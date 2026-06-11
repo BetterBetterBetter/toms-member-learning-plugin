@@ -610,8 +610,6 @@
 .tsol-accountability-modal-launcher {
     --tsol-launcher-bg: #ea323e;
     position: fixed;
-    right: 24px;
-    bottom: 24px;
     z-index: 999998;
     align-items: center !important;
     justify-content: center !important;
@@ -635,6 +633,26 @@
     box-shadow: 0 12px 28px rgba(1, 0, 23, 0.36), 0 0 0 7px rgba(22, 156, 199, 0.16);
 }
 
+.tsol-accountability-modal-launcher--bottom_right {
+    right: 24px;
+    bottom: 24px;
+}
+
+.tsol-accountability-modal-launcher--bottom_left {
+    bottom: 24px;
+    left: 24px;
+}
+
+.tsol-accountability-modal-launcher--top_right {
+    top: 24px;
+    right: 24px;
+}
+
+.tsol-accountability-modal-launcher--top_left {
+    top: 24px;
+    left: 24px;
+}
+
 .tsol-accountability-modal-launcher::before {
     content: "";
     position: absolute;
@@ -647,8 +665,6 @@
 
 .tsol-accountability-modal-launcher__bubble {
     position: absolute;
-    right: 61px;
-    bottom: 43px;
     min-width: 128px;
     max-width: 184px;
     border: 2px solid rgba(22, 156, 199, 0.28);
@@ -667,17 +683,58 @@
     box-shadow: 0 12px 28px rgba(1, 0, 23, 0.22);
 }
 
+.tsol-accountability-modal-launcher--bottom_right .tsol-accountability-modal-launcher__bubble {
+    right: 61px;
+    bottom: 43px;
+}
+
+.tsol-accountability-modal-launcher--bottom_left .tsol-accountability-modal-launcher__bubble {
+    bottom: 43px;
+    left: 61px;
+}
+
+.tsol-accountability-modal-launcher--top_right .tsol-accountability-modal-launcher__bubble {
+    top: 43px;
+    right: 61px;
+}
+
+.tsol-accountability-modal-launcher--top_left .tsol-accountability-modal-launcher__bubble {
+    top: 43px;
+    left: 61px;
+}
+
 .tsol-accountability-modal-launcher__bubble::after {
     content: "";
     position: absolute;
-    right: -8px;
-    bottom: 11px;
     width: 12px;
     height: 12px;
+    background: #ffffff;
+}
+
+.tsol-accountability-modal-launcher--bottom_right .tsol-accountability-modal-launcher__bubble::after,
+.tsol-accountability-modal-launcher--top_right .tsol-accountability-modal-launcher__bubble::after {
+    right: -8px;
     border-top: 2px solid rgba(22, 156, 199, 0.28);
     border-right: 2px solid rgba(22, 156, 199, 0.28);
-    background: #ffffff;
     transform: rotate(45deg);
+}
+
+.tsol-accountability-modal-launcher--bottom_left .tsol-accountability-modal-launcher__bubble::after,
+.tsol-accountability-modal-launcher--top_left .tsol-accountability-modal-launcher__bubble::after {
+    left: -8px;
+    border-bottom: 2px solid rgba(22, 156, 199, 0.28);
+    border-left: 2px solid rgba(22, 156, 199, 0.28);
+    transform: rotate(45deg);
+}
+
+.tsol-accountability-modal-launcher--bottom_right .tsol-accountability-modal-launcher__bubble::after,
+.tsol-accountability-modal-launcher--bottom_left .tsol-accountability-modal-launcher__bubble::after {
+    bottom: 11px;
+}
+
+.tsol-accountability-modal-launcher--top_right .tsol-accountability-modal-launcher__bubble::after,
+.tsol-accountability-modal-launcher--top_left .tsol-accountability-modal-launcher__bubble::after {
+    top: 11px;
 }
 
 .tsol-accountability-modal-launcher__icon {
@@ -831,20 +888,56 @@
     }
 
     .tsol-accountability-modal-launcher {
-        right: 14px;
-        bottom: 14px;
         width: 62px;
         height: 62px;
         font-size: 18px;
     }
 
+    .tsol-accountability-modal-launcher--bottom_right {
+        right: 14px;
+        bottom: 14px;
+    }
+
+    .tsol-accountability-modal-launcher--bottom_left {
+        bottom: 14px;
+        left: 14px;
+    }
+
+    .tsol-accountability-modal-launcher--top_right {
+        top: 14px;
+        right: 14px;
+    }
+
+    .tsol-accountability-modal-launcher--top_left {
+        top: 14px;
+        left: 14px;
+    }
+
     .tsol-accountability-modal-launcher__bubble {
-        right: 54px;
-        bottom: 36px;
         min-width: 0;
         max-width: calc(100vw - 100px);
         font-size: 12px;
         padding: 8px 10px;
+    }
+
+    .tsol-accountability-modal-launcher--bottom_right .tsol-accountability-modal-launcher__bubble {
+        right: 54px;
+        bottom: 36px;
+    }
+
+    .tsol-accountability-modal-launcher--bottom_left .tsol-accountability-modal-launcher__bubble {
+        bottom: 36px;
+        left: 54px;
+    }
+
+    .tsol-accountability-modal-launcher--top_right .tsol-accountability-modal-launcher__bubble {
+        top: 36px;
+        right: 54px;
+    }
+
+    .tsol-accountability-modal-launcher--top_left .tsol-accountability-modal-launcher__bubble {
+        top: 36px;
+        left: 54px;
     }
 }
 

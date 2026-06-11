@@ -22,6 +22,8 @@ Update these two places in `tomschooloflife-plugin.php`:
 
 Use semantic versioning: `MAJOR.MINOR.PATCH`.
 
+Also add a matching entry to `CHANGELOG.md`.
+
 ### Step 2: Commit and Push
 
 ```bash
@@ -85,6 +87,7 @@ If the GitHub repository is private, unauthenticated WordPress sites will not be
 
 - [ ] Plugin header `Version:` updated.
 - [ ] `TSOL_SITE_PLUGIN_VERSION` updated.
+- [ ] `CHANGELOG.md` updated.
 - [ ] Changes committed and pushed.
 - [ ] Tag created with `v` prefix.
 - [ ] GitHub release created.

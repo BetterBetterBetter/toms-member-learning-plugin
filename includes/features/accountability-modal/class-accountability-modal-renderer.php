@@ -11,8 +11,10 @@ class TSOL_Accountability_Modal_Renderer {
 
     private const LAUNCHER_ICON_ATTACHMENT_ID = 100146;
 
-    public function render($joinable_calls, $auto_open, $content = null) {
+    public function render($joinable_calls, $auto_open, $content = null, $display_rules = null) {
         $content = is_array($content) ? wp_parse_args($content, TSOL_Accountability_Modal_Settings::default_content()) : TSOL_Accountability_Modal_Settings::get_content();
+        $display_rules = is_array($display_rules) ? wp_parse_args($display_rules, TSOL_Accountability_Modal_Settings::default_display_rules()) : TSOL_Accountability_Modal_Settings::get_display_rules();
+        $launcher_class = 'tsol-accountability-modal-launcher tsol-accountability-modal-launcher--' . sanitize_html_class($display_rules['launcher_position']);
         $questions = TSOL_Accountability_Modal_Settings::get_enabled_questions($content);
         $total_steps = max(1, count($questions));
 
@@ -65,7 +67,7 @@ class TSOL_Accountability_Modal_Renderer {
             </div>
         </div>
         <?php if ($auto_open) : ?>
-            <button type="button" class="tsol-accountability-modal-launcher" data-tsol-accountability-modal-launcher hidden aria-label="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>" title="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>">
+            <button type="button" class="<?php echo esc_attr($launcher_class); ?>" data-tsol-accountability-modal-launcher hidden aria-label="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>" title="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>">
                 <span class="tsol-accountability-modal-launcher__bubble" data-tsol-accountability-modal-launcher-bubble hidden aria-hidden="true"></span>
                 <?php $this->render_launcher_icon(); ?>
             </button>

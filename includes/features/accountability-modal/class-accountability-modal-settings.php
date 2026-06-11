@@ -33,6 +33,7 @@ class TSOL_Accountability_Modal_Settings {
         $rules['page_ids'] = self::sanitize_page_ids($rules['page_ids']);
         $rules['scroll_threshold'] = max(0, absint($rules['scroll_threshold']));
         $rules['draft_ttl_days'] = max(1, absint($rules['draft_ttl_days']));
+        $rules['launcher_position'] = self::sanitize_launcher_position($rules['launcher_position']);
 
         return $rules;
     }
@@ -64,6 +65,7 @@ class TSOL_Accountability_Modal_Settings {
             'save_draft_answers' => '1',
             'draft_ttl_days' => 7,
             'show_resume_launcher' => '1',
+            'launcher_position' => 'bottom_right',
             'animate_resume_launcher' => '1',
         );
     }
@@ -253,6 +255,15 @@ class TSOL_Accountability_Modal_Settings {
         return in_array($type, array('number', 'range'), true);
     }
 
+    public static function get_launcher_positions() {
+        return array(
+            'bottom_right' => __('Bottom right', 'tomschooloflife-plugin'),
+            'bottom_left' => __('Bottom left', 'tomschooloflife-plugin'),
+            'top_right' => __('Top right', 'tomschooloflife-plugin'),
+            'top_left' => __('Top left', 'tomschooloflife-plugin'),
+        );
+    }
+
     public static function sanitize_display_rules($value) {
         $value = is_array($value) ? $value : array();
 
@@ -266,6 +277,7 @@ class TSOL_Accountability_Modal_Settings {
             'save_draft_answers' => self::sanitize_checkbox(isset($value['save_draft_answers']) ? $value['save_draft_answers'] : '0'),
             'draft_ttl_days' => max(1, absint(isset($value['draft_ttl_days']) ? $value['draft_ttl_days'] : 7)),
             'show_resume_launcher' => self::sanitize_checkbox(isset($value['show_resume_launcher']) ? $value['show_resume_launcher'] : '0'),
+            'launcher_position' => self::sanitize_launcher_position(isset($value['launcher_position']) ? wp_unslash($value['launcher_position']) : 'bottom_right'),
             'animate_resume_launcher' => self::sanitize_checkbox(isset($value['animate_resume_launcher']) ? $value['animate_resume_launcher'] : '0'),
         );
     }
@@ -387,6 +399,12 @@ class TSOL_Accountability_Modal_Settings {
 
     private static function sanitize_checkbox($value) {
         return $value === '1' ? '1' : '0';
+    }
+
+    private static function sanitize_launcher_position($value) {
+        $value = sanitize_key((string) $value);
+
+        return array_key_exists($value, self::get_launcher_positions()) ? $value : 'bottom_right';
     }
 
     private static function sanitize_question_key($value) {

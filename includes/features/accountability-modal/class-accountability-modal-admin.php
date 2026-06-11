@@ -544,7 +544,20 @@ class TSOL_Accountability_Modal_Admin {
                         <span><?php esc_html_e('days before unfinished local drafts expire.', 'tomschooloflife-plugin'); ?></span>
                     </td>
                 </tr>
-                <?php $this->render_display_checkbox('show_resume_launcher', __('Show bottom-right resume button after close', 'tomschooloflife-plugin'), $rules); ?>
+                <?php $this->render_display_checkbox('show_resume_launcher', __('Show circular resume button after close', 'tomschooloflife-plugin'), $rules); ?>
+                <tr>
+                    <th scope="row">
+                        <label for="tsol-accountability-launcher-position"><?php esc_html_e('Resume button position', 'tomschooloflife-plugin'); ?></label>
+                    </th>
+                    <td>
+                        <select id="tsol-accountability-launcher-position" name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::DISPLAY_OPTION); ?>[launcher_position]">
+                            <?php foreach (TSOL_Accountability_Modal_Settings::get_launcher_positions() as $position => $label) : ?>
+                                <option value="<?php echo esc_attr($position); ?>" <?php selected($position, $rules['launcher_position']); ?>><?php echo esc_html($label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="description"><?php esc_html_e('Choose where the circular resume button appears after a user closes an unfinished modal.', 'tomschooloflife-plugin'); ?></p>
+                    </td>
+                </tr>
                 <?php $this->render_display_checkbox('animate_resume_launcher', __('Animate the resume button occasionally', 'tomschooloflife-plugin'), $rules); ?>
             </table>
 

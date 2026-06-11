@@ -30,6 +30,7 @@ Supported development/deployed plugin basenames:
 - `assets/admin/` - Admin page assets.
 - `assets/features/accountability-modal/` - Accountability modal assets.
 - `plugin-update-checker/` - Bundled GitHub update checker library used for WordPress dashboard updates.
+- `CHANGELOG.md` - Version history and release notes.
 - `UPDATER_GUIDE.md` - Release workflow for dashboard updates.
 
 ## Feature Pattern
@@ -46,7 +47,7 @@ The intake form stores responses in user meta and lists only published MEC accou
 
 Admins can manually open the modal from the WordPress admin bar while viewing a selected display location.
 
-In-progress answers can be saved locally in the user's browser and are cleared after a successful submission. If a user closes the modal before submitting, a branded square-aspect circular launcher appears in the bottom-right corner so they can reopen and finish the form. The launcher uses the uploaded site-icon mark as a centered white mask and can show a short progress bubble once the user has completed more than one step.
+In-progress answers can be saved locally in the user's browser and are cleared after a successful submission. If a user closes the modal before submitting, a branded square-aspect circular launcher appears in the configured screen corner so they can reopen and finish the form. The launcher uses the uploaded site-icon mark as a centered white mask and can show a short progress bubble once the user has completed more than one step.
 
 The display locations, scroll threshold, local draft behavior, resume launcher behavior, admin preview button, member/submission hiding rules, modal copy, and question flow can be managed in WordPress under `TSOL > Accountability Modal`.
 

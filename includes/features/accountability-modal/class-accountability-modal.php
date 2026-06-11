@@ -72,8 +72,9 @@ class TSOL_Accountability_Modal implements TSOL_Site_Feature {
         $auto_open = $this->should_show_modal();
         $joinable_calls = $this->get_repository()->get_joinable_calls();
         $content = TSOL_Accountability_Modal_Settings::get_content();
+        $display_rules = TSOL_Accountability_Modal_Settings::get_display_rules();
 
-        $this->get_renderer()->render($joinable_calls, $auto_open, $content);
+        $this->get_renderer()->render($joinable_calls, $auto_open, $content, $display_rules);
     }
 
     public function add_admin_bar_button($wp_admin_bar) {
