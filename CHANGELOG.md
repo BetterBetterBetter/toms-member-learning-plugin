@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 - 2026-06-12
+
+- Added modular Cookie Consent feature with a TSOL admin submenu.
+- Added branded frontend cookie banner, preference center, and floating settings button.
+- Added Google Consent Mode v2 defaults and consent updates for analytics/marketing choices.
+- Added consent-controlled analytics and marketing script loading buckets.
+- Added configurable banner copy, legal links, category descriptions, display placement, GPC handling, and consent versioning.
+- Added admin implementation notes for migrating hard-coded tracking snippets into consent-aware loading.
+
 ## 0.1.1 - 2026-06-11
 
 - Added GitHub Plugin Update Checker support for WordPress dashboard updates.

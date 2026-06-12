@@ -12,6 +12,7 @@ class TomsSchoolOfLifePlugin {
     private static $instance = null;
     private $admin_settings = null;
     private $accountability_modal_admin = null;
+    private $cookie_consent_admin = null;
     private $features = array();
     private $admin_page_hooks = array();
 
@@ -42,6 +43,8 @@ class TomsSchoolOfLifePlugin {
         $this->admin_settings->init();
         $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
         $this->accountability_modal_admin->init();
+        $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
+        $this->cookie_consent_admin->init();
 
         $this->register_features();
         $this->init_features();
@@ -85,6 +88,15 @@ class TomsSchoolOfLifePlugin {
             'manage_options',
             TSOL_Accountability_Modal_Admin::PAGE_SLUG,
             array($this, 'render_accountability_modal_page')
+        );
+
+        $this->admin_page_hooks[] = add_submenu_page(
+            'tsol-site',
+            __('Cookie Consent', 'tomschooloflife-plugin'),
+            __('Cookie Consent', 'tomschooloflife-plugin'),
+            'manage_options',
+            TSOL_Cookie_Consent_Admin::PAGE_SLUG,
+            array($this, 'render_cookie_consent_page')
         );
     }
 
@@ -136,6 +148,18 @@ class TomsSchoolOfLifePlugin {
         }
 
         $this->accountability_modal_admin->display_page();
+    }
+
+    public function render_cookie_consent_page() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        if (!$this->cookie_consent_admin) {
+            $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
+        }
+
+        $this->cookie_consent_admin->display_page();
     }
 
     public function render_dependency_admin_notice() {
@@ -191,6 +215,7 @@ class TomsSchoolOfLifePlugin {
     private function register_features() {
         $this->features = array(
             new TSOL_Accountability_Modal(),
+            new TSOL_Cookie_Consent(),
         );
 
         /**

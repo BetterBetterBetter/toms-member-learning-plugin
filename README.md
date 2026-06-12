@@ -27,8 +27,12 @@ Supported development/deployed plugin basenames:
 - `includes/features/accountability-modal/class-accountability-modal-renderer.php` - Accountability modal form markup.
 - `includes/features/accountability-modal/class-accountability-modal-settings.php` - Accountability modal display/content settings.
 - `includes/features/accountability-modal/class-accountability-modal-submission-handler.php` - Accountability modal AJAX submission and user meta storage.
+- `includes/features/cookie-consent/class-cookie-consent.php` - Cookie consent frontend feature.
+- `includes/features/cookie-consent/class-cookie-consent-admin.php` - Cookie consent admin tabs.
+- `includes/features/cookie-consent/class-cookie-consent-settings.php` - Cookie consent settings and sanitization.
 - `assets/admin/` - Admin page assets.
 - `assets/features/accountability-modal/` - Accountability modal assets.
+- `assets/features/cookie-consent/` - Cookie consent assets.
 - `plugin-update-checker/` - Bundled GitHub update checker library used for WordPress dashboard updates.
 - `CHANGELOG.md` - Version history and release notes.
 - `UPDATER_GUIDE.md` - Release workflow for dashboard updates.
@@ -60,6 +64,14 @@ The `Submissions` admin tab reads the saved user meta in review cards with user 
 Accessibility support includes dialog labeling, described-by copy, Escape close, focus trapping, focus return, keyboard-accessible launcher, progressbar semantics, live status messages, and reduced-motion handling for launcher animation. It should still receive real screen-reader/browser QA before being treated as formally audited for WCAG conformance.
 
 The target content IDs can still be changed with the `tsol_site_accountability_modal_page` filter.
+
+## Cookie Consent
+
+The cookie consent feature renders an on-brand TSOL banner and preference center for public visitors. It stores consent in a first-party cookie and localStorage fallback, supports a floating cookie settings button, respects Global Privacy Control for marketing choices, and can be opened by admins from the frontend admin bar.
+
+The feature prints Google Consent Mode v2 defaults early in the page head and updates Consent Mode after the visitor chooses. Analytics and marketing scripts added under `TSOL > Cookie Consent > Scripts` are loaded only after the relevant category is accepted.
+
+Important: this feature cannot stop scripts that are hard-coded by another plugin, theme, HFCM snippet, or GTM tag before consent. Non-essential tracking should be moved into the cookie consent script buckets or configured inside GTM to obey Consent Mode.
 
 ## Development
 
