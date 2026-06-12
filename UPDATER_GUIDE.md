@@ -17,8 +17,8 @@ When you are ready to release a new version:
 
 Update these two places in `tomschooloflife-plugin.php`:
 
-1. Plugin header: `Version: 0.1.2`
-2. Constant: `define('TSOL_SITE_PLUGIN_VERSION', '0.1.2');`
+1. Plugin header: `Version: 0.1.3`
+2. Constant: `define('TSOL_SITE_PLUGIN_VERSION', '0.1.3');`
 
 Use semantic versioning: `MAJOR.MINOR.PATCH`.
 
@@ -28,7 +28,7 @@ Also add a matching entry to `CHANGELOG.md`.
 
 ```bash
 git add .
-git commit -m "Bump version to 0.1.2"
+git commit -m "Bump version to 0.1.3"
 git push origin main
 ```
 
@@ -38,7 +38,7 @@ From the parent directory of the plugin folder:
 
 ```bash
 cd /Users/ryan/Sites/thrice-agency/tomwoods
-zip -r tomschooloflife-plugin-0.1.2.zip tomschooloflife-plugin \
+zip -r tomschooloflife-plugin-0.1.3.zip tomschooloflife-plugin \
   -x "tomschooloflife-plugin/.git/*" \
   -x "tomschooloflife-plugin/.DS_Store" \
   -x "tomschooloflife-plugin/*.zip"
@@ -51,18 +51,18 @@ The ZIP should contain a top-level `tomschooloflife-plugin/` folder with `tomsch
 Option A: GitHub web interface
 
 1. Go to `https://github.com/BetterBetterBetter/tomschooloflife-plugin/releases/new`.
-2. Create a tag named `v0.1.2`.
-3. Release title: `Version 0.1.2`.
+2. Create a tag named `v0.1.3`.
+3. Release title: `Version 0.1.3`.
 4. Add release notes.
-5. Upload `tomschooloflife-plugin-0.1.2.zip` as a release asset.
+5. Upload `tomschooloflife-plugin-0.1.3.zip` as a release asset.
 6. Publish the release.
 
 Option B: GitHub CLI
 
 ```bash
-gh release create v0.1.2 tomschooloflife-plugin-0.1.2.zip \
+gh release create v0.1.3 tomschooloflife-plugin-0.1.3.zip \
   --repo BetterBetterBetter/tomschooloflife-plugin \
-  --title "Version 0.1.2" \
+  --title "Version 0.1.3" \
   --notes "Release notes here."
 ```
 

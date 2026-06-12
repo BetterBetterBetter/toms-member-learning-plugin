@@ -32,17 +32,19 @@ class TSOL_Accountability_Modal implements TSOL_Site_Feature {
         $auto_open = $this->should_show_modal();
         $content = TSOL_Accountability_Modal_Settings::get_content();
 
+        $this->enqueue_launcher_dock_assets();
+
         wp_enqueue_style(
             'tsol-accountability-modal',
             TSOL_SITE_PLUGIN_URL . 'assets/features/accountability-modal/accountability-modal.css',
-            array(),
+            array('tsol-site-launcher-dock'),
             TSOL_SITE_PLUGIN_VERSION
         );
 
         wp_enqueue_script(
             'tsol-accountability-modal',
             TSOL_SITE_PLUGIN_URL . 'assets/features/accountability-modal/accountability-modal.js',
-            array(),
+            array('tsol-site-launcher-dock'),
             TSOL_SITE_PLUGIN_VERSION,
             true
         );
@@ -206,6 +208,23 @@ class TSOL_Accountability_Modal implements TSOL_Site_Feature {
 
     private function get_draft_storage_key() {
         return 'tsol_accountability_modal_draft_' . md5(home_url('/') . ':' . get_current_user_id());
+    }
+
+    private function enqueue_launcher_dock_assets() {
+        wp_enqueue_style(
+            'tsol-site-launcher-dock',
+            TSOL_SITE_PLUGIN_URL . 'assets/shared/launcher-dock.css',
+            array(),
+            TSOL_SITE_PLUGIN_VERSION
+        );
+
+        wp_enqueue_script(
+            'tsol-site-launcher-dock',
+            TSOL_SITE_PLUGIN_URL . 'assets/shared/launcher-dock.js',
+            array(),
+            TSOL_SITE_PLUGIN_VERSION,
+            true
+        );
     }
 
     private function get_draft_schema($content) {

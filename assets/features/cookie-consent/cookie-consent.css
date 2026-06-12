@@ -94,14 +94,15 @@
     width: 56px;
 }
 
-.tsol-cookie-consent__mark span,
-.tsol-cookie-consent__reopen span,
-.tsol-cookie-preview__mark span {
-    background: var(--tsol-white);
+.tsol-cookie-consent__icon {
+    color: var(--tsol-white);
     display: block;
     height: 31px;
-    mask: var(--tsol-cookie-icon-mask) center / contain no-repeat;
-    -webkit-mask: var(--tsol-cookie-icon-mask) center / contain no-repeat;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
     width: 31px;
 }
 
@@ -195,7 +196,7 @@
 
 .tsol-cookie-consent button.tsol-cookie-consent__button:focus,
 .tsol-cookie-consent button.tsol-cookie-consent__close:focus,
-.tsol-cookie-consent button.tsol-cookie-consent__reopen:focus {
+button.tsol-cookie-consent__reopen:focus {
     outline: 2px solid var(--tsol-cyan);
     outline-offset: 3px;
 }
@@ -425,7 +426,11 @@
     min-height: 18px;
 }
 
-.tsol-cookie-consent button.tsol-cookie-consent__reopen {
+button.tsol-cookie-consent__reopen {
+    --tsol-blue-dark: #010017;
+    --tsol-cyan: #169cc7;
+    --tsol-red: #ea323e;
+    --tsol-white: #f3faff;
     align-items: center;
     background: var(--tsol-blue-dark) !important;
     border: 2px solid var(--tsol-cyan) !important;
@@ -442,8 +447,8 @@
     z-index: 999997;
 }
 
-.tsol-cookie-consent button.tsol-cookie-consent__reopen:hover,
-.tsol-cookie-consent button.tsol-cookie-consent__reopen:focus {
+button.tsol-cookie-consent__reopen:hover,
+button.tsol-cookie-consent__reopen:focus {
     background: var(--tsol-red) !important;
     border-color: var(--tsol-red) !important;
 }
@@ -478,7 +483,7 @@
         width: 44px;
     }
 
-    .tsol-cookie-consent__mark span {
+    .tsol-cookie-consent__mark .tsol-cookie-consent__icon {
         height: 25px;
         width: 25px;
     }

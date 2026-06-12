@@ -67,7 +67,17 @@ class TSOL_Accountability_Modal_Renderer {
             </div>
         </div>
         <?php if ($auto_open) : ?>
-            <button type="button" class="<?php echo esc_attr($launcher_class); ?>" data-tsol-accountability-modal-launcher hidden aria-label="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>" title="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>">
+            <button
+                type="button"
+                class="<?php echo esc_attr($launcher_class); ?>"
+                data-tsol-accountability-modal-launcher
+                data-tsol-launcher-dock-item
+                data-tsol-launcher-dock-position="<?php echo esc_attr($display_rules['launcher_position']); ?>"
+                data-tsol-launcher-dock-priority="20"
+                hidden
+                aria-label="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>"
+                title="<?php esc_attr_e('Finish accountability group form', 'tomschooloflife-plugin'); ?>"
+            >
                 <span class="tsol-accountability-modal-launcher__bubble" data-tsol-accountability-modal-launcher-bubble hidden aria-hidden="true"></span>
                 <?php $this->render_launcher_icon(); ?>
             </button>

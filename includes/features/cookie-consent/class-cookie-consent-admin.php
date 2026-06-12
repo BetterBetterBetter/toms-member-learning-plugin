@@ -137,7 +137,7 @@ class TSOL_Cookie_Consent_Admin {
         </div>
 
         <div class="tsol-cookie-preview" aria-label="<?php esc_attr_e('Cookie banner preview', 'tomschooloflife-plugin'); ?>">
-            <div class="tsol-cookie-preview__mark"><span></span></div>
+            <div class="tsol-cookie-preview__mark"><?php echo TSOL_Cookie_Consent_Settings::get_cookie_icon_svg('tsol-cookie-preview__icon'); ?></div>
             <div>
                 <p><?php echo esc_html($settings['banner_eyebrow']); ?></p>
                 <h3><?php echo esc_html($settings['banner_title']); ?></h3>

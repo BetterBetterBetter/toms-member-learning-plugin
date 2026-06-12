@@ -49,17 +49,19 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
         $settings = $this->get_settings();
         $categories = TSOL_Cookie_Consent_Settings::get_categories($settings);
 
+        $this->enqueue_launcher_dock_assets();
+
         wp_enqueue_style(
             'tsol-cookie-consent',
             TSOL_SITE_PLUGIN_URL . 'assets/features/cookie-consent/cookie-consent.css',
-            array(),
+            array('tsol-site-launcher-dock'),
             TSOL_SITE_PLUGIN_VERSION
         );
 
         wp_enqueue_script(
             'tsol-cookie-consent',
             TSOL_SITE_PLUGIN_URL . 'assets/features/cookie-consent/cookie-consent.js',
-            array(),
+            array('tsol-site-launcher-dock'),
             TSOL_SITE_PLUGIN_VERSION,
             true
         );
@@ -128,8 +130,6 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
         $settings = $this->get_settings();
         $categories = TSOL_Cookie_Consent_Settings::get_categories($settings);
         $has_valid_consent = is_array(TSOL_Cookie_Consent_Settings::get_consent_from_cookie($settings));
-        $site_icon_url = get_site_icon_url(192);
-        $root_style = $site_icon_url ? '--tsol-cookie-icon-mask: url("' . esc_url_raw($site_icon_url) . '");' : '';
         $show_reopen_button = $settings['show_reopen_button'] === '1' && ($has_valid_consent || $settings['banner_enabled'] !== '1');
         $hide_root = ($has_valid_consent && !$show_reopen_button) || (!$has_valid_consent && $settings['banner_enabled'] !== '1' && !$show_reopen_button);
         $root_classes = array(
@@ -146,7 +146,6 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
             id="tsol-cookie-consent"
             class="<?php echo esc_attr(implode(' ', $root_classes)); ?>"
             data-tsol-cookie-consent
-            style="<?php echo esc_attr($root_style); ?>"
             <?php echo $hide_root ? 'hidden' : ''; ?>
         >
             <section
@@ -159,7 +158,7 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
                 <?php echo $has_valid_consent || $settings['banner_enabled'] !== '1' ? 'hidden' : ''; ?>
             >
                 <div class="tsol-cookie-consent__mark" aria-hidden="true">
-                    <span></span>
+                    <?php echo TSOL_Cookie_Consent_Settings::get_cookie_icon_svg('tsol-cookie-consent__icon'); ?>
                 </div>
 
                 <div class="tsol-cookie-consent__copy">
@@ -245,10 +244,13 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
                 type="button"
                 class="<?php echo esc_attr(implode(' ', $reopen_classes)); ?>"
                 data-tsol-cookie-reopen
+                data-tsol-launcher-dock-item
+                data-tsol-launcher-dock-position="<?php echo esc_attr($settings['reopen_position']); ?>"
+                data-tsol-launcher-dock-priority="10"
                 aria-label="<?php echo esc_attr($settings['settings_label']); ?>"
                 <?php echo $show_reopen_button ? '' : 'hidden'; ?>
             >
-                <span aria-hidden="true"></span>
+                <?php echo TSOL_Cookie_Consent_Settings::get_cookie_icon_svg('tsol-cookie-consent__icon'); ?>
             </button>
         </div>
         <?php
@@ -302,6 +304,23 @@ class TSOL_Cookie_Consent implements TSOL_Site_Feature {
         }
 
         return $this->settings;
+    }
+
+    private function enqueue_launcher_dock_assets() {
+        wp_enqueue_style(
+            'tsol-site-launcher-dock',
+            TSOL_SITE_PLUGIN_URL . 'assets/shared/launcher-dock.css',
+            array(),
+            TSOL_SITE_PLUGIN_VERSION
+        );
+
+        wp_enqueue_script(
+            'tsol-site-launcher-dock',
+            TSOL_SITE_PLUGIN_URL . 'assets/shared/launcher-dock.js',
+            array(),
+            TSOL_SITE_PLUGIN_VERSION,
+            true
+        );
     }
 
     private function is_json_or_rest_request() {

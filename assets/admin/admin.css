@@ -91,11 +91,15 @@
     width: 56px;
 }
 
-.tsol-cookie-preview__mark span {
-    background: #f3faff;
-    border-radius: 50%;
+.tsol-cookie-preview__icon {
+    color: #f3faff;
     display: block;
     height: 28px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
     width: 28px;
 }
 

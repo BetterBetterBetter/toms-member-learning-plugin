@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 - 2026-06-12
+
+- Added shared launcher docking so floating TSOL buttons in the same corner stack instead of overlapping.
+- Changed the cookie consent floating button to use a cookie icon instead of the site logo.
+
 ## 0.1.2 - 2026-06-12
 
 - Added modular Cookie Consent feature with a TSOL admin submenu.

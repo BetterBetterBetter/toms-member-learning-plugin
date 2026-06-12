@@ -139,6 +139,15 @@ class TSOL_Cookie_Consent_Settings {
         );
     }
 
+    public static function get_cookie_icon_svg($class = '') {
+        $class = trim((string) $class);
+
+        return sprintf(
+            '<svg class="%1$s" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5Z"/><path d="M8.5 8.5h.01"/><path d="M16 15.5h.01"/><path d="M12 12h.01"/><path d="M11 17h.01"/><path d="M7 14h.01"/></svg>',
+            esc_attr($class)
+        );
+    }
+
     public static function get_consent_from_cookie($settings = null) {
         $settings = is_array($settings) ? wp_parse_args($settings, self::defaults()) : self::get_settings();
 

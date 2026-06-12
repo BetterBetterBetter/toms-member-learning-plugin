@@ -454,6 +454,14 @@
         }
     });
 
+    if (reopenButton) {
+        reopenButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openPreferences();
+        });
+    }
+
     document.addEventListener('click', function(event) {
         var adminBarLink = event.target.closest('#wp-admin-bar-tsol-cookie-consent-open a');
 
