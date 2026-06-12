@@ -557,6 +557,365 @@
         applyState(true);
     }
 
+    function getAdminStrings() {
+        return window.tsolSitePluginAdmin && window.tsolSitePluginAdmin.strings ? window.tsolSitePluginAdmin.strings : {};
+    }
+
+    function formatAdminString(pattern, value) {
+        return String(pattern || '').replace('%d', String(value));
+    }
+
+    function createCookieUrlRow(inputName, value) {
+        var strings = getAdminStrings();
+        var placeholder = strings.scriptUrlPlaceholder || 'https://example.com/script.js';
+        var removeLabel = strings.removeUrl || 'Remove URL';
+        var removeAriaLabel = strings.removeScriptUrl || 'Remove this script URL';
+
+        return $(
+            '<div class="tsol-cookie-url-row" data-cookie-url-row>' +
+                '<input type="url" class="regular-text" name="' + escapeHtml(inputName) + '" value="' + escapeHtml(value || '') + '" placeholder="' + escapeHtml(placeholder) + '" data-cookie-url-input>' +
+                '<button type="button" class="button tsol-cookie-icon-button tsol-cookie-remove-button tsol-cookie-url-row__remove" data-cookie-url-remove aria-label="' + escapeHtml(removeAriaLabel) + '"><span class="tsol-cookie-close-icon" aria-hidden="true"></span><span class="screen-reader-text">' + escapeHtml(removeLabel) + '</span></button>' +
+            '</div>'
+        );
+    }
+
+    function initCookieUrlRepeater($repeater) {
+        var $rows = $repeater.find('[data-cookie-url-repeater-rows]');
+        var $count = $repeater.find('[data-cookie-url-count]');
+        var inputName = String($repeater.data('cookie-url-input-name') || '');
+
+        function updateCount() {
+            var strings = getAdminStrings();
+            var count = 0;
+            var $allRows = $rows.find('[data-cookie-url-row]');
+
+            $rows.find('[data-cookie-url-input]').each(function() {
+                if ($.trim($(this).val())) {
+                    count += 1;
+                }
+            });
+
+            $allRows.each(function() {
+                var $row = $(this);
+                var isOnlyRow = $allRows.length === 1;
+                $row.find('[data-cookie-url-remove]').prop('hidden', isOnlyRow);
+            });
+
+            $count.text(count === 1 ? (strings.scriptUrlCountSingular || '1 URL') : formatAdminString(strings.scriptUrlCountPlural || '%d URLs', count));
+        }
+
+        function addRow(value) {
+            var $row = createCookieUrlRow(inputName, value || '');
+
+            $row.addClass('is-new');
+            $rows.append($row);
+            updateCount();
+            $row.find('[data-cookie-url-input]').trigger('focus');
+
+            window.setTimeout(function() {
+                $row.removeClass('is-new');
+            }, 250);
+        }
+
+        $repeater.on('click', '[data-cookie-url-repeater-add]', function() {
+            addRow('');
+        });
+
+        $repeater.on('input', '[data-cookie-url-input]', updateCount);
+
+        $repeater.on('click', '[data-cookie-url-remove]', function() {
+            var $row = $(this).closest('[data-cookie-url-row]');
+            var $allRows = $rows.find('[data-cookie-url-row]');
+
+            if ($allRows.length === 1) {
+                updateCount();
+                return;
+            }
+
+            $row.slideUp(140, function() {
+                $row.remove();
+
+                updateCount();
+            });
+        });
+
+        if (!$rows.find('[data-cookie-url-row]').length) {
+            addRow('');
+        }
+
+        updateCount();
+    }
+
+    function insertTextareaText(textarea, value) {
+        var start = textarea.selectionStart || 0;
+        var end = textarea.selectionEnd || 0;
+        var before = textarea.value.slice(0, start);
+        var after = textarea.value.slice(end);
+
+        textarea.value = before + value + after;
+        textarea.selectionStart = start + value.length;
+        textarea.selectionEnd = start + value.length;
+        $(textarea).trigger('input').trigger('change');
+    }
+
+    function formatCodeMirror(editor) {
+        var codeMirror = editor && editor.codemirror ? editor.codemirror : null;
+        var startLine;
+        var endLine;
+        var line;
+
+        if (!codeMirror) {
+            return;
+        }
+
+        if (codeMirror.somethingSelected()) {
+            startLine = codeMirror.getCursor('from').line;
+            endLine = codeMirror.getCursor('to').line;
+        } else {
+            startLine = 0;
+            endLine = codeMirror.lineCount() - 1;
+        }
+
+        codeMirror.operation(function() {
+            for (line = startLine; line <= endLine; line += 1) {
+                codeMirror.indentLine(line, 'smart');
+            }
+
+            codeMirror.save();
+        });
+    }
+
+    function initCookieCodeEditor($field) {
+        var textarea = $field.find('[data-cookie-code-editor-textarea]')[0];
+        var editorSettings = window.tsolSitePluginAdmin && window.tsolSitePluginAdmin.codeEditor ? window.tsolSitePluginAdmin.codeEditor : null;
+        var editor = null;
+
+        if (!textarea || $field.data('cookieCodeEditorInitialized')) {
+            return;
+        }
+
+        $field.data('cookieCodeEditorInitialized', true);
+
+        if (editorSettings && window.wp && window.wp.codeEditor) {
+            editor = window.wp.codeEditor.initialize(textarea, $.extend(true, {}, editorSettings, {
+                codemirror: {
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    indentUnit: 4,
+                    indentWithTabs: false
+                }
+            }));
+
+            if (editor && editor.codemirror) {
+                $field.addClass('is-enhanced');
+                $field.data('cookieCodeEditorInstance', editor);
+                $(editor.codemirror.getWrapperElement()).addClass('tsol-cookie-code-editor__mirror');
+                editor.codemirror.setSize(null, 360);
+                editor.codemirror.on('change', function() {
+                    editor.codemirror.save();
+                    $field.trigger('tsolCookieCodeChanged');
+                });
+
+                $field.closest('form').on('submit', function() {
+                    editor.codemirror.save();
+                });
+            }
+        }
+
+        $field.on('click', '[data-cookie-code-format]', function() {
+            if (editor && editor.codemirror) {
+                formatCodeMirror(editor);
+                editor.codemirror.focus();
+                return;
+            }
+
+            textarea.focus();
+        });
+
+        $field.on('click', '[data-cookie-code-separator]', function() {
+            if (editor && editor.codemirror) {
+                editor.codemirror.replaceSelection('\n---\n', 'end');
+                editor.codemirror.focus();
+                editor.codemirror.save();
+                return;
+            }
+
+            insertTextareaText(textarea, '\n---\n');
+            textarea.focus();
+        });
+    }
+
+    function getCodeEditorValue($row) {
+        var editor = $row.data('cookieCodeEditorInstance');
+
+        if (editor && editor.codemirror) {
+            editor.codemirror.save();
+            return editor.codemirror.getValue();
+        }
+
+        return $row.find('[data-cookie-code-editor-textarea]').val() || '';
+    }
+
+    function createCookieSnippetRow(inputName, nameInputName, builderKey, index, value, snippetName) {
+        var strings = getAdminStrings();
+        var idSuffix = String(Date.now()) + '-' + String(Math.floor(Math.random() * 100000));
+        var bodyId = 'tsol-cookie-' + String(builderKey || 'inline').replace(/[^a-z0-9_-]/gi, '-') + '-snippet-' + idSuffix;
+        var textareaId = bodyId + '-code';
+        var nameId = bodyId + '-name';
+        var fallbackName = (strings.snippetLabel || 'Snippet') + ' ' + (index + 1);
+
+        return $(
+            '<div class="tsol-cookie-snippet-row is-open is-new" data-cookie-snippet-row data-cookie-code-editor>' +
+                '<div class="tsol-cookie-snippet-row__bar">' +
+                    '<button type="button" class="tsol-cookie-snippet-row__toggle" data-cookie-snippet-toggle aria-expanded="true" aria-controls="' + escapeHtml(bodyId) + '" aria-label="' + escapeHtml('Toggle ' + fallbackName) + '">' +
+                        '<span class="tsol-cookie-snippet-row__chevron" aria-hidden="true"></span>' +
+                    '</button>' +
+                    '<div class="tsol-cookie-snippet-row__summary">' +
+                        '<span id="' + escapeHtml(nameId) + '" class="tsol-cookie-snippet-row__name" contenteditable="true" role="textbox" aria-label="Snippet name" spellcheck="false" data-cookie-snippet-name-editor>' + escapeHtml(snippetName || fallbackName) + '</span>' +
+                        '<input type="hidden" name="' + escapeHtml(nameInputName) + '" value="' + escapeHtml(snippetName || fallbackName) + '" data-cookie-snippet-name>' +
+                    '</div>' +
+                    '<div class="tsol-cookie-snippet-row__actions">' +
+                        '<button type="button" class="button button-small" data-cookie-code-format>' + escapeHtml(strings.formatSnippet || 'Format') + '</button>' +
+                        '<button type="button" class="button tsol-cookie-icon-button tsol-cookie-remove-button tsol-cookie-snippet-row__remove" data-cookie-snippet-remove aria-label="' + escapeHtml(strings.removeSnippetAria || 'Remove this JavaScript snippet') + '"><span class="tsol-cookie-close-icon" aria-hidden="true"></span><span class="screen-reader-text">' + escapeHtml(strings.removeSnippet || 'Remove snippet') + '</span></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="' + escapeHtml(bodyId) + '" class="tsol-cookie-snippet-row__body" data-cookie-snippet-body>' +
+                    '<label for="' + escapeHtml(textareaId) + '" class="screen-reader-text">' + escapeHtml((strings.snippetLabel || 'Snippet') + ' ' + (index + 1) + ' JavaScript') + '</label>' +
+                    '<textarea id="' + escapeHtml(textareaId) + '" class="large-text code tsol-cookie-code-editor__textarea" rows="14" name="' + escapeHtml(inputName) + '" data-cookie-code-editor-textarea>' + escapeHtml(value || '') + '</textarea>' +
+                '</div>' +
+            '</div>'
+        );
+    }
+
+    function initCookieSnippetBuilder($builder) {
+        var $rows = $builder.find('[data-cookie-snippet-rows]');
+        var $count = $builder.find('[data-cookie-snippet-count]');
+        var inputName = String($builder.data('cookie-snippet-input-name') || '');
+        var nameInputName = String($builder.data('cookie-snippet-name-input-name') || '');
+        var builderKey = String($builder.data('cookie-snippet-key') || 'inline');
+
+        function setRowOpen($row, isOpen) {
+            var editor = $row.data('cookieCodeEditorInstance');
+
+            $row.toggleClass('is-open', isOpen);
+            $row.find('[data-cookie-snippet-body]').prop('hidden', !isOpen);
+            $row.find('[data-cookie-snippet-toggle]').attr('aria-expanded', isOpen ? 'true' : 'false');
+
+            if (isOpen) {
+                initCookieCodeEditor($row);
+                editor = $row.data('cookieCodeEditorInstance');
+
+                if (editor && editor.codemirror) {
+                    window.setTimeout(function() {
+                        editor.codemirror.refresh();
+                    }, 0);
+                }
+            }
+        }
+
+        function updateRowSummary($row, index) {
+            var strings = getAdminStrings();
+            var fallbackName = (strings.snippetLabel || 'Snippet') + ' ' + (index + 1);
+            var $nameInput = $row.find('[data-cookie-snippet-name]');
+            var $nameEditor = $row.find('[data-cookie-snippet-name-editor]');
+            var currentName = $.trim($nameEditor.text());
+
+            if (!currentName) {
+                $nameEditor.text(fallbackName);
+                currentName = fallbackName;
+            }
+
+            $nameInput.val(currentName);
+            $row.find('[data-cookie-snippet-toggle]').attr('aria-label', 'Toggle ' + currentName);
+        }
+
+        function updateCount() {
+            var strings = getAdminStrings();
+            var count = $rows.find('[data-cookie-snippet-row]').length;
+
+            $rows.find('[data-cookie-snippet-remove]').prop('hidden', count <= 1);
+            $count.text(count === 1 ? (strings.snippetCountSingular || '1 snippet') : formatAdminString(strings.snippetCountPlural || '%d snippets', count));
+        }
+
+        function reindexRows() {
+            $rows.find('[data-cookie-snippet-row]').each(function(index) {
+                updateRowSummary($(this), index);
+            });
+
+            updateCount();
+        }
+
+        function addRow() {
+            var index = $rows.find('[data-cookie-snippet-row]').length;
+            var $row = createCookieSnippetRow(inputName, nameInputName, builderKey, index, '', '');
+
+            $rows.append($row);
+            initCookieCodeEditor($row);
+            setRowOpen($row, true);
+            reindexRows();
+
+            window.setTimeout(function() {
+                var editor = $row.data('cookieCodeEditorInstance');
+
+                $row.removeClass('is-new');
+
+                if (editor && editor.codemirror) {
+                    editor.codemirror.focus();
+                } else {
+                    $row.find('[data-cookie-code-editor-textarea]').trigger('focus');
+                }
+            }, 120);
+        }
+
+        $builder.on('click', '[data-cookie-snippet-add]', addRow);
+
+        $builder.on('click', '[data-cookie-snippet-toggle]', function() {
+            var $row = $(this).closest('[data-cookie-snippet-row]');
+
+            setRowOpen($row, !$row.hasClass('is-open'));
+        });
+
+        $builder.on('click', '[data-cookie-snippet-remove]', function() {
+            var $row = $(this).closest('[data-cookie-snippet-row]');
+
+            if ($rows.find('[data-cookie-snippet-row]').length <= 1) {
+                reindexRows();
+                return;
+            }
+
+            $row.slideUp(160, function() {
+                $row.remove();
+
+                reindexRows();
+            });
+        });
+
+        $builder.on('keydown', '[data-cookie-snippet-name-editor]', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                $(this).trigger('blur');
+            }
+        });
+
+        $builder.on('paste', '[data-cookie-snippet-name-editor]', function(event) {
+            var clipboardData = event.originalEvent && event.originalEvent.clipboardData;
+            var text = clipboardData ? clipboardData.getData('text/plain') : '';
+
+            event.preventDefault();
+            document.execCommand('insertText', false, text.replace(/\s+/g, ' '));
+        });
+
+        $builder.on('input blur', '[data-cookie-snippet-name-editor]', reindexRows);
+        $builder.on('tsolCookieCodeChanged', '[data-cookie-snippet-row]', reindexRows);
+        $builder.closest('form').on('submit', reindexRows);
+
+        $rows.find('[data-cookie-snippet-row]').each(function() {
+            setRowOpen($(this), false);
+        });
+
+        reindexRows();
+    }
+
     $(document).ready(function() {
         $('[data-page-picker]').each(function() {
             initPagePicker($(this));
@@ -568,6 +927,18 @@
 
         $('[data-submissions-controls]').each(function() {
             initSubmissionsManager($(this));
+        });
+
+        $('[data-cookie-url-repeater]').each(function() {
+            initCookieUrlRepeater($(this));
+        });
+
+        $('[data-cookie-code-editor]').each(function() {
+            initCookieCodeEditor($(this));
+        });
+
+        $('[data-cookie-snippet-builder]').each(function() {
+            initCookieSnippetBuilder($(this));
         });
 
         $(document).trigger('tsolSitePluginAdminReady');

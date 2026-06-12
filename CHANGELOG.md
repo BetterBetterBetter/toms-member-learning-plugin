@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 - 2026-06-12
+
+- Improved Cookie Consent script management with repeater-style URL fields.
+- Added accordion-based inline JavaScript snippets with editable saved snippet names.
+- Added WordPress code editor support for inline JavaScript snippets.
+- Improved script admin UI polish, spacing, focus states, icon-only remove buttons, and single-item remove handling.
+- Preserved named empty snippets in the admin while keeping empty JavaScript out of the frontend payload.
+
 ## 0.1.3 - 2026-06-12
 
 - Added shared launcher docking so floating TSOL buttons in the same corner stack instead of overlapping.

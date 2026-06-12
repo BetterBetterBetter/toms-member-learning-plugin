@@ -233,24 +233,24 @@ class TSOL_Cookie_Consent_Admin {
         ?>
         <div class="tsol-cookie-script-intro">
             <h2><?php esc_html_e('Consent-controlled scripts', 'tomschooloflife-plugin'); ?></h2>
-            <p><?php esc_html_e('Use this tab for scripts that should not load until a visitor accepts analytics or marketing cookies. Put external script URLs one per line. Put inline JavaScript without opening or closing script tags. Separate multiple inline blocks with a line containing only three dashes.', 'tomschooloflife-plugin'); ?></p>
+            <p><?php esc_html_e('Use this tab for scripts that should not load until a visitor accepts analytics or marketing cookies. Add external script URLs one at a time. Put inline JavaScript without opening or closing script tags, and separate multiple inline blocks with a line containing only three dashes.', 'tomschooloflife-plugin'); ?></p>
         </div>
 
         <div class="tsol-cookie-script-grid">
-            <section class="tsol-site-card">
+            <section class="tsol-cookie-script-section">
                 <h2><?php esc_html_e('Analytics scripts', 'tomschooloflife-plugin'); ?></h2>
-                <?php $this->render_textarea_field('analytics_script_urls', __('External script URLs', 'tomschooloflife-plugin'), $settings['analytics_script_urls'], 6, 'code'); ?>
-                <?php $this->render_textarea_field('analytics_inline_scripts', __('Inline JavaScript', 'tomschooloflife-plugin'), $settings['analytics_inline_scripts'], 10, 'code'); ?>
+                <?php $this->render_url_repeater_field('analytics_script_urls', __('External script URLs', 'tomschooloflife-plugin'), $settings['analytics_script_urls']); ?>
+                <?php $this->render_inline_snippet_builder_field('analytics_inline_scripts', __('Inline JavaScript snippets', 'tomschooloflife-plugin'), $settings['analytics_inline_scripts'], $settings['analytics_inline_script_names']); ?>
             </section>
 
-            <section class="tsol-site-card">
+            <section class="tsol-cookie-script-section">
                 <h2><?php esc_html_e('Marketing scripts', 'tomschooloflife-plugin'); ?></h2>
-                <?php $this->render_textarea_field('marketing_script_urls', __('External script URLs', 'tomschooloflife-plugin'), $settings['marketing_script_urls'], 6, 'code'); ?>
-                <?php $this->render_textarea_field('marketing_inline_scripts', __('Inline JavaScript', 'tomschooloflife-plugin'), $settings['marketing_inline_scripts'], 10, 'code'); ?>
+                <?php $this->render_url_repeater_field('marketing_script_urls', __('External script URLs', 'tomschooloflife-plugin'), $settings['marketing_script_urls']); ?>
+                <?php $this->render_inline_snippet_builder_field('marketing_inline_scripts', __('Inline JavaScript snippets', 'tomschooloflife-plugin'), $settings['marketing_inline_scripts'], $settings['marketing_inline_script_names']); ?>
             </section>
         </div>
 
-        <section class="tsol-site-card tsol-cookie-warning-card">
+        <section class="tsol-cookie-script-note">
             <h2><?php esc_html_e('What to move here', 'tomschooloflife-plugin'); ?></h2>
             <p><?php esc_html_e('Move direct Google Analytics, Google Ads, retargeting, heatmap, and other non-essential snippets here unless they are already managed inside GTM with consent-aware triggers.', 'tomschooloflife-plugin'); ?></p>
             <p><?php esc_html_e('Do not move required login, checkout, security, or Access authentication scripts into optional categories.', 'tomschooloflife-plugin'); ?></p>
@@ -376,6 +376,110 @@ class TSOL_Cookie_Consent_Admin {
         echo '<label for="' . esc_attr('tsol-cookie-' . $key) . '">' . esc_html($label) . '</label>';
         $this->render_textarea_input($key, $value, $rows, $class);
         echo '</div>';
+    }
+
+    private function render_url_repeater_field($key, $label, $value) {
+        $urls = TSOL_Cookie_Consent_Settings::parse_script_urls($value);
+        $input_name = TSOL_Cookie_Consent_Settings::OPTION . '[' . $key . '][]';
+
+        if (empty($urls)) {
+            $urls = array('');
+        }
+
+        echo '<fieldset class="tsol-cookie-field tsol-cookie-url-repeater" data-cookie-url-repeater data-cookie-url-input-name="' . esc_attr($input_name) . '">';
+        echo '<div class="tsol-cookie-control-header">';
+        echo '<legend>' . esc_html($label) . '</legend>';
+        echo '<span data-cookie-url-count></span>';
+        echo '</div>';
+        echo '<input type="hidden" name="' . esc_attr($input_name) . '" value="">';
+        echo '<div class="tsol-cookie-url-repeater__rows" data-cookie-url-repeater-rows>';
+
+        foreach ($urls as $url) {
+            $this->render_url_repeater_row($input_name, $url, count($urls) === 1);
+        }
+
+        echo '</div>';
+        echo '<button type="button" class="button tsol-cookie-add-button tsol-cookie-url-repeater__add" data-cookie-url-repeater-add>' . esc_html__('Add script URL', 'tomschooloflife-plugin') . '</button>';
+        echo '<p class="description">' . esc_html__('Only add scripts that can wait for visitor consent. Required login, checkout, security, and Access scripts should stay outside these optional buckets.', 'tomschooloflife-plugin') . '</p>';
+        echo '</fieldset>';
+    }
+
+    private function render_url_repeater_row($input_name, $value = '', $hide_remove = false) {
+        echo '<div class="tsol-cookie-url-row" data-cookie-url-row>';
+        printf(
+            '<input type="url" class="regular-text" name="%1$s" value="%2$s" placeholder="%3$s" data-cookie-url-input>',
+            esc_attr($input_name),
+            esc_attr($value),
+            esc_attr__('https://example.com/script.js', 'tomschooloflife-plugin')
+        );
+        echo '<button type="button" class="button tsol-cookie-icon-button tsol-cookie-remove-button tsol-cookie-url-row__remove" data-cookie-url-remove aria-label="' . esc_attr__('Remove this script URL', 'tomschooloflife-plugin') . '"' . ($hide_remove ? ' hidden' : '') . '><span class="tsol-cookie-close-icon" aria-hidden="true"></span><span class="screen-reader-text">' . esc_html__('Remove URL', 'tomschooloflife-plugin') . '</span></button>';
+        echo '</div>';
+    }
+
+    private function render_inline_snippet_builder_field($key, $label, $value, $name_value = '') {
+        $snippets = TSOL_Cookie_Consent_Settings::split_inline_script_rows($value);
+        $names = TSOL_Cookie_Consent_Settings::split_inline_script_names($name_value);
+        $input_name = TSOL_Cookie_Consent_Settings::OPTION . '[' . $key . '][]';
+        $name_key = str_replace('_inline_scripts', '_inline_script_names', $key);
+        $name_input_name = TSOL_Cookie_Consent_Settings::OPTION . '[' . $name_key . '][]';
+        $row_count = max(count($snippets), count($names), 1);
+
+        if (empty($snippets)) {
+            $snippets = array_fill(0, $row_count, '');
+        }
+
+        ?>
+        <fieldset
+            class="tsol-cookie-field tsol-cookie-snippet-builder"
+            data-cookie-snippet-builder
+            data-cookie-snippet-input-name="<?php echo esc_attr($input_name); ?>"
+            data-cookie-snippet-name-input-name="<?php echo esc_attr($name_input_name); ?>"
+            data-cookie-snippet-key="<?php echo esc_attr($key); ?>"
+        >
+            <div class="tsol-cookie-control-header">
+                <legend><?php echo esc_html($label); ?></legend>
+                <span data-cookie-snippet-count></span>
+            </div>
+            <div class="tsol-cookie-snippet-builder__rows" data-cookie-snippet-rows>
+                <?php for ($index = 0; $index < $row_count; $index++) : ?>
+                    <?php $snippet = isset($snippets[$index]) ? $snippets[$index] : ''; ?>
+                    <?php $this->render_inline_snippet_row($key, $input_name, $name_input_name, $snippet, isset($names[$index]) ? $names[$index] : '', $index, $row_count === 1); ?>
+                <?php endfor; ?>
+            </div>
+            <button type="button" class="button tsol-cookie-add-button tsol-cookie-snippet-builder__add" data-cookie-snippet-add><?php esc_html_e('Add JavaScript snippet', 'tomschooloflife-plugin'); ?></button>
+            <p class="description"><?php esc_html_e('Each accordion is loaded as its own inline script after the visitor grants consent. Paste JavaScript only; do not include script tags.', 'tomschooloflife-plugin'); ?></p>
+        </fieldset>
+        <?php
+    }
+
+    private function render_inline_snippet_row($key, $input_name, $name_input_name, $value = '', $name = '', $index = 0, $hide_remove = false) {
+        $body_id = 'tsol-cookie-' . sanitize_html_class($key) . '-snippet-' . absint($index);
+        $textarea_id = $body_id . '-code';
+        $name_id = $body_id . '-name';
+        $fallback_name = sprintf(__('Snippet %d', 'tomschooloflife-plugin'), $index + 1);
+        $display_name = trim((string) $name) !== '' ? $name : $fallback_name;
+
+        ?>
+        <div class="tsol-cookie-snippet-row" data-cookie-snippet-row data-cookie-code-editor>
+            <div class="tsol-cookie-snippet-row__bar">
+                <button type="button" class="tsol-cookie-snippet-row__toggle" data-cookie-snippet-toggle aria-expanded="false" aria-controls="<?php echo esc_attr($body_id); ?>" aria-label="<?php echo esc_attr(sprintf(__('Toggle %s', 'tomschooloflife-plugin'), $fallback_name)); ?>">
+                    <span class="tsol-cookie-snippet-row__chevron" aria-hidden="true"></span>
+                </button>
+                <div class="tsol-cookie-snippet-row__summary">
+                    <span id="<?php echo esc_attr($name_id); ?>" class="tsol-cookie-snippet-row__name" contenteditable="true" role="textbox" aria-label="<?php esc_attr_e('Snippet name', 'tomschooloflife-plugin'); ?>" spellcheck="false" data-cookie-snippet-name-editor><?php echo esc_html($display_name); ?></span>
+                    <input type="hidden" name="<?php echo esc_attr($name_input_name); ?>" value="<?php echo esc_attr($display_name); ?>" data-cookie-snippet-name>
+                </div>
+                <div class="tsol-cookie-snippet-row__actions">
+                    <button type="button" class="button button-small" data-cookie-code-format><?php esc_html_e('Format', 'tomschooloflife-plugin'); ?></button>
+                    <button type="button" class="button tsol-cookie-icon-button tsol-cookie-remove-button tsol-cookie-snippet-row__remove" data-cookie-snippet-remove aria-label="<?php esc_attr_e('Remove this JavaScript snippet', 'tomschooloflife-plugin'); ?>" <?php echo $hide_remove ? 'hidden' : ''; ?>><span class="tsol-cookie-close-icon" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e('Remove snippet', 'tomschooloflife-plugin'); ?></span></button>
+                </div>
+            </div>
+            <div id="<?php echo esc_attr($body_id); ?>" class="tsol-cookie-snippet-row__body" data-cookie-snippet-body hidden>
+                <label for="<?php echo esc_attr($textarea_id); ?>" class="screen-reader-text"><?php echo esc_html(sprintf(__('Snippet %d JavaScript', 'tomschooloflife-plugin'), $index + 1)); ?></label>
+                <textarea id="<?php echo esc_attr($textarea_id); ?>" class="large-text code tsol-cookie-code-editor__textarea" rows="14" name="<?php echo esc_attr($input_name); ?>" data-cookie-code-editor-textarea><?php echo esc_textarea($value); ?></textarea>
+            </div>
+        </div>
+        <?php
     }
 
     private function render_text_input($key, $value, $type = 'text') {

@@ -3,7 +3,7 @@
  * Plugin Name: Tom's School Of Life Plugin
  * Plugin URI: https://github.com/BetterBetterBetter/tomschooloflife-plugin
  * Description: Site-specific functionality for Tom's School Of Life.
- * Version: 0.1.3
+ * Version: 0.1.4
  * Author: Thrice Agency
  * License: GPL v2 or later
  * Text Domain: tomschooloflife-plugin
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('TSOL_SITE_PLUGIN_VERSION', '0.1.3');
+define('TSOL_SITE_PLUGIN_VERSION', '0.1.4');
 define('TSOL_SITE_PLUGIN_FILE', __FILE__);
 define('TSOL_SITE_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('TSOL_SITE_PLUGIN_DIR', plugin_dir_path(__FILE__));

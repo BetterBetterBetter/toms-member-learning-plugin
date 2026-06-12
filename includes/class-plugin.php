@@ -105,6 +105,27 @@ class TomsSchoolOfLifePlugin {
             return;
         }
 
+        $code_editor_settings = null;
+        $admin_script_dependencies = array('jquery');
+
+        if (strpos((string) $hook, TSOL_Cookie_Consent_Admin::PAGE_SLUG) !== false && function_exists('wp_enqueue_code_editor')) {
+            $code_editor_settings = wp_enqueue_code_editor(array(
+                'type' => 'application/javascript',
+                'codemirror' => array(
+                    'indentUnit' => 4,
+                    'indentWithTabs' => false,
+                    'lint' => false,
+                    'lineNumbers' => true,
+                    'lineWrapping' => true,
+                    'styleActiveLine' => true,
+                ),
+            ));
+
+            if ($code_editor_settings) {
+                $admin_script_dependencies[] = 'code-editor';
+            }
+        }
+
         wp_enqueue_style(
             'tsol-site-admin',
             TSOL_SITE_PLUGIN_URL . 'assets/admin/admin.css',
@@ -115,7 +136,7 @@ class TomsSchoolOfLifePlugin {
         wp_enqueue_script(
             'tsol-site-admin',
             TSOL_SITE_PLUGIN_URL . 'assets/admin/admin.js',
-            array('jquery'),
+            $admin_script_dependencies,
             TSOL_SITE_PLUGIN_VERSION,
             true
         );
@@ -123,6 +144,20 @@ class TomsSchoolOfLifePlugin {
         wp_localize_script('tsol-site-admin', 'tsolSitePluginAdmin', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('tsol_site_plugin_nonce'),
+            'codeEditor' => $code_editor_settings ? $code_editor_settings : null,
+            'strings' => array(
+                'scriptUrlPlaceholder' => __('https://example.com/script.js', 'tomschooloflife-plugin'),
+                'removeUrl' => __('Remove URL', 'tomschooloflife-plugin'),
+                'removeScriptUrl' => __('Remove this script URL', 'tomschooloflife-plugin'),
+                'scriptUrlCountSingular' => __('1 URL', 'tomschooloflife-plugin'),
+                'scriptUrlCountPlural' => __('%d URLs', 'tomschooloflife-plugin'),
+                'snippetLabel' => __('Snippet', 'tomschooloflife-plugin'),
+                'snippetCountSingular' => __('1 snippet', 'tomschooloflife-plugin'),
+                'snippetCountPlural' => __('%d snippets', 'tomschooloflife-plugin'),
+                'formatSnippet' => __('Format', 'tomschooloflife-plugin'),
+                'removeSnippet' => __('Remove snippet', 'tomschooloflife-plugin'),
+                'removeSnippetAria' => __('Remove this JavaScript snippet', 'tomschooloflife-plugin'),
+            ),
         ));
     }
 

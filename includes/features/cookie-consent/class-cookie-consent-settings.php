@@ -57,8 +57,10 @@ class TSOL_Cookie_Consent_Settings {
             'marketing_description' => 'Helps measure campaigns, improve ad relevance, and avoid showing irrelevant promotions.',
             'analytics_script_urls' => '',
             'analytics_inline_scripts' => '',
+            'analytics_inline_script_names' => '',
             'marketing_script_urls' => '',
             'marketing_inline_scripts' => '',
+            'marketing_inline_script_names' => '',
         );
     }
 
@@ -275,19 +277,38 @@ class TSOL_Cookie_Consent_Settings {
             $sanitized['marketing_script_urls'] = self::sanitize_script_urls(wp_unslash($value['marketing_script_urls']));
         }
 
-        if (array_key_exists('analytics_inline_scripts', $value)) {
-            $sanitized['analytics_inline_scripts'] = self::sanitize_inline_scripts(wp_unslash($value['analytics_inline_scripts']));
+        if (array_key_exists('analytics_inline_scripts', $value) || array_key_exists('analytics_inline_script_names', $value)) {
+            $inline_bundle = self::sanitize_inline_script_bundle(
+                array_key_exists('analytics_inline_scripts', $value) ? wp_unslash($value['analytics_inline_scripts']) : '',
+                array_key_exists('analytics_inline_script_names', $value) ? wp_unslash($value['analytics_inline_script_names']) : ''
+            );
+            $sanitized['analytics_inline_scripts'] = $inline_bundle['scripts'];
+            $sanitized['analytics_inline_script_names'] = $inline_bundle['names'];
         }
 
-        if (array_key_exists('marketing_inline_scripts', $value)) {
-            $sanitized['marketing_inline_scripts'] = self::sanitize_inline_scripts(wp_unslash($value['marketing_inline_scripts']));
+        if (array_key_exists('marketing_inline_scripts', $value) || array_key_exists('marketing_inline_script_names', $value)) {
+            $inline_bundle = self::sanitize_inline_script_bundle(
+                array_key_exists('marketing_inline_scripts', $value) ? wp_unslash($value['marketing_inline_scripts']) : '',
+                array_key_exists('marketing_inline_script_names', $value) ? wp_unslash($value['marketing_inline_script_names']) : ''
+            );
+            $sanitized['marketing_inline_scripts'] = $inline_bundle['scripts'];
+            $sanitized['marketing_inline_script_names'] = $inline_bundle['names'];
         }
 
         return $sanitized;
     }
 
-    private static function parse_script_urls($value) {
-        $lines = preg_split('/\r\n|\r|\n/', (string) $value);
+    public static function parse_script_urls($value) {
+        if (is_array($value)) {
+            $lines = array();
+
+            array_walk_recursive($value, function($line) use (&$lines) {
+                $lines[] = $line;
+            });
+        } else {
+            $lines = preg_split('/\r\n|\r|\n/', (string) $value);
+        }
+
         $urls = array();
 
         foreach ((array) $lines as $line) {
@@ -297,7 +318,11 @@ class TSOL_Cookie_Consent_Settings {
                 continue;
             }
 
-            $url = esc_url_raw($url);
+            if (!preg_match('#^https?://#i', $url)) {
+                continue;
+            }
+
+            $url = esc_url_raw($url, array('http', 'https'));
 
             if ($url) {
                 $urls[] = $url;
@@ -307,10 +332,10 @@ class TSOL_Cookie_Consent_Settings {
         return array_values(array_unique($urls));
     }
 
-    private static function split_inline_scripts($value) {
-        $value = trim((string) $value);
+    public static function split_inline_scripts($value) {
+        $value = (string) $value;
 
-        if ($value === '') {
+        if (trim($value) === '') {
             return array();
         }
 
@@ -321,11 +346,94 @@ class TSOL_Cookie_Consent_Settings {
         return array_values($blocks);
     }
 
+    public static function split_inline_script_rows($value) {
+        $value = (string) $value;
+
+        if (trim($value) === '') {
+            return array();
+        }
+
+        $blocks = preg_split('/\n-{3,}\n/', $value);
+        $blocks = array_map('trim', (array) $blocks);
+
+        return array_values($blocks);
+    }
+
+    public static function split_inline_script_names($value) {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return array();
+        }
+
+        $names = preg_split('/\r\n|\r|\n/', $value);
+        $names = array_map('sanitize_text_field', (array) $names);
+
+        return array_values($names);
+    }
+
     private static function sanitize_script_urls($value) {
         return implode("\n", self::parse_script_urls($value));
     }
 
+    private static function sanitize_inline_script_bundle($script_value, $name_value) {
+        $script_values = is_array($script_value) ? array_values($script_value) : self::split_inline_script_rows($script_value);
+        $name_values = is_array($name_value) ? $name_value : self::split_inline_script_names($name_value);
+        $scripts = array();
+        $names = array();
+        $row_count = max(count($script_values), count($name_values));
+
+        for ($index = 0; $index < $row_count; $index++) {
+            $sanitized_script = isset($script_values[$index]) ? self::sanitize_inline_script_block($script_values[$index]) : '';
+            $sanitized_name = isset($name_values[$index]) ? sanitize_text_field((string) $name_values[$index]) : '';
+
+            if ($sanitized_script === '' && $sanitized_name === '') {
+                continue;
+            }
+
+            $scripts[] = $sanitized_script;
+            $names[] = $sanitized_name;
+        }
+
+        return array(
+            'scripts' => implode("\n---\n", $scripts),
+            'names' => implode("\n", $names),
+        );
+    }
+
     private static function sanitize_inline_scripts($value) {
+        if (is_array($value)) {
+            $blocks = array();
+
+            array_walk_recursive($value, function($block) use (&$blocks) {
+                $sanitized_block = self::sanitize_inline_script_block($block);
+
+                if ($sanitized_block !== '') {
+                    $blocks[] = $sanitized_block;
+                }
+            });
+
+            return implode("\n---\n", $blocks);
+        }
+
+        return self::sanitize_inline_script_block($value);
+    }
+
+    private static function sanitize_inline_script_names($value) {
+        if (!is_array($value)) {
+            $value = preg_split('/\r\n|\r|\n/', (string) $value);
+        }
+
+        $names = array();
+
+        foreach ((array) $value as $name) {
+            $names[] = sanitize_text_field((string) $name);
+        }
+
+        return implode("\n", $names);
+    }
+
+    private static function sanitize_inline_script_block($value) {
         $value = (string) $value;
 
         if (!current_user_can('unfiltered_html')) {
