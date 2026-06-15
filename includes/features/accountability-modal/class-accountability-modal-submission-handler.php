@@ -19,15 +19,25 @@ class TSOL_Accountability_Modal_Submission_Handler {
     public const META_SELECTED_CALLS = 'tsol_accountability_intake_available_calls';
     public const META_ANSWERS = 'tsol_accountability_intake_answers';
     public const META_SUBMITTED_AT = 'tsol_accountability_intake_submitted_at';
+    public const META_JOINED_GROUP_ID = 'tsol_accountability_intake_joined_group_id';
+    public const META_JOINED_EVENT_ID = 'tsol_accountability_intake_joined_event_id';
+    public const META_JOINED_AT = 'tsol_accountability_intake_joined_at';
+    public const META_REQUESTED_GROUP_ID = 'tsol_accountability_intake_requested_group_id';
+    public const META_REQUESTED_EVENT_ID = 'tsol_accountability_intake_requested_event_id';
+    public const META_REQUESTED_AT = 'tsol_accountability_intake_requested_at';
 
     private $repository;
+    private $matcher;
 
-    public function __construct(TSOL_Accountability_Modal_Repository $repository) {
+    public function __construct(TSOL_Accountability_Modal_Repository $repository, ?TSOL_Accountability_Modal_Matcher $matcher = null) {
         $this->repository = $repository;
+        $this->matcher = $matcher ? $matcher : new TSOL_Accountability_Modal_Matcher($repository, new TSOL_Gemini_Client());
     }
 
     public function init() {
         add_action('wp_ajax_tsol_accountability_modal_submit', array($this, 'handle_submission'));
+        add_action('wp_ajax_tsol_accountability_modal_recommend', array($this, 'handle_recommendation'));
+        add_action('wp_ajax_tsol_accountability_modal_join', array($this, 'handle_join'));
     }
 
     public function user_completed_intake($user_id) {
@@ -65,12 +75,114 @@ class TSOL_Accountability_Modal_Submission_Handler {
             ), 400);
         }
 
-        $this->store_submission($user_id, $submission);
+        $this->store_submission($user_id, $submission, true);
 
         $content = TSOL_Accountability_Modal_Settings::get_content();
 
         wp_send_json_success(array(
             'message' => $content['success_message'],
+        ));
+    }
+
+    public function handle_recommendation() {
+        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array(
+                'message' => __('You need to be logged in to submit this form.', 'tomschooloflife-plugin'),
+            ), 401);
+        }
+
+        $user_id = get_current_user_id();
+
+        if ($this->repository->user_has_accountability_group($user_id)) {
+            wp_send_json_error(array(
+                'message' => __('You are already in an accountability group.', 'tomschooloflife-plugin'),
+            ), 400);
+        }
+
+        $submission = $this->prepare_submission();
+
+        if (is_wp_error($submission)) {
+            wp_send_json_error(array(
+                'message' => $submission->get_error_message(),
+            ), 400);
+        }
+
+        $this->store_submission($user_id, $submission, false);
+
+        $selected_event_ids = wp_list_pluck($submission['selected_calls'], 'event_id');
+
+        wp_send_json_success($this->matcher->recommend($submission, $selected_event_ids));
+    }
+
+    public function handle_join() {
+        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array(
+                'message' => __('You need to be logged in to join a group.', 'tomschooloflife-plugin'),
+            ), 401);
+        }
+
+        $user_id = get_current_user_id();
+        $event_id = isset($_POST['event_id']) ? absint(wp_unslash($_POST['event_id'])) : 0;
+        $group_id = isset($_POST['group_id']) ? absint(wp_unslash($_POST['group_id'])) : 0;
+        $joinable_call_map = $this->repository->get_joinable_call_map();
+
+        if (!$event_id || !isset($joinable_call_map[$event_id])) {
+            wp_send_json_error($this->get_unavailable_join_payload(), 409);
+        }
+
+        $call = $joinable_call_map[$event_id];
+        $server_group_id = (int) $call['group_id'];
+
+        if ($group_id && $group_id !== $server_group_id) {
+            wp_send_json_error(array(
+                'message' => __('That group choice could not be verified.', 'tomschooloflife-plugin'),
+            ), 400);
+        }
+
+        $group_id = $server_group_id;
+
+        if (!$this->repository->group_is_accountability_child($group_id)) {
+            wp_send_json_error(array(
+                'message' => __('That accountability group is not available.', 'tomschooloflife-plugin'),
+            ), 400);
+        }
+
+        if (!$this->repository->engine_is_active()) {
+            $this->store_requested_choice($user_id, $group_id, $event_id, true);
+
+            wp_send_json_success(array(
+                'manual' => true,
+                'message' => __('Your request was received. A coach will place you in a group.', 'tomschooloflife-plugin'),
+                'label' => isset($call['label']) ? $call['label'] : '',
+            ));
+        }
+
+        $joined = $this->repository->join_user_to_group($user_id, $group_id);
+
+        if (is_wp_error($joined)) {
+            wp_send_json_error(array(
+                'message' => $joined->get_error_message(),
+            ), 500);
+        }
+
+        $this->store_joined_choice($user_id, $group_id, $event_id);
+
+        /**
+         * Fires after a user joins an accountability group through the modal.
+         *
+         * @param int $user_id  User ID.
+         * @param int $group_id itthinx group ID.
+         * @param int $event_id MEC event ID.
+         */
+        do_action('tsol_site_accountability_user_joined_group', $user_id, $group_id, $event_id);
+
+        wp_send_json_success(array(
+            'message' => __('You have joined your accountability group.', 'tomschooloflife-plugin'),
+            'label' => isset($call['label']) ? $call['label'] : '',
         ));
     }
 
@@ -305,7 +417,7 @@ class TSOL_Accountability_Modal_Submission_Handler {
         return $selected_calls;
     }
 
-    private function store_submission($user_id, $submission) {
+    private function store_submission($user_id, $submission, $completed = false) {
         update_user_meta($user_id, self::META_ANSWERS, $submission['answers']);
         update_user_meta($user_id, self::META_PROFESSIONAL_GOALS, $submission['professional_goals']);
         update_user_meta($user_id, self::META_PERSONAL_GOALS, $submission['personal_goals']);
@@ -313,7 +425,63 @@ class TSOL_Accountability_Modal_Submission_Handler {
         update_user_meta($user_id, self::META_OCCUPATION, $submission['occupation']);
         update_user_meta($user_id, self::META_SELECTED_CALLS, $submission['selected_calls']);
         update_user_meta($user_id, self::META_SUBMITTED_AT, current_time('mysql'));
+
+        if ($completed) {
+            update_user_meta($user_id, self::META_COMPLETED, '1');
+        } else {
+            delete_user_meta($user_id, self::META_COMPLETED);
+        }
+    }
+
+    private function store_joined_choice($user_id, $group_id, $event_id) {
+        update_user_meta($user_id, self::META_JOINED_GROUP_ID, (int) $group_id);
+        update_user_meta($user_id, self::META_JOINED_EVENT_ID, (int) $event_id);
+        update_user_meta($user_id, self::META_JOINED_AT, current_time('mysql'));
         update_user_meta($user_id, self::META_COMPLETED, '1');
+        delete_user_meta($user_id, self::META_REQUESTED_GROUP_ID);
+        delete_user_meta($user_id, self::META_REQUESTED_EVENT_ID);
+        delete_user_meta($user_id, self::META_REQUESTED_AT);
+    }
+
+    private function store_requested_choice($user_id, $group_id, $event_id, $completed = false) {
+        update_user_meta($user_id, self::META_REQUESTED_GROUP_ID, (int) $group_id);
+        update_user_meta($user_id, self::META_REQUESTED_EVENT_ID, (int) $event_id);
+        update_user_meta($user_id, self::META_REQUESTED_AT, current_time('mysql'));
+
+        if ($completed) {
+            update_user_meta($user_id, self::META_COMPLETED, '1');
+        }
+    }
+
+    private function get_unavailable_join_payload() {
+        return array(
+            'code' => 'group_unavailable',
+            'message' => __('That group just filled up. Please choose another open group.', 'tomschooloflife-plugin'),
+            'recommendations' => array(
+                'mode' => 'show_all',
+                'has_strong_fit' => false,
+                'recommendations' => array(),
+                'all_groups' => $this->format_join_payload_groups($this->repository->get_all_joinable_groups()),
+            ),
+        );
+    }
+
+    private function format_join_payload_groups($groups) {
+        $formatted = array();
+
+        foreach ((array) $groups as $group) {
+            $formatted[] = array(
+                'group_id' => (int) $group['group_id'],
+                'event_id' => (int) $group['event_id'],
+                'label' => (string) $group['label'],
+                'group_name' => (string) $group['group_name'],
+                'facilitator' => isset($group['facilitator']) ? (string) $group['facilitator'] : '',
+                'reason' => '',
+                'fit_score' => null,
+            );
+        }
+
+        return $formatted;
     }
 
     private function question_is_required($question) {

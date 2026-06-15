@@ -51,7 +51,11 @@ class TSOL_Accountability_Modal implements TSOL_Site_Feature {
 
         wp_localize_script('tsol-accountability-modal', 'tsolAccountabilityModal', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
+            'recommendUrl' => admin_url('admin-ajax.php'),
+            'joinUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce(TSOL_Accountability_Modal_Submission_Handler::NONCE_ACTION),
+            'recommendAction' => 'tsol_accountability_modal_recommend',
+            'joinAction' => 'tsol_accountability_modal_join',
             'scrollThreshold' => (int) $display_rules['scroll_threshold'],
             'draftKey' => $this->get_draft_storage_key(),
             'draftSchema' => $this->get_draft_schema($content),
@@ -62,6 +66,16 @@ class TSOL_Accountability_Modal implements TSOL_Site_Feature {
             'messages' => array(
                 'callRequired' => __('Please choose at least one call you can attend weekly.', 'tomschooloflife-plugin'),
                 'submitError' => __('Something went wrong. Please try again.', 'tomschooloflife-plugin'),
+                'findingFit' => __('Finding your best-fit groups...', 'tomschooloflife-plugin'),
+                'recommendedGroups' => __('Your best-fit accountability groups', 'tomschooloflife-plugin'),
+                'joinCta' => __('Join', 'tomschooloflife-plugin'),
+                'showAll' => __('Show all groups', 'tomschooloflife-plugin'),
+                'noStrongFit' => __('No strong fit stood out, so here are the open groups you can choose from.', 'tomschooloflife-plugin'),
+                'allGroups' => __('All open groups', 'tomschooloflife-plugin'),
+                'facilitator' => __('Facilitator', 'tomschooloflife-plugin'),
+                'joinSuccess' => __('You have joined your accountability group.', 'tomschooloflife-plugin'),
+                'joinError' => __('We could not join that group. Please try another open group.', 'tomschooloflife-plugin'),
+                'groupFull' => __('That group just filled up. Please choose another open group.', 'tomschooloflife-plugin'),
             ),
         ));
     }

@@ -32,7 +32,7 @@ class TSOL_Accountability_Modal_Admin {
         }
 
         $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview';
-        $allowed_tabs = array('overview', 'submissions', 'display', 'content');
+        $allowed_tabs = array('overview', 'submissions', 'display', 'content', 'groups');
 
         if (!in_array($tab, $allowed_tabs, true)) {
             $tab = 'overview';
@@ -53,6 +53,8 @@ class TSOL_Accountability_Modal_Admin {
                     $this->render_display_tab();
                 } elseif ($tab === 'content') {
                     $this->render_content_tab();
+                } elseif ($tab === 'groups') {
+                    $this->render_groups_tab();
                 } else {
                     $this->render_overview_tab();
                 }
@@ -128,6 +130,7 @@ class TSOL_Accountability_Modal_Admin {
             'submissions' => __('Submissions', 'tomschooloflife-plugin'),
             'display' => __('Display Rules', 'tomschooloflife-plugin'),
             'content' => __('Content', 'tomschooloflife-plugin'),
+            'groups' => __('Groups', 'tomschooloflife-plugin'),
         );
 
         echo '<nav class="nav-tab-wrapper tsol-site-tabs" aria-label="' . esc_attr__('Accountability modal settings', 'tomschooloflife-plugin') . '">';
@@ -168,8 +171,8 @@ class TSOL_Accountability_Modal_Admin {
         <div class="tsol-site-admin-grid">
             <section class="tsol-site-card">
                 <h2><?php esc_html_e('Recommendation approach', 'tomschooloflife-plugin'); ?></h2>
-                <p><?php esc_html_e('For now, recommendations should be availability-based. If a user selects three calls they can attend, those are the safest recommended fits because they are both open and realistic for the user.', 'tomschooloflife-plugin'); ?></p>
-                <p><?php esc_html_e('The next useful layer would be matching goal keywords or topic tags to group themes, but I would not auto-enroll users until the client confirms the business rules.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Recommendations are hard-filtered by the calls a member can attend, then AI-ranked against group bios, facilitator names, event titles, and the member intake answers.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('If Gemini is disabled, unavailable, or does not find a strong fit, the modal falls back to open-call choices and still lets the member continue.', 'tomschooloflife-plugin'); ?></p>
             </section>
 
             <section class="tsol-site-card">
@@ -179,6 +182,7 @@ class TSOL_Accountability_Modal_Admin {
                     <li><?php esc_html_e('Only selected content locations can auto-open the modal.', 'tomschooloflife-plugin'); ?></li>
                     <li><?php esc_html_e('Calls marked full or waitlist are excluded from choices.', 'tomschooloflife-plugin'); ?></li>
                     <li><?php esc_html_e('Submissions are stored on the user profile as user meta.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Self-service joins require the accountability enrollment engine so downstream sync hooks run.', 'tomschooloflife-plugin'); ?></li>
                 </ul>
             </section>
         </div>
@@ -345,7 +349,7 @@ class TSOL_Accountability_Modal_Admin {
             <div class="tsol-submission-card__grid">
                 <section>
                     <h3><?php esc_html_e('Recommended fit', 'tomschooloflife-plugin'); ?></h3>
-                    <?php $this->render_recommendations($submission['selected_calls']); ?>
+                    <?php $this->render_recommendations($submission); ?>
                 </section>
 
                 <section>
@@ -392,6 +396,12 @@ class TSOL_Accountability_Modal_Admin {
                 'occupation' => $submission['occupation'],
                 'selected_call_count' => count($selected_call_labels),
                 'selected_calls' => implode(', ', $selected_call_labels),
+                'joined_group_id' => $submission['joined_group_id'],
+                'joined_event_id' => $submission['joined_event_id'],
+                'joined_at' => $submission['joined_at'],
+                'requested_group_id' => $submission['requested_group_id'],
+                'requested_event_id' => $submission['requested_event_id'],
+                'requested_at' => $submission['requested_at'],
                 'answers' => $answers,
             );
         }
@@ -486,6 +496,8 @@ class TSOL_Accountability_Modal_Admin {
             $submission['occupation'],
             $this->get_submission_status_label($is_assigned),
             implode(' ', $this->get_submission_call_labels($submission)),
+            $submission['joined_group_id'] ? sprintf('joined group %d', $submission['joined_group_id']) : '',
+            $submission['requested_group_id'] ? sprintf('requested group %d', $submission['requested_group_id']) : '',
         );
 
         foreach ($this->get_submission_answer_map($submission) as $label => $value) {
@@ -559,9 +571,57 @@ class TSOL_Accountability_Modal_Admin {
                     </td>
                 </tr>
                 <?php $this->render_display_checkbox('animate_resume_launcher', __('Animate the resume button occasionally', 'tomschooloflife-plugin'), $rules); ?>
+                <?php $this->render_display_checkbox('ai_matching_enabled', __('Enable AI group matching', 'tomschooloflife-plugin'), $rules); ?>
+                <tr>
+                    <th scope="row">
+                        <label for="tsol-accountability-fit-threshold"><?php esc_html_e('Strong-fit threshold', 'tomschooloflife-plugin'); ?></label>
+                    </th>
+                    <td>
+                        <input id="tsol-accountability-fit-threshold" type="number" min="0" max="1" step="0.05" name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::DISPLAY_OPTION); ?>[fit_threshold]" value="<?php echo esc_attr($rules['fit_threshold']); ?>" class="small-text">
+                        <p class="description"><?php esc_html_e('Scores below this value automatically show the all-groups fallback. Default: 0.5.', 'tomschooloflife-plugin'); ?></p>
+                    </td>
+                </tr>
             </table>
 
             <?php submit_button(__('Save display rules', 'tomschooloflife-plugin')); ?>
+        </form>
+        <?php
+    }
+
+    private function render_groups_tab() {
+        $groups = $this->repository->get_accountability_groups();
+        $overrides = TSOL_Accountability_Modal_Settings::get_group_bio_overrides();
+
+        ?>
+        <form method="post" action="options.php">
+            <?php settings_fields(TSOL_Accountability_Modal_Settings::GROUP_BIOS_GROUP); ?>
+
+            <h2><?php esc_html_e('Group matching bios', 'tomschooloflife-plugin'); ?></h2>
+            <p class="description"><?php esc_html_e('Overrides improve AI matching without editing the underlying itthinx Groups records. Empty overrides fall back to the group description, then group name.', 'tomschooloflife-plugin'); ?></p>
+
+            <?php if (!$groups) : ?>
+                <p class="tsol-site-muted"><?php esc_html_e('No accountability child groups were found.', 'tomschooloflife-plugin'); ?></p>
+            <?php else : ?>
+                <div class="tsol-group-bios">
+                    <?php foreach ($groups as $group) : ?>
+                        <?php
+                        $group_id = (int) $group['group_id'];
+                        $field_id = 'tsol-accountability-group-bio-' . $group_id;
+                        $override = isset($overrides[$group_id]) ? $overrides[$group_id] : '';
+                        ?>
+                        <section class="tsol-site-card tsol-group-bio">
+                            <h3><?php echo esc_html($group['group_name']); ?> <span class="tsol-site-muted"><?php echo esc_html('#' . $group_id); ?></span></h3>
+                            <?php if (!empty($group['description'])) : ?>
+                                <p><strong><?php esc_html_e('Current group description:', 'tomschooloflife-plugin'); ?></strong> <?php echo esc_html($group['description']); ?></p>
+                            <?php endif; ?>
+                            <label for="<?php echo esc_attr($field_id); ?>"><?php esc_html_e('Bio override', 'tomschooloflife-plugin'); ?></label>
+                            <textarea id="<?php echo esc_attr($field_id); ?>" class="large-text" rows="5" name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::GROUP_BIOS_OPTION . '[' . $group_id . ']'); ?>"><?php echo esc_textarea($override); ?></textarea>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php submit_button(__('Save group bios', 'tomschooloflife-plugin')); ?>
         </form>
         <?php
     }
@@ -992,7 +1052,31 @@ class TSOL_Accountability_Modal_Admin {
         <?php
     }
 
-    private function render_recommendations($selected_calls) {
+    private function render_recommendations($submission) {
+        $selected_calls = isset($submission['selected_calls']) ? $submission['selected_calls'] : array();
+
+        if (!empty($submission['joined_group_id'])) {
+            echo '<p>';
+            echo '<span class="tsol-site-status tsol-site-status--ok">' . esc_html__('Self-joined', 'tomschooloflife-plugin') . '</span> ';
+            echo esc_html($this->get_choice_summary($submission['joined_group_id'], $submission['joined_event_id']));
+            if (!empty($submission['joined_at'])) {
+                echo '<br><small>' . esc_html($submission['joined_at']) . '</small>';
+            }
+            echo '</p>';
+            return;
+        }
+
+        if (!empty($submission['requested_group_id'])) {
+            echo '<p>';
+            echo '<span class="tsol-site-status tsol-site-status--warning">' . esc_html__('Manual placement requested', 'tomschooloflife-plugin') . '</span> ';
+            echo esc_html($this->get_choice_summary($submission['requested_group_id'], $submission['requested_event_id']));
+            if (!empty($submission['requested_at'])) {
+                echo '<br><small>' . esc_html($submission['requested_at']) . '</small>';
+            }
+            echo '</p>';
+            return;
+        }
+
         if (!$selected_calls) {
             echo '<span class="tsol-site-muted">' . esc_html__('No calls selected', 'tomschooloflife-plugin') . '</span>';
             return;
@@ -1014,6 +1098,27 @@ class TSOL_Accountability_Modal_Admin {
             echo '</li>';
         }
         echo '</ol>';
+    }
+
+    private function get_choice_summary($group_id, $event_id) {
+        $joinable_map = $this->repository->get_joinable_call_map();
+        $event_id = (int) $event_id;
+        $group_id = (int) $group_id;
+
+        if ($event_id && isset($joinable_map[$event_id])) {
+            return sprintf(
+                /* translators: 1: Call label. 2: Group ID. */
+                __('%1$s (group #%2$d)', 'tomschooloflife-plugin'),
+                $joinable_map[$event_id]['label'],
+                $group_id
+            );
+        }
+
+        return sprintf(
+            /* translators: %d: Group ID. */
+            __('Group #%d', 'tomschooloflife-plugin'),
+            $group_id
+        );
     }
 
     private function render_submission_answers($submission) {

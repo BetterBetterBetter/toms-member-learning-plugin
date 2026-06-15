@@ -50,6 +50,8 @@ class TSOL_Accountability_Modal_Renderer {
                         <?php $this->render_question_step($question, $index, $joinable_calls, $content, $index !== 0); ?>
                     <?php endforeach; ?>
 
+                    <section class="tsol-accountability-modal__results" data-tsol-accountability-modal-results hidden aria-live="polite" tabindex="-1"></section>
+
                     <div class="tsol-accountability-modal__status" data-tsol-accountability-modal-status aria-live="polite"></div>
 
                     <div class="tsol-accountability-modal__actions">

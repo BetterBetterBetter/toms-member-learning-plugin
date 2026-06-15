@@ -1228,6 +1228,26 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.tsol-group-bios {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.tsol-group-bio {
+    display: grid;
+    gap: 10px;
+}
+
+.tsol-group-bio h3,
+.tsol-group-bio p {
+    margin: 0;
+}
+
+.tsol-group-bio label {
+    font-weight: 700;
+}
+
 .tsol-recommendation-list {
     margin: 0;
     padding-left: 18px;

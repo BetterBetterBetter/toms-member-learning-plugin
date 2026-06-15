@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.6 - 2026-06-15
+
+- Iterated the release version for the AI-assisted accountability group matching release.
+
+## 0.1.5 - 2026-06-15
+
+- Added AI-assisted accountability group recommendations using Gemini structured JSON output.
+- Added availability-filtered top-three recommendations, Show all groups fallback, and one-click group joining through the Groups API.
+- Added soft dependency gating for the accountability enrollment engine to avoid unsynced half-joins.
+- Added admin controls for AI matching, Gemini model selection, fit threshold, and per-group matching bio overrides.
+- Added joined/requested group metadata to accountability submissions.
+
 ## 0.1.4 - 2026-06-12
 
 - Improved Cookie Consent script management with repeater-style URL fields.

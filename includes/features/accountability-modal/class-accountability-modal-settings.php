@@ -11,8 +11,10 @@ class TSOL_Accountability_Modal_Settings {
 
     public const DISPLAY_OPTION = 'tsol_accountability_modal_display_rules';
     public const CONTENT_OPTION = 'tsol_accountability_modal_content';
+    public const GROUP_BIOS_OPTION = 'tsol_accountability_modal_group_bios';
     public const DISPLAY_GROUP = 'tsol_accountability_modal_display_rules';
     public const CONTENT_GROUP = 'tsol_accountability_modal_content';
+    public const GROUP_BIOS_GROUP = 'tsol_accountability_modal_group_bios';
 
     public static function register_settings() {
         register_setting(self::DISPLAY_GROUP, self::DISPLAY_OPTION, array(
@@ -24,6 +26,11 @@ class TSOL_Accountability_Modal_Settings {
             'sanitize_callback' => array(__CLASS__, 'sanitize_content'),
             'default' => self::default_content(),
         ));
+
+        register_setting(self::GROUP_BIOS_GROUP, self::GROUP_BIOS_OPTION, array(
+            'sanitize_callback' => array(__CLASS__, 'sanitize_group_bios'),
+            'default' => array(),
+        ));
     }
 
     public static function get_display_rules() {
@@ -34,6 +41,7 @@ class TSOL_Accountability_Modal_Settings {
         $rules['scroll_threshold'] = max(0, absint($rules['scroll_threshold']));
         $rules['draft_ttl_days'] = max(1, absint($rules['draft_ttl_days']));
         $rules['launcher_position'] = self::sanitize_launcher_position($rules['launcher_position']);
+        $rules['fit_threshold'] = self::sanitize_fit_threshold($rules['fit_threshold']);
 
         return $rules;
     }
@@ -67,6 +75,8 @@ class TSOL_Accountability_Modal_Settings {
             'show_resume_launcher' => '1',
             'launcher_position' => 'bottom_right',
             'animate_resume_launcher' => '1',
+            'ai_matching_enabled' => '1',
+            'fit_threshold' => '0.5',
         );
     }
 
@@ -264,6 +274,31 @@ class TSOL_Accountability_Modal_Settings {
         );
     }
 
+    public static function get_group_bio_overrides() {
+        $stored = get_option(self::GROUP_BIOS_OPTION, array());
+
+        return self::sanitize_group_bios(is_array($stored) ? $stored : array());
+    }
+
+    public static function get_group_bio_override($group_id) {
+        $overrides = self::get_group_bio_overrides();
+        $group_id = (int) $group_id;
+
+        return isset($overrides[$group_id]) ? $overrides[$group_id] : '';
+    }
+
+    public static function ai_matching_enabled() {
+        $rules = self::get_display_rules();
+
+        return isset($rules['ai_matching_enabled']) && $rules['ai_matching_enabled'] === '1';
+    }
+
+    public static function get_fit_threshold() {
+        $rules = self::get_display_rules();
+
+        return (float) $rules['fit_threshold'];
+    }
+
     public static function sanitize_display_rules($value) {
         $value = is_array($value) ? $value : array();
 
@@ -279,6 +314,8 @@ class TSOL_Accountability_Modal_Settings {
             'show_resume_launcher' => self::sanitize_checkbox(isset($value['show_resume_launcher']) ? $value['show_resume_launcher'] : '0'),
             'launcher_position' => self::sanitize_launcher_position(isset($value['launcher_position']) ? wp_unslash($value['launcher_position']) : 'bottom_right'),
             'animate_resume_launcher' => self::sanitize_checkbox(isset($value['animate_resume_launcher']) ? $value['animate_resume_launcher'] : '0'),
+            'ai_matching_enabled' => self::sanitize_checkbox(isset($value['ai_matching_enabled']) ? $value['ai_matching_enabled'] : '0'),
+            'fit_threshold' => self::sanitize_fit_threshold(isset($value['fit_threshold']) ? wp_unslash($value['fit_threshold']) : '0.5'),
         );
     }
 
@@ -301,6 +338,28 @@ class TSOL_Accountability_Modal_Settings {
         $sanitized['questions'] = self::sanitize_questions(isset($value['questions']) ? $value['questions'] : self::default_questions());
 
         return $sanitized;
+    }
+
+    public static function sanitize_group_bios($value) {
+        $value = is_array($value) ? $value : array();
+        $bios = array();
+
+        foreach ($value as $group_id => $bio) {
+            if (is_array($bio)) {
+                continue;
+            }
+
+            $group_id = absint($group_id);
+            $bio = self::sanitize_multiline_text(wp_unslash($bio));
+
+            if (!$group_id || $bio === '') {
+                continue;
+            }
+
+            $bios[$group_id] = $bio;
+        }
+
+        return $bios;
     }
 
     public static function get_quick_picks($content = null) {
@@ -430,5 +489,17 @@ class TSOL_Accountability_Modal_Settings {
         }
 
         return (string) (0 + $value);
+    }
+
+    private static function sanitize_fit_threshold($value) {
+        $value = trim((string) $value);
+
+        if ($value === '' || !is_numeric($value)) {
+            return '0.5';
+        }
+
+        $value = max(0, min(1, (float) $value));
+
+        return (string) $value;
     }
 }

@@ -2,6 +2,7 @@
 
 .tsol-accountability-modal[hidden],
 .tsol-accountability-modal__step[hidden],
+.tsol-accountability-modal__results[hidden],
 .tsol-accountability-modal__actions [hidden],
 .tsol-accountability-modal-launcher[hidden],
 .tsol-accountability-modal-launcher__bubble[hidden] {
@@ -523,6 +524,137 @@
     padding: 14px;
 }
 
+.tsol-accountability-modal__results {
+    display: grid;
+    gap: 18px;
+    min-height: 254px;
+}
+
+.tsol-accountability-modal__results:focus {
+    outline: 0;
+}
+
+.tsol-accountability-modal__results-loading,
+.tsol-accountability-modal__confirmation {
+    display: grid;
+    gap: 14px;
+    align-content: center;
+    min-height: 220px;
+    border: 2px solid var(--tsol-line);
+    border-radius: 3px;
+    background: #f7fbfd;
+    color: var(--tsol-blue-dark);
+    padding: 22px;
+    text-align: center;
+}
+
+.tsol-accountability-modal__results-loading strong,
+.tsol-accountability-modal__confirmation h3 {
+    margin: 0;
+    color: var(--tsol-blue-dark);
+    font-family: "Fira Sans", sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.tsol-accountability-modal__spinner {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    border: 4px solid rgba(22, 156, 199, 0.2);
+    border-top-color: var(--tsol-cyan);
+    border-radius: 50%;
+    animation: tsol-accountability-spin 800ms linear infinite;
+}
+
+.tsol-accountability-modal__results-heading {
+    display: grid;
+    gap: 7px;
+}
+
+.tsol-accountability-modal__results-heading h3 {
+    margin: 0;
+    color: var(--tsol-blue-dark);
+    font-family: "Fira Sans", sans-serif;
+    font-size: 27px;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.tsol-accountability-modal__results-heading p {
+    margin: 0;
+    color: var(--tsol-muted);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.tsol-accountability-modal__group-results {
+    display: grid;
+    gap: 12px;
+}
+
+.tsol-accountability-modal__group-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    border: 2px solid var(--tsol-line);
+    border-radius: 3px;
+    background: #ffffff;
+    padding: 16px;
+}
+
+.tsol-accountability-modal__group-card-copy {
+    display: grid;
+    gap: 5px;
+}
+
+.tsol-accountability-modal__group-card h4 {
+    margin: 0;
+    color: var(--tsol-blue-dark);
+    font-family: "Fira Sans", sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.tsol-accountability-modal__group-card small {
+    display: block;
+    color: var(--tsol-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.tsol-accountability-modal__group-card p {
+    margin: 5px 0 0;
+    color: var(--tsol-muted);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.tsol-accountability-modal .tsol-accountability-modal__show-all {
+    justify-self: start;
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--tsol-blue) !important;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.tsol-accountability-modal .tsol-accountability-modal__show-all:hover,
+.tsol-accountability-modal .tsol-accountability-modal__show-all:focus {
+    color: var(--tsol-cyan) !important;
+    outline: 0;
+}
+
 .tsol-accountability-modal__status {
     min-height: 22px;
     font-size: 14px;
@@ -831,6 +963,12 @@
     }
 }
 
+@keyframes tsol-accountability-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @media (max-width: 700px) {
     .tsol-accountability-modal {
         align-items: stretch;
@@ -868,7 +1006,8 @@
 
     .tsol-accountability-modal__step-heading--split,
     .tsol-accountability-modal__choice-list,
-    .tsol-accountability-modal__call-list {
+    .tsol-accountability-modal__call-list,
+    .tsol-accountability-modal__group-card {
         grid-template-columns: 1fr;
     }
 
@@ -943,7 +1082,8 @@
 
 @media (prefers-reduced-motion: reduce) {
     .tsol-accountability-modal-launcher,
-    .tsol-accountability-modal-launcher::before {
+    .tsol-accountability-modal-launcher::before,
+    .tsol-accountability-modal__spinner {
         animation: none !important;
     }
 }

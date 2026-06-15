@@ -3,7 +3,7 @@
  * Plugin Name: Tom's School Of Life Plugin
  * Plugin URI: https://github.com/BetterBetterBetter/tomschooloflife-plugin
  * Description: Site-specific functionality for Tom's School Of Life.
- * Version: 0.1.4
+ * Version: 0.1.6
  * Author: Thrice Agency
  * License: GPL v2 or later
  * Text Domain: tomschooloflife-plugin
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('TSOL_SITE_PLUGIN_VERSION', '0.1.4');
+define('TSOL_SITE_PLUGIN_VERSION', '0.1.6');
 define('TSOL_SITE_PLUGIN_FILE', __FILE__);
 define('TSOL_SITE_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('TSOL_SITE_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -43,8 +43,10 @@ if (file_exists(TSOL_SITE_PLUGIN_DIR . 'plugin-update-checker/plugin-update-chec
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/contracts/interface-feature.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-dependencies.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-admin-settings.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-gemini-client.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-settings.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-repository.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-matcher.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-renderer.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/accountability-modal/class-accountability-modal-submission-handler.php';
