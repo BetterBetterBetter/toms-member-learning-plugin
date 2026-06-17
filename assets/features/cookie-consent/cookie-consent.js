@@ -375,8 +375,7 @@
             return;
         }
 
-        preferences.hidden = true;
-        document.removeEventListener('keydown', handleDialogKeydown);
+        hidePreferences();
 
         if (consent) {
             hideBanner();
@@ -387,6 +386,14 @@
         if (previousFocus && typeof previousFocus.focus === 'function') {
             previousFocus.focus();
         }
+    }
+
+    function hidePreferences() {
+        if (preferences) {
+            preferences.hidden = true;
+        }
+
+        document.removeEventListener('keydown', handleDialogKeydown);
     }
 
     function saveCurrentPreferences() {
@@ -406,11 +413,8 @@
 
         consent = buildConsent(analytics, marketing, 'preferences');
         applyConsent(consent, true);
+        hidePreferences();
         hideBanner();
-
-        if (preferences) {
-            preferences.hidden = true;
-        }
 
         if (status) {
             status.textContent = config.messages && config.messages.saved ? config.messages.saved : 'Cookie choices saved.';
@@ -421,6 +425,7 @@
         var consent = buildConsent(true, true, 'accept_all');
 
         applyConsent(consent, true);
+        hidePreferences();
         hideBanner();
         syncInputs(consent);
     }
@@ -429,6 +434,7 @@
         var consent = buildConsent(false, false, 'reject_optional');
 
         applyConsent(consent, true);
+        hidePreferences();
         hideBanner();
         syncInputs(consent);
     }

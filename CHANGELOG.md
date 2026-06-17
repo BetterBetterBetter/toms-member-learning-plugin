@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 - 2026-06-17
+
+- Fixed the cookie preferences modal so Reject optional closes the blocking overlay after saving consent.
+
 ## 0.1.6 - 2026-06-15
 
 - Iterated the release version for the AI-assisted accountability group matching release.
