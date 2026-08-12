@@ -1,0 +1,117 @@
+.tsol-speaker-about-heading {
+    margin: 1.25rem 0 0.5rem;
+}
+
+.tsol-speaker-profile-editor,
+.tsol-speaker-profile-editor * {
+    box-sizing: border-box;
+}
+
+.tsol-speaker-about-heading h2,
+.tsol-speaker-about-heading p {
+    margin: 0 0 0.35rem;
+}
+
+.tsol-speaker-about-heading p {
+    color: #50575e;
+}
+
+.tsol-speaker-profile-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tsol-speaker-profile-grid label,
+.tsol-speaker-profile-field {
+    display: grid;
+    font-weight: 600;
+    gap: 0.4rem;
+}
+
+.tsol-speaker-profile-field {
+    margin-top: 1rem;
+}
+
+.tsol-speaker-profile-grid input,
+.tsol-speaker-profile-field > input {
+    max-width: 100%;
+    min-height: 36px;
+    width: 100%;
+}
+
+.tsol-speaker-social-editor,
+.tsol-speaker-social-rows {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.tsol-speaker-social-row {
+    align-items: end;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(9rem, 0.45fr) minmax(14rem, 1fr) auto;
+    padding: 0.75rem;
+}
+
+.tsol-speaker-social-row label {
+    display: grid;
+    font-weight: 600;
+    gap: 0.35rem;
+}
+
+.tsol-speaker-social-row input,
+.tsol-speaker-social-row select {
+    max-width: 100%;
+    width: 100%;
+}
+
+.tsol-speaker-list-headshot {
+    border-radius: 50%;
+    display: block;
+    height: 42px;
+    object-fit: cover;
+    width: 42px;
+}
+
+.tsol-speaker-list-role {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.tsol-speaker-list-role__job-title,
+.tsol-speaker-list-role__organization {
+    display: block;
+}
+
+.tsol-speaker-list-role__organization {
+    color: #646970;
+}
+
+.column-tsol-speaker-headshot {
+    width: 5rem;
+}
+
+.column-tsol-speaker-content {
+    width: 6rem;
+}
+
+.tsol-speaker-notice-list {
+    list-style: disc;
+    margin-left: 1.25rem;
+}
+
+@media (max-width: 782px) {
+    .tsol-speaker-profile-grid,
+    .tsol-speaker-social-row {
+        grid-template-columns: 1fr;
+    }
+
+    .tsol-speaker-social-row .button-link-delete {
+        justify-self: start;
+        min-height: 36px;
+    }
+}

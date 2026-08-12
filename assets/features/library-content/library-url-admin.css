@@ -1,0 +1,63 @@
+.tsol-library-url-editor {
+    box-sizing: border-box;
+    line-height: 2.3077;
+    margin: 5px 0 15px;
+    min-height: 30px;
+    padding: 0 10px;
+}
+
+.tsol-library-url-editor__path {
+    margin: 0 6px;
+    overflow-wrap: anywhere;
+}
+
+.tsol-library-url-editor__edit-controls {
+    align-items: center;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tsol-library-url-editor__edit-controls[hidden],
+.tsol-library-url-editor [hidden] {
+    display: none;
+}
+
+.tsol-library-url-editor__edit-controls input {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 2;
+    margin: 0;
+    min-height: 28px;
+    padding: 0 5px;
+    width: min(24rem, 50vw);
+}
+
+.tsol-library-url-editor__warning {
+    color: #8a4b08;
+    display: block;
+    line-height: 1.5;
+    margin-top: 2px;
+}
+
+@media screen and (max-width: 782px) {
+    .tsol-library-url-editor {
+        line-height: 2.8;
+        padding: 0;
+    }
+
+    .tsol-library-url-editor__edit-controls {
+        display: flex;
+        margin-top: 4px;
+    }
+
+    .tsol-library-url-editor__edit-controls[hidden] {
+        display: none;
+    }
+
+    .tsol-library-url-editor__edit-controls input {
+        font-size: 16px;
+        min-height: 40px;
+        width: 100%;
+    }
+}

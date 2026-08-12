@@ -13,6 +13,7 @@ class TomsSchoolOfLifePlugin {
     private $admin_settings = null;
     private $accountability_modal_admin = null;
     private $cookie_consent_admin = null;
+    private $library_auth = null;
     private $features = array();
     private $admin_page_hooks = array();
 
@@ -35,22 +36,20 @@ class TomsSchoolOfLifePlugin {
     public function init() {
         load_plugin_textdomain('tomschooloflife-plugin', false, dirname(TSOL_SITE_PLUGIN_BASENAME) . '/languages');
 
-        if (!$this->dependencies_met()) {
-            return;
-        }
-
         $this->admin_settings = new TSOL_Site_Admin_Settings();
         $this->admin_settings->init();
         $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
         $this->accountability_modal_admin->init();
         $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
         $this->cookie_consent_admin->init();
+        $this->library_auth = new TSOL_Library_Auth();
+        $this->library_auth->init();
 
         $this->register_features();
         $this->init_features();
 
         /**
-         * Fires after the site plugin has loaded and dependency checks passed.
+         * Fires after the site plugin has loaded.
          *
          * @param TomsSchoolOfLifePlugin $plugin Plugin instance.
          */
@@ -58,10 +57,6 @@ class TomsSchoolOfLifePlugin {
     }
 
     public function add_admin_menu() {
-        if (!$this->dependencies_met()) {
-            return;
-        }
-
         $this->admin_page_hooks[] = add_menu_page(
             __('TSOL (Tom\'s School Of Life)', 'tomschooloflife-plugin'),
             __('TSOL', 'tomschooloflife-plugin'),
@@ -203,21 +198,19 @@ class TomsSchoolOfLifePlugin {
             return;
         }
 
-        echo '<div class="notice notice-error"><p>';
-        echo esc_html__('Tom\'s School Of Life Plugin requires Access Platform SSO to be installed and active.', 'tomschooloflife-plugin');
+        echo '<div class="notice notice-info"><p>';
+        echo esc_html__('Access Platform SSO is not active. The TSOL plugin and Library authentication bridge still work, but Access-origin members need another way to establish their WordPress login.', 'tomschooloflife-plugin');
         echo '</p></div>';
     }
 
     public function plugin_action_links($links) {
-        if ($this->dependencies_met()) {
-            $settings_link = sprintf(
-                '<a href="%s">%s</a>',
-                esc_url(admin_url('admin.php?page=tsol-site')),
-                esc_html__('Settings', 'tomschooloflife-plugin')
-            );
+        $settings_link = sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(admin_url('admin.php?page=tsol-site')),
+            esc_html__('Settings', 'tomschooloflife-plugin')
+        );
 
-            array_unshift($links, $settings_link);
-        }
+        array_unshift($links, $settings_link);
 
         return $links;
     }
@@ -231,27 +224,19 @@ class TomsSchoolOfLifePlugin {
     }
 
     public static function activate() {
-        if (!self::is_access_sso_available()) {
-            if (function_exists('deactivate_plugins')) {
-                deactivate_plugins(TSOL_SITE_PLUGIN_BASENAME);
-            }
-
-            wp_die(
-                esc_html__('Tom\'s School Of Life Plugin requires Access Platform SSO to be installed and active before activation.', 'tomschooloflife-plugin'),
-                esc_html__('Plugin dependency missing', 'tomschooloflife-plugin'),
-                array('back_link' => true)
-            );
-        }
+        TSOL_Library_Auth::activate();
+        TSOL_Library_Content::activate();
     }
 
     public static function deactivate() {
-        // Reserved for future cleanup. Do not delete settings on deactivation.
+        TSOL_Library_Auth::deactivate();
     }
 
     private function register_features() {
         $this->features = array(
             new TSOL_Accountability_Modal(),
             new TSOL_Cookie_Consent(),
+            new TSOL_Library_Content(),
         );
 
         /**
