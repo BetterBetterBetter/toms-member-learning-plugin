@@ -4,9 +4,9 @@ Dedicated WordPress plugin for Tom's School Of Life.
 
 This plugin is intentionally site-specific. It should contain behavior that belongs to this website and should not be added to the shared Access Platform SSO plugin.
 
-## Dependency
+## Optional Access SSO integration
 
-Requires the Access Platform SSO plugin to be installed and active.
+Access Platform SSO is an optional upstream WordPress login source. The TSOL plugin and Library authentication bridge continue to load when it is absent. MemberPress, not Access SSO, is the protected-content authorization authority.
 
 Supported development/deployed plugin basenames:
 
@@ -30,6 +30,9 @@ Supported development/deployed plugin basenames:
 - `includes/features/cookie-consent/class-cookie-consent.php` - Cookie consent frontend feature.
 - `includes/features/cookie-consent/class-cookie-consent-admin.php` - Cookie consent admin tabs.
 - `includes/features/cookie-consent/class-cookie-consent-settings.php` - Cookie consent settings and sanitization.
+- `includes/features/library-auth/` - Narrow WordPress identity and MemberPress content-authorization bridge for the standalone Library.
+- `includes/features/library-content/` - Private TSOL-owned courses/content/Speaker profiles, editorial UI, catalogue projection, and read-only MemberPress access presentation.
+- `includes/migrations/library-catalogue-import/` - Guarded local clone-only importer from the locked legacy inventory.
 - `assets/admin/` - Admin page assets.
 - `assets/features/accountability-modal/` - Accountability modal assets.
 - `assets/features/cookie-consent/` - Cookie consent assets.
@@ -55,11 +58,13 @@ In-progress answers can be saved locally in the user's browser and are cleared a
 
 The display locations, scroll threshold, local draft behavior, resume launcher behavior, admin preview button, member/submission hiding rules, modal copy, and question flow can be managed in WordPress under `TSOL > Accountability Modal`.
 
+Gemini configuration is isolated under `TSOL > Accountability Modal > AI Matching`. That tab owns the Accountability-specific API key status, model, enable switch, strong-fit threshold, fallback explanation, and data-sharing notice. The generic TSOL settings page deliberately does not present Gemini as a site-wide integration, and the TSOL Library does not use this credential.
+
 The `Display Rules` tab includes a searchable content picker with selected-location review rows and filters for content type, publish status, and selected/unselected state.
 
 The `Content` tab includes an ACF-style accordion question repeater. Admins can add, remove, reorder, enable/disable, and require questions. Question keys are generated automatically from the question title. Supported field types are text field, text area, number, number slider, select dropdown, checkbox select, radio select, and the dedicated joinable accountability calls selector.
 
-The `Submissions` admin tab reads the saved user meta in review cards with user actions, intake answers, selected call availability, and recommended group fits. It supports search, status/call/date filters, sorting, pagination, CSV export for either all submissions or the current filtered/sorted result set, and nonce-protected deletion of a user's saved intake submission. Recommendations are availability-based for now; they do not auto-enroll users.
+The `Submissions` admin tab reads the saved user meta in review cards with user actions, intake answers, selected call availability, and recommended group fits. It supports search, status/call/date filters, sorting, pagination, CSV export for either all submissions or the current filtered/sorted result set, and nonce-protected deletion of a user's saved intake submission. Availability is always enforced before optional Gemini ranking; unavailable or weak AI results fall back to open-call choices. A separately validated join action can enroll a member when the accountability enrollment engine is available.
 
 Accessibility support includes dialog labeling, described-by copy, Escape close, focus trapping, focus return, keyboard-accessible launcher, progressbar semantics, live status messages, and reduced-motion handling for launcher animation. It should still receive real screen-reader/browser QA before being treated as formally audited for WCAG conformance.
 
@@ -67,11 +72,71 @@ The target content IDs can still be changed with the `tsol_site_accountability_m
 
 ## Cookie Consent
 
-The cookie consent feature renders an on-brand TSOL banner and preference center for public visitors. It stores consent in a first-party cookie and localStorage fallback, supports a floating cookie settings button, respects Global Privacy Control for marketing choices, and can be opened by admins from the frontend admin bar.
+The cookie consent feature renders an on-brand TSOL banner and preference center for public visitors. It stores consent in a first-party cookie and expiring localStorage fallback, supports a floating cookie settings button, respects Global Privacy Control for marketing choices, removes known first-party cookies after rejection, and can be opened by admins from the frontend admin bar.
 
 The feature prints Google Consent Mode v2 defaults early in the page head and updates Consent Mode after the visitor chooses. Analytics and marketing scripts added under `TSOL > Cookie Consent > Scripts` are loaded only after the relevant category is accepted.
 
-Important: this feature cannot stop scripts that are hard-coded by another plugin, theme, HFCM snippet, or GTM tag before consent. Non-essential tracking should be moved into the cookie consent script buckets or configured inside GTM to obey Consent Mode.
+Important: this feature cannot stop scripts that are hard-coded by another plugin, theme, HFCM snippet, or GTM tag before consent. Non-essential tracking should be moved into the cookie consent script buckets or configured inside GTM to obey Consent Mode. Third-party and HttpOnly cookies cannot be removed by frontend JavaScript, so their originating tracker must be prevented from loading when consent is denied.
+
+The official Tapfiliate plugin's `tapfiliate-js` handle is captured automatically and emitted as inert Marketing-category scripts. This preserves its WooCommerce conversion data while allowing the consent frontend to control when the vendor code executes. Additional registered WordPress script handles can opt into the same mechanism with the `tsol_site_cookie_consent_managed_script_handles` filter.
+
+The existing WPCode Tapfiliate handlers (snippet IDs `102804` and `102816`) are also converted to inert Marketing-category script tags. The IDs can be changed with the `tsol_site_cookie_consent_wpcode_marketing_snippet_ids` filter.
+
+Legacy HFCM snippet `4` (Google), Vimeo snippets `14`, `21`, `26`, `28`, and `37`, RocketChat snippet `24`, and retired Kissmetrics snippet `57` are intercepted at the HFCM render hook. Their script tags are made inert under Marketing or Analytics consent while preserving each snippet's display rules; the ID/category map can be changed with `tsol_site_cookie_consent_hfcm_snippet_categories`.
+
+Server-rendered Vimeo and YouTube iframes are held behind Marketing consent, and Elementor video-lightbox links open the cookie preference dialog when Marketing is not yet allowed. The host/category map can be changed with `tsol_site_cookie_consent_embed_hosts`.
+
+## Library Authentication
+
+Configure the bridge under `TSOL > Library Authentication`. It uses an OAuth-style authorization-code flow with mandatory S256 PKCE, exact callback matching, one-use 60-second hashed codes, five-minute bearer tokens, server-authenticated content-access checks, rate limits, no-store responses, explicit `DONOTCACHEPAGE` and WP Rocket exclusions, and signed, audience-bound, one-time cross-application logout.
+
+The server-authenticated `/wp-json/tsol-library/v1/header-navigation` endpoint
+reads the Elementor header menu as an anonymous visitor and returns its safe
+public links for the Library Explore menu. Account, login, logout, and
+Library-home entries are excluded, so the same Explore menu is available to
+signed-in and signed-out visitors.
+
+The plugin also registers a **TSOL Library Footer** menu location under WordPress navigation settings. Its server-authenticated `/wp-json/tsol-library/v1/footer-navigation` endpoint returns up to 12 safe HTTP(S) links in menu order. If no menu is assigned, it returns an empty list and the Library omits the WordPress-managed footer section.
+
+Every authenticated WordPress account can enter and browse the Library. Access to each protected course or lesson is decided from that content's existing MemberPress rules, including drip and expiry behavior; unprotected published content is available to signed-in users. WordPress users with `manage_options` retain full administrator access. The plugin does not maintain a second membership or staff allowlist.
+
+The URL, client ID, and client secret can be managed in the plugin UI. The secret field reports whether a value is configured but never renders the stored value; leaving it blank preserves the current secret. Host-managed `TSOL_LIBRARY_APP_URL`, `TSOL_LIBRARY_CLIENT_ID`, and `TSOL_LIBRARY_CLIENT_SECRET` constants remain optional overrides. Use separate clients and secrets for development, staging, and production.
+
+Configure `TSOL_LIBRARY_AUTH_REVOCATION_SECRET` only as a host-managed
+WordPress constant and use the same dedicated value in the Library secret
+manager. It must be at least 32 bytes and must not equal the client or catalogue
+webhook secret. Password changes or resets, user deletion, role changes, and relevant
+identity changes enter a durable signed outbox that revokes all matching
+Library sessions. Suspension and security tooling can request an allowlisted
+event after committing its canonical state:
+
+```php
+do_action('tsol_library_auth_revocation_requested', $user_id, 'user.suspended');
+```
+
+Delivery retries with bounded backoff, maintains a one-minute recovery
+watchdog, and treats the Library's `409` replay response as acknowledgement of
+a previously applied one-time `jti`.
+
+Run the WordPress contract checks from the plugin directory with:
+
+```bash
+wp eval-file tests/library-auth-contract.php --skip-themes
+wp eval-file tests/library-auth-revocation-contract.php --skip-themes
+```
+
+## Library Content
+
+The standalone Library has a dedicated top-level `TSOL Library` admin menu.
+Its private `tsol_library_course` and `tsol_library_item` types own the new
+editorial structure. Native MemberPress Courses and legacy Pages remain
+untouched; MemberPress Rules remains the sole live access authority.
+
+The local clone importer currently produces six draft courses and 142 draft
+content records while delegating all 148 access mappings to their unchanged
+legacy sources. Watch routes use immutable content UUIDs, kept separate from
+authorization pointers. See `includes/features/library-content/README.md` and
+`../plans/tsol-library-content-model.md` for the model and verification record.
 
 ## Development
 
