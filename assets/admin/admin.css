@@ -384,6 +384,13 @@
     box-shadow: inset 3px 0 0 #169cc7;
 }
 
+.tsol-cookie-snippet-row.has-syntax-error,
+.tsol-cookie-snippet-row.has-syntax-error:hover,
+.tsol-cookie-snippet-row.has-syntax-error:focus-within {
+    border-color: #d63638;
+    box-shadow: inset 3px 0 0 #d63638;
+}
+
 .tsol-cookie-snippet-row:focus-within {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
@@ -489,6 +496,14 @@
 
 .tsol-cookie-snippet-row__body[hidden] {
     display: none;
+}
+
+.tsol-cookie-snippet-error {
+    background: #fcf0f1;
+    border-top: 1px solid #d63638;
+    color: #8a2424;
+    margin: 0;
+    padding: 10px 12px;
 }
 
 .tsol-cookie-snippet-builder__add {

@@ -455,6 +455,7 @@ class TSOL_Cookie_Consent_Admin {
     private function render_inline_snippet_row($key, $input_name, $name_input_name, $value = '', $name = '', $index = 0, $hide_remove = false) {
         $body_id = 'tsol-cookie-' . sanitize_html_class($key) . '-snippet-' . absint($index);
         $textarea_id = $body_id . '-code';
+        $error_id = $body_id . '-error';
         $name_id = $body_id . '-name';
         $fallback_name = sprintf(__('Snippet %d', 'tomschooloflife-plugin'), $index + 1);
         $display_name = trim((string) $name) !== '' ? $name : $fallback_name;
@@ -477,6 +478,7 @@ class TSOL_Cookie_Consent_Admin {
             <div id="<?php echo esc_attr($body_id); ?>" class="tsol-cookie-snippet-row__body" data-cookie-snippet-body hidden>
                 <label for="<?php echo esc_attr($textarea_id); ?>" class="screen-reader-text"><?php echo esc_html(sprintf(__('Snippet %d JavaScript', 'tomschooloflife-plugin'), $index + 1)); ?></label>
                 <textarea id="<?php echo esc_attr($textarea_id); ?>" class="large-text code tsol-cookie-code-editor__textarea" rows="14" name="<?php echo esc_attr($input_name); ?>" data-cookie-code-editor-textarea><?php echo esc_textarea($value); ?></textarea>
+                <p id="<?php echo esc_attr($error_id); ?>" class="tsol-cookie-snippet-error" data-cookie-snippet-error role="alert" hidden></p>
             </div>
         </div>
         <?php

@@ -157,6 +157,7 @@ class TomsSchoolOfLifePlugin {
                 'formatSnippet' => __('Format', 'tomschooloflife-plugin'),
                 'removeSnippet' => __('Remove snippet', 'tomschooloflife-plugin'),
                 'removeSnippetAria' => __('Remove this JavaScript snippet', 'tomschooloflife-plugin'),
+                'snippetSyntaxError' => __('JavaScript syntax error:', 'tomschooloflife-plugin'),
             ),
         ));
     }

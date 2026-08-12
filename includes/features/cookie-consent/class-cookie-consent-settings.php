@@ -141,6 +141,58 @@ class TSOL_Cookie_Consent_Settings {
         );
     }
 
+    public static function get_cookie_cleanup_payload() {
+        $payload = array(
+            'analytics' => array(
+                'names' => array(
+                    '_ga',
+                    '_gid',
+                    '_gat',
+                    '__utma',
+                    '__utmb',
+                    '__utmc',
+                    '__utmt',
+                    '__utmz',
+                    'km_ai',
+                    'km_lv',
+                    'km_vs',
+                ),
+                'prefixes' => array('_ga_', '_gat_', '__utmt_', 'km_'),
+            ),
+            'marketing' => array(
+                'names' => array(
+                    '_fbc',
+                    '_fbp',
+                    '_gcl_au',
+                    'tap_vid',
+                    'tap_ref',
+                    'tapfiliate',
+                ),
+                'prefixes' => array('_gac_', '_gcl_', 'tap_'),
+            ),
+        );
+
+        /**
+         * Filters the first-party cookies removed when optional consent is denied.
+         *
+         * Third-party and HttpOnly cookies cannot be removed by browser JavaScript.
+         * Each category accepts exact cookie names and cookie-name prefixes.
+         *
+         * @param array $payload Cookie cleanup rules keyed by consent category.
+         */
+        $payload = apply_filters('tsol_site_cookie_consent_cleanup', $payload);
+
+        foreach (array('analytics', 'marketing') as $category) {
+            $rules = isset($payload[$category]) && is_array($payload[$category]) ? $payload[$category] : array();
+            $payload[$category] = array(
+                'names' => self::sanitize_cookie_name_list(isset($rules['names']) ? $rules['names'] : array()),
+                'prefixes' => self::sanitize_cookie_name_list(isset($rules['prefixes']) ? $rules['prefixes'] : array()),
+            );
+        }
+
+        return $payload;
+    }
+
     public static function get_cookie_icon_svg($class = '') {
         $class = trim((string) $class);
 
@@ -160,18 +212,55 @@ class TSOL_Cookie_Consent_Settings {
         $raw_cookie = rawurldecode((string) wp_unslash($_COOKIE[self::COOKIE_NAME]));
         $decoded = json_decode($raw_cookie, true);
 
-        if (!is_array($decoded) || !isset($decoded['version']) || $decoded['version'] !== $settings['consent_version']) {
+        if (
+            !is_array($decoded)
+            || !isset($decoded['version'])
+            || $decoded['version'] !== $settings['consent_version']
+            || !array_key_exists('necessary', $decoded)
+            || $decoded['necessary'] !== true
+        ) {
             return null;
+        }
+
+        $timestamp = isset($decoded['timestamp']) ? sanitize_text_field($decoded['timestamp']) : '';
+        $timestamp_unix = $timestamp !== '' ? strtotime($timestamp) : false;
+        $now = time();
+        $lifetime_seconds = max(30, absint($settings['cookie_lifetime_days'])) * DAY_IN_SECONDS;
+
+        if (
+            $timestamp_unix === false
+            || $timestamp_unix > ($now + (5 * MINUTE_IN_SECONDS))
+            || $timestamp_unix < ($now - $lifetime_seconds)
+        ) {
+            return null;
+        }
+
+        $categories = self::get_categories($settings);
+        $analytics = $categories['analytics']['enabled'] && !empty($decoded['analytics']);
+        $marketing = $categories['marketing']['enabled'] && !empty($decoded['marketing']);
+
+        if (self::is_gpc_enabled($settings)) {
+            $marketing = false;
         }
 
         return array(
             'version' => sanitize_text_field($decoded['version']),
             'necessary' => true,
-            'analytics' => !empty($decoded['analytics']),
-            'marketing' => !empty($decoded['marketing']),
-            'timestamp' => isset($decoded['timestamp']) ? sanitize_text_field($decoded['timestamp']) : '',
+            'analytics' => $analytics,
+            'marketing' => $marketing,
+            'timestamp' => $timestamp,
             'source' => isset($decoded['source']) ? sanitize_key($decoded['source']) : '',
         );
+    }
+
+    public static function is_gpc_enabled($settings = null) {
+        $settings = is_array($settings) ? wp_parse_args($settings, self::defaults()) : self::get_settings();
+
+        if ($settings['respect_gpc'] !== '1') {
+            return false;
+        }
+
+        return isset($_SERVER['HTTP_SEC_GPC']) && trim((string) wp_unslash($_SERVER['HTTP_SEC_GPC'])) === '1';
     }
 
     public static function get_consent_mode_state($consent = null) {
@@ -231,6 +320,10 @@ class TSOL_Cookie_Consent_Settings {
             'marketing_description',
         );
 
+        // WordPress unslashes registered Settings API values in options.php
+        // before this sanitizer runs. Unslashing again corrupts JavaScript
+        // escapes such as the `\/` in a regular-expression literal.
+
         foreach ($checkboxes as $key) {
             if (array_key_exists($key, $value)) {
                 $sanitized[$key] = self::sanitize_checkbox($value[$key]);
@@ -239,13 +332,13 @@ class TSOL_Cookie_Consent_Settings {
 
         foreach ($text_fields as $key) {
             if (array_key_exists($key, $value)) {
-                $sanitized[$key] = sanitize_text_field(wp_unslash($value[$key]));
+                $sanitized[$key] = sanitize_text_field($value[$key]);
             }
         }
 
         foreach ($textarea_fields as $key) {
             if (array_key_exists($key, $value)) {
-                $sanitized[$key] = sanitize_textarea_field(wp_unslash($value[$key]));
+                $sanitized[$key] = sanitize_textarea_field($value[$key]);
             }
         }
 
@@ -254,33 +347,33 @@ class TSOL_Cookie_Consent_Settings {
         }
 
         if (array_key_exists('banner_position', $value)) {
-            $sanitized['banner_position'] = self::sanitize_banner_position(wp_unslash($value['banner_position']));
+            $sanitized['banner_position'] = self::sanitize_banner_position($value['banner_position']);
         }
 
         if (array_key_exists('reopen_position', $value)) {
-            $sanitized['reopen_position'] = self::sanitize_reopen_position(wp_unslash($value['reopen_position']));
+            $sanitized['reopen_position'] = self::sanitize_reopen_position($value['reopen_position']);
         }
 
         if (array_key_exists('privacy_url', $value)) {
-            $sanitized['privacy_url'] = esc_url_raw(wp_unslash($value['privacy_url']));
+            $sanitized['privacy_url'] = esc_url_raw($value['privacy_url']);
         }
 
         if (array_key_exists('terms_url', $value)) {
-            $sanitized['terms_url'] = esc_url_raw(wp_unslash($value['terms_url']));
+            $sanitized['terms_url'] = esc_url_raw($value['terms_url']);
         }
 
         if (array_key_exists('analytics_script_urls', $value)) {
-            $sanitized['analytics_script_urls'] = self::sanitize_script_urls(wp_unslash($value['analytics_script_urls']));
+            $sanitized['analytics_script_urls'] = self::sanitize_script_urls($value['analytics_script_urls']);
         }
 
         if (array_key_exists('marketing_script_urls', $value)) {
-            $sanitized['marketing_script_urls'] = self::sanitize_script_urls(wp_unslash($value['marketing_script_urls']));
+            $sanitized['marketing_script_urls'] = self::sanitize_script_urls($value['marketing_script_urls']);
         }
 
         if (array_key_exists('analytics_inline_scripts', $value) || array_key_exists('analytics_inline_script_names', $value)) {
             $inline_bundle = self::sanitize_inline_script_bundle(
-                array_key_exists('analytics_inline_scripts', $value) ? wp_unslash($value['analytics_inline_scripts']) : '',
-                array_key_exists('analytics_inline_script_names', $value) ? wp_unslash($value['analytics_inline_script_names']) : ''
+                array_key_exists('analytics_inline_scripts', $value) ? $value['analytics_inline_scripts'] : '',
+                array_key_exists('analytics_inline_script_names', $value) ? $value['analytics_inline_script_names'] : ''
             );
             $sanitized['analytics_inline_scripts'] = $inline_bundle['scripts'];
             $sanitized['analytics_inline_script_names'] = $inline_bundle['names'];
@@ -288,8 +381,8 @@ class TSOL_Cookie_Consent_Settings {
 
         if (array_key_exists('marketing_inline_scripts', $value) || array_key_exists('marketing_inline_script_names', $value)) {
             $inline_bundle = self::sanitize_inline_script_bundle(
-                array_key_exists('marketing_inline_scripts', $value) ? wp_unslash($value['marketing_inline_scripts']) : '',
-                array_key_exists('marketing_inline_script_names', $value) ? wp_unslash($value['marketing_inline_script_names']) : ''
+                array_key_exists('marketing_inline_scripts', $value) ? $value['marketing_inline_scripts'] : '',
+                array_key_exists('marketing_inline_script_names', $value) ? $value['marketing_inline_script_names'] : ''
             );
             $sanitized['marketing_inline_scripts'] = $inline_bundle['scripts'];
             $sanitized['marketing_inline_script_names'] = $inline_bundle['names'];
@@ -444,6 +537,20 @@ class TSOL_Cookie_Consent_Settings {
         $value = preg_replace('/<\/?script\b[^>]*>/i', '', $value);
 
         return trim((string) $value);
+    }
+
+    private static function sanitize_cookie_name_list($values) {
+        $sanitized = array();
+
+        foreach ((array) $values as $value) {
+            $value = trim((string) $value);
+
+            if ($value !== '' && preg_match('/^[A-Za-z0-9_.-]+$/', $value)) {
+                $sanitized[] = $value;
+            }
+        }
+
+        return array_values(array_unique($sanitized));
     }
 
     private static function sanitize_checkbox($value) {

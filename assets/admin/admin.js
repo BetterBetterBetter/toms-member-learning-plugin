@@ -761,6 +761,7 @@
         var idSuffix = String(Date.now()) + '-' + String(Math.floor(Math.random() * 100000));
         var bodyId = 'tsol-cookie-' + String(builderKey || 'inline').replace(/[^a-z0-9_-]/gi, '-') + '-snippet-' + idSuffix;
         var textareaId = bodyId + '-code';
+        var errorId = bodyId + '-error';
         var nameId = bodyId + '-name';
         var fallbackName = (strings.snippetLabel || 'Snippet') + ' ' + (index + 1);
 
@@ -782,6 +783,7 @@
                 '<div id="' + escapeHtml(bodyId) + '" class="tsol-cookie-snippet-row__body" data-cookie-snippet-body>' +
                     '<label for="' + escapeHtml(textareaId) + '" class="screen-reader-text">' + escapeHtml((strings.snippetLabel || 'Snippet') + ' ' + (index + 1) + ' JavaScript') + '</label>' +
                     '<textarea id="' + escapeHtml(textareaId) + '" class="large-text code tsol-cookie-code-editor__textarea" rows="14" name="' + escapeHtml(inputName) + '" data-cookie-code-editor-textarea>' + escapeHtml(value || '') + '</textarea>' +
+                    '<p id="' + escapeHtml(errorId) + '" class="tsol-cookie-snippet-error" data-cookie-snippet-error role="alert" hidden></p>' +
                 '</div>' +
             '</div>'
         );
@@ -867,6 +869,80 @@
             }, 120);
         }
 
+        function clearSyntaxError($row) {
+            var $error = $row.find('[data-cookie-snippet-error]');
+
+            $row.removeClass('has-syntax-error');
+            $row.find('[data-cookie-code-editor-textarea]').removeAttr('aria-invalid aria-describedby');
+            $error.prop('hidden', true).text('');
+        }
+
+        function showSyntaxError($row, message) {
+            var strings = getAdminStrings();
+            var $textarea = $row.find('[data-cookie-code-editor-textarea]');
+            var $error = $row.find('[data-cookie-snippet-error]');
+            var errorId = $error.attr('id');
+            var prefix = strings.snippetSyntaxError || 'JavaScript syntax error:';
+
+            $row.addClass('has-syntax-error');
+            $textarea.attr('aria-invalid', 'true');
+
+            if (errorId) {
+                $textarea.attr('aria-describedby', errorId);
+            }
+
+            $error.text(prefix + ' ' + message).prop('hidden', false);
+        }
+
+        function validateSnippets() {
+            var $firstInvalid = $();
+
+            $rows.find('[data-cookie-snippet-row]').each(function() {
+                var $row = $(this);
+                var code = getCodeEditorValue($row);
+
+                clearSyntaxError($row);
+
+                if (!$.trim(code)) {
+                    return;
+                }
+
+                try {
+                    // Parsing with Function does not execute the snippet.
+                    new Function(code);
+                } catch (error) {
+                    showSyntaxError($row, error && error.message ? error.message : 'Invalid JavaScript.');
+
+                    if (!$firstInvalid.length) {
+                        $firstInvalid = $row;
+                    }
+                }
+            });
+
+            if (!$firstInvalid.length) {
+                return true;
+            }
+
+            setRowOpen($firstInvalid, true);
+
+            window.setTimeout(function() {
+                var editor = $firstInvalid.data('cookieCodeEditorInstance');
+                var rowElement = $firstInvalid.get(0);
+
+                if (rowElement && typeof rowElement.scrollIntoView === 'function') {
+                    rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                if (editor && editor.codemirror) {
+                    editor.codemirror.focus();
+                } else {
+                    $firstInvalid.find('[data-cookie-code-editor-textarea]').trigger('focus');
+                }
+            }, 0);
+
+            return false;
+        }
+
         $builder.on('click', '[data-cookie-snippet-add]', addRow);
 
         $builder.on('click', '[data-cookie-snippet-toggle]', function() {
@@ -906,8 +982,20 @@
         });
 
         $builder.on('input blur', '[data-cookie-snippet-name-editor]', reindexRows);
-        $builder.on('tsolCookieCodeChanged', '[data-cookie-snippet-row]', reindexRows);
-        $builder.closest('form').on('submit', reindexRows);
+        $builder.on('input', '[data-cookie-code-editor-textarea]', function() {
+            clearSyntaxError($(this).closest('[data-cookie-snippet-row]'));
+        });
+        $builder.on('tsolCookieCodeChanged', '[data-cookie-snippet-row]', function() {
+            clearSyntaxError($(this));
+            reindexRows();
+        });
+        $builder.closest('form').on('submit', function(event) {
+            reindexRows();
+
+            if (!validateSnippets()) {
+                event.preventDefault();
+            }
+        });
 
         $rows.find('[data-cookie-snippet-row]').each(function() {
             setRowOpen($(this), false);

@@ -1,5 +1,60 @@
 /* Tom's School Of Life Cookie Consent */
 
+.tsol-cookie-consent-embed {
+    align-items: center;
+    aspect-ratio: 16 / 9;
+    background: #101820;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    min-height: 220px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.tsol-cookie-consent-embed iframe {
+    border: 0;
+    height: 100%;
+    inset: 0;
+    position: absolute;
+    width: 100%;
+}
+
+.tsol-cookie-consent-embed__placeholder {
+    max-width: 34rem;
+    padding: 24px;
+    position: relative;
+    text-align: center;
+    z-index: 1;
+}
+
+.tsol-cookie-consent-embed__placeholder p {
+    color: inherit;
+    margin: 0 0 12px;
+}
+
+.tsol-cookie-consent-embed__placeholder button {
+    background: #fff;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    color: #101820;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 8px 16px;
+}
+
+.tsol-cookie-consent-embed__placeholder button:hover,
+.tsol-cookie-consent-embed__placeholder button:focus {
+    background: transparent;
+    color: #fff;
+}
+
+.tsol-cookie-consent-embed.is-active .tsol-cookie-consent-embed__placeholder {
+    display: none;
+}
+
 .tsol-cookie-consent[hidden],
 .tsol-cookie-consent__banner[hidden],
 .tsol-cookie-consent__modal[hidden],
