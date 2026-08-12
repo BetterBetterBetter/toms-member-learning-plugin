@@ -52,6 +52,54 @@ $table = TSOL_Library_Auth_Repository::table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table, 'Authorization-code table is missing.');
 $messages_table = TSOL_Library_Auth_Repository::messages_table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $messages_table)) === $messages_table, 'Authentication-message replay table is missing.');
+$rate_limits_table = TSOL_Library_Auth_Repository::rate_limits_table();
+$assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $rate_limits_table)) === $rate_limits_table, 'Atomic authentication rate-limit table is missing.');
+
+$rate_key = hash('sha256', 'library-auth-contract-' . wp_generate_uuid4());
+$rate_now = time();
+$first_rate = TSOL_Library_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
+$second_rate = TSOL_Library_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
+$assert(is_array($first_rate) && (int) ($first_rate['count'] ?? 0) === 1, 'The atomic rate limiter did not create its first request count.');
+$assert(is_array($second_rate) && (int) ($second_rate['count'] ?? 0) === 2, 'The atomic rate limiter did not increment its request count.');
+$wpdb->delete($rate_limits_table, array('rate_key' => $rate_key), array('%s'));
+
+$auth = new TSOL_Library_Auth();
+$authorize_request_method = new ReflectionMethod(TSOL_Library_Auth::class, 'has_exact_authorize_request');
+$authorize_request_method->setAccessible(true);
+$previous_get = $_GET;
+$previous_query_string = $_SERVER['QUERY_STRING'] ?? null;
+$previous_request_uri = $_SERVER['REQUEST_URI'] ?? null;
+$authorize_query = array(
+    'action' => 'tsol_library_authorize',
+    'client_id' => 'tsol-library',
+    'code_challenge' => str_repeat('a', 43),
+    'code_challenge_method' => 'S256',
+    'redirect_uri' => 'https://library.example.test/api/auth/oauth2/callback/tsol-wordpress',
+    'response_type' => 'code',
+    'scope' => '',
+    'state' => str_repeat('b', 32),
+);
+$_GET = $authorize_query;
+$_SERVER['QUERY_STRING'] = http_build_query($authorize_query, '', '&', PHP_QUERY_RFC3986);
+$_SERVER['REQUEST_URI'] = (string) wp_parse_url(admin_url('admin-post.php'), PHP_URL_PATH) . '?' . $_SERVER['QUERY_STRING'];
+$assert(true === $authorize_request_method->invoke($auth), 'The exact authorization request shape was rejected.');
+$_GET['unexpected'] = '1';
+$_SERVER['QUERY_STRING'] .= '&unexpected=1';
+$assert(false === $authorize_request_method->invoke($auth), 'An unexpected authorization query parameter was accepted.');
+unset($_GET['unexpected']);
+$_SERVER['QUERY_STRING'] = http_build_query($authorize_query, '', '&', PHP_QUERY_RFC3986) . '&state=duplicate';
+$assert(false === $authorize_request_method->invoke($auth), 'A duplicate authorization query parameter was accepted.');
+$_GET = $previous_get;
+if (null === $previous_query_string) {
+    unset($_SERVER['QUERY_STRING']);
+} else {
+    $_SERVER['QUERY_STRING'] = $previous_query_string;
+}
+if (null === $previous_request_uri) {
+    unset($_SERVER['REQUEST_URI']);
+} else {
+    $_SERVER['REQUEST_URI'] = $previous_request_uri;
+}
 
 if (TSOL_Library_Auth_Settings::configured()) {
     $navigation_request = new WP_REST_Request('GET', '/tsol-library/v1/footer-navigation');
@@ -101,7 +149,6 @@ if (TSOL_Library_Auth_Settings::configured()) {
         $assert(is_wp_error($replay) && $replay->get_error_code() === 'invalid_grant', 'An authorization code replay was not rejected.');
     }
 
-    $auth = new TSOL_Library_Auth();
     $logout_message_method = new ReflectionMethod(TSOL_Library_Auth::class, 'logout_message');
     $logout_message_method->setAccessible(true);
     $logout_jti = wp_generate_uuid4();

@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Auth_Repository {
 
-    public const SCHEMA_VERSION = '3';
+    public const SCHEMA_VERSION = '4';
 
     public static function table() {
         global $wpdb;
@@ -19,6 +19,11 @@ class TSOL_Library_Auth_Repository {
     public static function messages_table() {
         global $wpdb;
         return $wpdb->prefix . 'tsol_library_auth_messages';
+    }
+
+    public static function rate_limits_table() {
+        global $wpdb;
+        return $wpdb->prefix . 'tsol_library_auth_rate_limits';
     }
 
     public static function install() {
@@ -49,6 +54,16 @@ class TSOL_Library_Auth_Repository {
             expires_at datetime NOT NULL,
             created_at datetime NOT NULL,
             PRIMARY KEY  (jti),
+            KEY expires_at (expires_at)
+        ) {$charset};");
+
+        $rate_limits_table = self::rate_limits_table();
+        dbDelta("CREATE TABLE {$rate_limits_table} (
+            rate_key char(64) NOT NULL,
+            request_count bigint(20) unsigned NOT NULL,
+            window_started_at bigint(20) unsigned NOT NULL,
+            expires_at bigint(20) unsigned NOT NULL,
+            PRIMARY KEY  (rate_key),
             KEY expires_at (expires_at)
         ) {$charset};");
     }
@@ -108,10 +123,58 @@ class TSOL_Library_Auth_Repository {
         $codes_deleted = $wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE expires_at < %s", $cutoff));
         $messages_table = self::messages_table();
         $messages_deleted = $wpdb->query($wpdb->prepare("DELETE FROM {$messages_table} WHERE expires_at < %s", $cutoff));
-        if (false === $codes_deleted || false === $messages_deleted) {
+        $rate_limits_table = self::rate_limits_table();
+        $rate_limits_deleted = $wpdb->query($wpdb->prepare("DELETE FROM {$rate_limits_table} WHERE expires_at < %d", time() - DAY_IN_SECONDS));
+        if (false === $codes_deleted || false === $messages_deleted || false === $rate_limits_deleted) {
             return false;
         }
-        return (int) $codes_deleted + (int) $messages_deleted;
+        return (int) $codes_deleted + (int) $messages_deleted + (int) $rate_limits_deleted;
+    }
+
+    public static function increment_rate_limit($rate_key, $now, $window_seconds) {
+        global $wpdb;
+
+        $rate_key = strtolower((string) $rate_key);
+        $now = (int) $now;
+        $window_seconds = (int) $window_seconds;
+        if (!preg_match('/^[a-f0-9]{64}$/', $rate_key) || $now <= 0 || $window_seconds < 10 || $window_seconds > DAY_IN_SECONDS) {
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+        }
+
+        $expires_at = $now + $window_seconds;
+        $table = self::rate_limits_table();
+        $written = $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table} (rate_key, request_count, window_started_at, expires_at)
+             VALUES (%s, 1, %d, %d)
+             ON DUPLICATE KEY UPDATE
+                request_count = IF(expires_at <= %d, 1, request_count + 1),
+                window_started_at = IF(expires_at <= %d, %d, window_started_at),
+                expires_at = IF(expires_at <= %d, %d, expires_at)",
+            $rate_key,
+            $now,
+            $expires_at,
+            $now,
+            $now,
+            $now,
+            $now,
+            $expires_at
+        ));
+        if (false === $written) {
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+        }
+
+        $state = $wpdb->get_row($wpdb->prepare(
+            "SELECT request_count, expires_at FROM {$table} WHERE rate_key = %s LIMIT 1",
+            $rate_key
+        ), ARRAY_A);
+        if (!is_array($state) || !isset($state['request_count'], $state['expires_at'])) {
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+        }
+
+        return array(
+            'count' => max(1, (int) $state['request_count']),
+            'expires_at' => max($now + 1, (int) $state['expires_at']),
+        );
     }
 
     public static function consume_message($jti, $event, $expires_at) {

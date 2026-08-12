@@ -13,24 +13,25 @@ class TSOL_Library_Auth_Rate_Limiter {
         $scope = sanitize_key((string) $scope);
         $limit = max(1, (int) apply_filters('tsol_library_auth_rate_limit', $limit, $scope));
         $window_seconds = max(10, (int) $window_seconds);
-        $remote_address = isset($_SERVER['REMOTE_ADDR']) ? (string) wp_unslash($_SERVER['REMOTE_ADDR']) : 'unknown';
-        $client_address = (string) apply_filters('tsol_library_auth_client_ip', $remote_address);
-        $key = 'tsol_lib_rl_' . substr(hash('sha256', $scope . "\n" . $client_address . "\n" . (string) $subject), 0, 40);
+        $subject = trim((string) $subject);
+        $identity = $subject === '' ? 'address:' . self::client_address() : 'subject:' . substr($subject, 0, 256);
+        $key = hash('sha256', $scope . "\n" . $identity);
         $now = time();
-        $state = get_transient($key);
-
-        if (!is_array($state) || empty($state['started_at']) || ($now - (int) $state['started_at']) >= $window_seconds) {
-            $state = array('count' => 0, 'started_at' => $now);
+        $state = TSOL_Library_Auth_Repository::increment_rate_limit($key, $now, $window_seconds);
+        if (is_wp_error($state)) {
+            return $state;
         }
-
-        if ((int) $state['count'] >= $limit) {
-            $retry_after = max(1, $window_seconds - ($now - (int) $state['started_at']));
+        if ((int) $state['count'] > $limit) {
+            $retry_after = max(1, (int) $state['expires_at'] - $now);
             return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'tomschooloflife-plugin'), array('retry_after' => $retry_after));
         }
-
-        $state['count'] = (int) $state['count'] + 1;
-        set_transient($key, $state, $window_seconds);
         return true;
+    }
+
+    public static function client_address() {
+        $remote_address = isset($_SERVER['REMOTE_ADDR']) ? (string) wp_unslash($_SERVER['REMOTE_ADDR']) : 'unknown';
+        $client_address = trim((string) apply_filters('tsol_library_auth_client_ip', $remote_address));
+        return $client_address === '' ? 'unknown' : substr($client_address, 0, 128);
     }
 }
 
