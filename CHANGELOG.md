@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+- Added durable, HMAC-signed catalogue wake-ups with request coalescing, bounded retries, and the existing incremental journal as a polling fallback; no catalogue or MemberPress data is sent in the webhook.
+- Replaced the Speaker headshot attachment-editor workaround with WordPress's native select-then-crop media workflow, requiring an interactive 1:1 crop while retaining the original upload.
+- Removed the redundant editable Library inclusion checkbox: the dedicated Course, Series, and Content post types now establish Library identity automatically, while WordPress status controls member visibility and non-published records remain available for administrator preview in the protected projection.
+- Replaced the plain Speaker multiple select on Library editors with a searchable visual profile picker, ordered selected cards, keyboard controls, responsive presentation, and a native no-JavaScript fallback.
+- Replaced the retired Library Speakers taxonomy with private Speaker profiles using the classic About editor, native Featured Image headshots, role/organisation/website/social fields, and direct Course/Series/Content relationships that never participate in MemberPress authorization.
+- Moved Gemini configuration from the generic TSOL settings screen into a dedicated Accountability Modal AI Matching tab without changing the stored credential or option names.
+- Consolidated the AI enable switch, model, fit threshold, fallback explanation, and privacy notice under the feature that uses them.
+
+## 0.2.1 - 2026-08-09
+
+- Added a dedicated TSOL Library Footer menu location and authenticated navigation endpoint for the standalone Library.
+- Return an empty navigation list when no menu is assigned so the Library can omit the WordPress-managed menu cleanly.
+
+## 0.2.0 - 2026-08-07
+
+- Added the TSOL Library authentication bridge with mandatory S256 PKCE, exact callbacks, hashed one-use authorization codes, short-lived tokens, rate limits, and signed logout propagation.
+- Separated authentication from course authorization: every authenticated WordPress user can enter the Library, while MemberPress-native per-content rules and WordPress `manage_options` decide protected content access without a second allowlist.
+- Added authenticated content-access and readiness endpoints, redacted audit events, no-store security headers, `DONOTCACHEPAGE` and WP Rocket exclusions, and scheduled authorization-code cleanup.
+- Made Access Platform SSO an optional WordPress login source instead of a hard plugin dependency.
+- Required production bridge secrets to be supplied outside the WordPress database.
+- Made Consent Mode defaults cache-safe by always denying optional storage until the visitor's saved choice is applied in the browser.
+- Enforced consent expiry in both the cookie and localStorage fallback and applied Global Privacy Control to previously stored marketing consent.
+- Removed known first-party analytics and marketing cookies on rejection, then reloaded after withdrawal so already-running consent-managed trackers stop.
+- Routed the official Tapfiliate plugin's loader and WooCommerce conversion payload through the Marketing consent category.
+- Converted the site's WPCode MemberPress and WooCommerce Tapfiliate handlers into inert Marketing-category scripts until consent is granted.
+- Added a compatibility bridge that makes legacy HFCM Google, Vimeo Player API, RocketChat, and Kissmetrics snippets consent-controlled while they are being retired from configuration.
+- Gated server-rendered Vimeo/YouTube iframes and Elementor video-lightbox launches behind Marketing consent with a visible settings placeholder.
+- Added accessible JavaScript syntax validation to the consent snippet editor so malformed tracker snippets cannot be saved from the admin screen.
+- Preserved JavaScript backslashes when saving cookie-consent snippets by removing redundant Settings API unslashing.
+
 ## 0.1.7 - 2026-06-17
 
 - Fixed the cookie preferences modal so Reject optional closes the blocking overlay after saving consent.
