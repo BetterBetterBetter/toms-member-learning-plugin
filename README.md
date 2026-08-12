@@ -100,7 +100,19 @@ The plugin also registers a **TSOL Library Footer** menu location under WordPres
 
 Every authenticated WordPress account can enter and browse the Library. Access to each protected course or lesson is decided from that content's existing MemberPress rules, including drip and expiry behavior; unprotected published content is available to signed-in users. WordPress users with `manage_options` retain full administrator access. The plugin does not maintain a second membership or staff allowlist.
 
-The URL, client ID, and client secret can be managed in the plugin UI. The secret field reports whether a value is configured but never renders the stored value; leaving it blank preserves the current secret. Host-managed `TSOL_LIBRARY_APP_URL`, `TSOL_LIBRARY_CLIENT_ID`, and `TSOL_LIBRARY_CLIENT_SECRET` constants remain optional overrides. Use separate clients and secrets for development, staging, and production.
+The URL and client ID can be managed in the plugin UI. Development and staging
+may use the write-only client-secret option, which never renders the stored
+value. Production requires the host-managed `TSOL_LIBRARY_CLIENT_SECRET`
+constant and ignores the editable option. `TSOL_LIBRARY_APP_URL` and
+`TSOL_LIBRARY_CLIENT_ID` remain optional host overrides. Use separate clients
+and secrets for development, staging, and production.
+
+Bridge request limits use an atomic WordPress database table shared across PHP
+instances. Valid server traffic is scoped by endpoint/client ID and WordPress
+user where applicable instead of only by a common egress address. Invalid
+client traffic uses the directly connected address; configure the
+`tsol_library_auth_client_ip` filter only when a trusted proxy overwrites and
+validates its forwarding header.
 
 Configure `TSOL_LIBRARY_AUTH_REVOCATION_SECRET` only as a host-managed
 WordPress constant and use the same dedicated value in the Library secret
