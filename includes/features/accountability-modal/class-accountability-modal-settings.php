@@ -12,6 +12,9 @@ class TSOL_Accountability_Modal_Settings {
     public const DISPLAY_OPTION = 'tsol_accountability_modal_display_rules';
     public const CONTENT_OPTION = 'tsol_accountability_modal_content';
     public const GROUP_BIOS_OPTION = 'tsol_accountability_modal_group_bios';
+    public const GEMINI_API_KEY_OPTION = 'tsol_site_gemini_api_key';
+    public const GEMINI_MODEL_OPTION = 'tsol_site_gemini_model';
+    public const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
     public const DISPLAY_GROUP = 'tsol_accountability_modal_display_rules';
     public const CONTENT_GROUP = 'tsol_accountability_modal_content';
     public const GROUP_BIOS_GROUP = 'tsol_accountability_modal_group_bios';
@@ -299,8 +302,53 @@ class TSOL_Accountability_Modal_Settings {
         return (float) $rules['fit_threshold'];
     }
 
+    public static function get_gemini_api_key() {
+        return trim((string) get_option(self::GEMINI_API_KEY_OPTION, ''));
+    }
+
+    public static function get_gemini_model() {
+        $model = trim((string) get_option(self::GEMINI_MODEL_OPTION, self::DEFAULT_GEMINI_MODEL));
+
+        return $model !== '' ? $model : self::DEFAULT_GEMINI_MODEL;
+    }
+
+    public static function sanitize_gemini_model($value) {
+        if (!is_scalar($value)) {
+            return self::DEFAULT_GEMINI_MODEL;
+        }
+        $value = sanitize_text_field((string) wp_unslash($value));
+        $options = self::get_gemini_model_options();
+
+        return isset($options[$value]) ? $value : self::DEFAULT_GEMINI_MODEL;
+    }
+
+    public static function get_gemini_model_options() {
+        $options = array(
+            'gemini-2.5-flash' => __('Gemini 2.5 Flash', 'tomschooloflife-plugin'),
+            'gemini-2.5-pro' => __('Gemini 2.5 Pro', 'tomschooloflife-plugin'),
+            'gemini-2.5-flash-lite' => __('Gemini 2.5 Flash-Lite', 'tomschooloflife-plugin'),
+        );
+
+        /**
+         * Filters the Gemini model choices retained from the original shared
+         * TSOL settings screen.
+         *
+         * @param array $options Model value => label map.
+         */
+        $options = (array) apply_filters('tsol_site_gemini_model_options', $options);
+
+        /**
+         * Filters the Gemini model choices for Accountability Modal matching.
+         *
+         * @param array $options Model value => label map.
+         */
+        return (array) apply_filters('tsol_site_accountability_gemini_model_options', $options);
+    }
+
     public static function sanitize_display_rules($value) {
         $value = is_array($value) ? $value : array();
+        $current = get_option(self::DISPLAY_OPTION, self::default_display_rules());
+        $current = is_array($current) ? wp_parse_args($current, self::default_display_rules()) : self::default_display_rules();
 
         return array(
             'enabled' => self::sanitize_checkbox(isset($value['enabled']) ? $value['enabled'] : '0'),
@@ -314,8 +362,8 @@ class TSOL_Accountability_Modal_Settings {
             'show_resume_launcher' => self::sanitize_checkbox(isset($value['show_resume_launcher']) ? $value['show_resume_launcher'] : '0'),
             'launcher_position' => self::sanitize_launcher_position(isset($value['launcher_position']) ? wp_unslash($value['launcher_position']) : 'bottom_right'),
             'animate_resume_launcher' => self::sanitize_checkbox(isset($value['animate_resume_launcher']) ? $value['animate_resume_launcher'] : '0'),
-            'ai_matching_enabled' => self::sanitize_checkbox(isset($value['ai_matching_enabled']) ? $value['ai_matching_enabled'] : '0'),
-            'fit_threshold' => self::sanitize_fit_threshold(isset($value['fit_threshold']) ? wp_unslash($value['fit_threshold']) : '0.5'),
+            'ai_matching_enabled' => self::sanitize_checkbox(array_key_exists('ai_matching_enabled', $value) ? $value['ai_matching_enabled'] : $current['ai_matching_enabled']),
+            'fit_threshold' => self::sanitize_fit_threshold(array_key_exists('fit_threshold', $value) ? wp_unslash($value['fit_threshold']) : $current['fit_threshold']),
         );
     }
 

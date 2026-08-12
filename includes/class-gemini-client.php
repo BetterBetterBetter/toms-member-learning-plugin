@@ -13,11 +13,11 @@ class TSOL_Gemini_Client {
     public const MODEL_OPTION = 'tsol_site_gemini_model';
 
     public function is_configured() {
-        return TSOL_Site_Admin_Settings::get_gemini_api_key() !== '';
+        return TSOL_Accountability_Modal_Settings::get_gemini_api_key() !== '';
     }
 
     public function generate_json($prompt, $response_schema, $args = array()) {
-        $api_key = TSOL_Site_Admin_Settings::get_gemini_api_key();
+        $api_key = TSOL_Accountability_Modal_Settings::get_gemini_api_key();
 
         if ($api_key === '') {
             return new WP_Error(
@@ -106,7 +106,7 @@ class TSOL_Gemini_Client {
     }
 
     public function get_model() {
-        $model = TSOL_Site_Admin_Settings::get_gemini_model();
+        $model = TSOL_Accountability_Modal_Settings::get_gemini_model();
 
         /**
          * Filters the Gemini model used by site features.

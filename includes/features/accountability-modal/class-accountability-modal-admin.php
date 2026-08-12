@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) {
 class TSOL_Accountability_Modal_Admin {
 
     public const PAGE_SLUG = 'tsol-accountability-modal';
+    public const AI_SETTINGS_NONCE_ACTION = 'tsol_accountability_save_ai_settings';
 
     private $repository;
 
@@ -20,6 +21,7 @@ class TSOL_Accountability_Modal_Admin {
     public function init() {
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_post_tsol_accountability_delete_submission', array($this, 'handle_delete_submission'));
+        add_action('admin_post_tsol_accountability_save_ai_settings', array($this, 'handle_save_ai_settings'));
     }
 
     public function register_settings() {
@@ -32,7 +34,7 @@ class TSOL_Accountability_Modal_Admin {
         }
 
         $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview';
-        $allowed_tabs = array('overview', 'submissions', 'display', 'content', 'groups');
+        $allowed_tabs = array('overview', 'submissions', 'display', 'ai', 'content', 'groups');
 
         if (!in_array($tab, $allowed_tabs, true)) {
             $tab = 'overview';
@@ -51,6 +53,8 @@ class TSOL_Accountability_Modal_Admin {
                     $this->render_submissions_tab();
                 } elseif ($tab === 'display') {
                     $this->render_display_tab();
+                } elseif ($tab === 'ai') {
+                    $this->render_ai_tab();
                 } elseif ($tab === 'content') {
                     $this->render_content_tab();
                 } elseif ($tab === 'groups') {
@@ -82,6 +86,59 @@ class TSOL_Accountability_Modal_Admin {
         $this->redirect_to_submissions($deleted ? 'submission_deleted' : 'submission_not_found');
     }
 
+    public function handle_save_ai_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to change accountability AI settings.', 'tomschooloflife-plugin'));
+        }
+
+        check_admin_referer(self::AI_SETTINGS_NONCE_ACTION);
+
+        $rules = TSOL_Accountability_Modal_Settings::get_display_rules();
+        $rules['ai_matching_enabled'] = isset($_POST['ai_matching_enabled']) ? '1' : '0';
+        $threshold = isset($_POST['fit_threshold']) ? wp_unslash($_POST['fit_threshold']) : '0.5';
+        $rules['fit_threshold'] = is_scalar($threshold) ? (string) $threshold : '0.5';
+        update_option(
+            TSOL_Accountability_Modal_Settings::DISPLAY_OPTION,
+            TSOL_Accountability_Modal_Settings::sanitize_display_rules($rules),
+            false
+        );
+
+        $model = isset($_POST[TSOL_Accountability_Modal_Settings::GEMINI_MODEL_OPTION])
+            ? wp_unslash($_POST[TSOL_Accountability_Modal_Settings::GEMINI_MODEL_OPTION])
+            : TSOL_Accountability_Modal_Settings::DEFAULT_GEMINI_MODEL;
+        $model = is_scalar($model) ? (string) $model : TSOL_Accountability_Modal_Settings::DEFAULT_GEMINI_MODEL;
+        update_option(
+            TSOL_Accountability_Modal_Settings::GEMINI_MODEL_OPTION,
+            TSOL_Accountability_Modal_Settings::sanitize_gemini_model($model),
+            false
+        );
+
+        $clear_key_value = isset($_POST['tsol_accountability_clear_gemini_api_key'])
+            ? wp_unslash($_POST['tsol_accountability_clear_gemini_api_key'])
+            : '';
+        $clear_key = is_scalar($clear_key_value) && '1' === (string) $clear_key_value;
+        $new_key_value = isset($_POST[TSOL_Accountability_Modal_Settings::GEMINI_API_KEY_OPTION])
+            ? wp_unslash($_POST[TSOL_Accountability_Modal_Settings::GEMINI_API_KEY_OPTION])
+            : '';
+        $new_key = is_scalar($new_key_value) ? trim((string) $new_key_value) : '';
+        if ($clear_key) {
+            update_option(TSOL_Accountability_Modal_Settings::GEMINI_API_KEY_OPTION, '', false);
+        } elseif ('' !== $new_key) {
+            update_option(
+                TSOL_Accountability_Modal_Settings::GEMINI_API_KEY_OPTION,
+                sanitize_text_field($new_key),
+                false
+            );
+        }
+
+        wp_safe_redirect(add_query_arg(array(
+            'page' => self::PAGE_SLUG,
+            'tab' => 'ai',
+            'tsol_notice' => 'ai_settings_saved',
+        ), admin_url('admin.php')));
+        exit;
+    }
+
     private function render_action_notice() {
         $notice = isset($_GET['tsol_notice']) ? sanitize_key(wp_unslash($_GET['tsol_notice'])) : '';
 
@@ -101,6 +158,10 @@ class TSOL_Accountability_Modal_Admin {
             'submission_delete_error' => array(
                 'class' => 'notice-error',
                 'message' => __('The submission could not be deleted.', 'tomschooloflife-plugin'),
+            ),
+            'ai_settings_saved' => array(
+                'class' => 'notice-success',
+                'message' => __('AI matching settings saved.', 'tomschooloflife-plugin'),
             ),
         );
 
@@ -129,6 +190,7 @@ class TSOL_Accountability_Modal_Admin {
             'overview' => __('Overview', 'tomschooloflife-plugin'),
             'submissions' => __('Submissions', 'tomschooloflife-plugin'),
             'display' => __('Display Rules', 'tomschooloflife-plugin'),
+            'ai' => __('AI Matching', 'tomschooloflife-plugin'),
             'content' => __('Content', 'tomschooloflife-plugin'),
             'groups' => __('Groups', 'tomschooloflife-plugin'),
         );
@@ -142,9 +204,10 @@ class TSOL_Accountability_Modal_Admin {
             }
 
             printf(
-                '<a class="%1$s" href="%2$s">%3$s</a>',
+                '<a class="%1$s" href="%2$s"%3$s>%4$s</a>',
                 esc_attr($classes),
                 esc_url(admin_url('admin.php?page=' . self::PAGE_SLUG . '&tab=' . $tab)),
+                $tab === $active_tab ? ' aria-current="page"' : '',
                 esc_html($label)
             );
         }
@@ -571,19 +634,97 @@ class TSOL_Accountability_Modal_Admin {
                     </td>
                 </tr>
                 <?php $this->render_display_checkbox('animate_resume_launcher', __('Animate the resume button occasionally', 'tomschooloflife-plugin'), $rules); ?>
-                <?php $this->render_display_checkbox('ai_matching_enabled', __('Enable AI group matching', 'tomschooloflife-plugin'), $rules); ?>
+            </table>
+
+            <?php submit_button(__('Save display rules', 'tomschooloflife-plugin')); ?>
+        </form>
+        <?php
+    }
+
+    private function render_ai_tab() {
+        $rules = TSOL_Accountability_Modal_Settings::get_display_rules();
+        $has_key = '' !== TSOL_Accountability_Modal_Settings::get_gemini_api_key();
+        $model = TSOL_Accountability_Modal_Settings::get_gemini_model();
+        ?>
+        <div class="tsol-site-admin-grid">
+            <section class="tsol-site-card">
+                <h2><?php esc_html_e('Accountability AI matching', 'tomschooloflife-plugin'); ?></h2>
+                <p><?php esc_html_e('Gemini is used only to rank eligible Accountability Modal groups after weekly call availability has already been checked. It is not used by TSOL Library.', 'tomschooloflife-plugin'); ?></p>
+            </section>
+            <section class="tsol-site-card">
+                <h2><?php esc_html_e('Safe fallback', 'tomschooloflife-plugin'); ?></h2>
+                <p><?php esc_html_e('If AI is disabled, unavailable, or returns no usable result, members still receive availability-based group choices and can continue.', 'tomschooloflife-plugin'); ?></p>
+            </section>
+        </div>
+
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="tsol_accountability_save_ai_settings">
+            <?php wp_nonce_field(self::AI_SETTINGS_NONCE_ACTION); ?>
+
+            <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row">
-                        <label for="tsol-accountability-fit-threshold"><?php esc_html_e('Strong-fit threshold', 'tomschooloflife-plugin'); ?></label>
-                    </th>
+                    <th scope="row"><?php esc_html_e('AI group matching', 'tomschooloflife-plugin'); ?></th>
                     <td>
-                        <input id="tsol-accountability-fit-threshold" type="number" min="0" max="1" step="0.05" name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::DISPLAY_OPTION); ?>[fit_threshold]" value="<?php echo esc_attr($rules['fit_threshold']); ?>" class="small-text">
-                        <p class="description"><?php esc_html_e('Scores below this value automatically show the all-groups fallback. Default: 0.5.', 'tomschooloflife-plugin'); ?></p>
+                        <label>
+                            <input type="checkbox" name="ai_matching_enabled" value="1" <?php checked('1', $rules['ai_matching_enabled']); ?>>
+                            <?php esc_html_e('Enable Gemini-assisted accountability group ranking', 'tomschooloflife-plugin'); ?>
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tsol-accountability-gemini-api-key"><?php esc_html_e('Gemini API key', 'tomschooloflife-plugin'); ?></label></th>
+                    <td>
+                        <p style="margin: 0 0 10px;">
+                            <?php if ($has_key) : ?>
+                                <span class="tsol-site-status tsol-site-status--ok" data-accountability-gemini-status="configured"><?php esc_html_e('Configured', 'tomschooloflife-plugin'); ?></span>
+                            <?php else : ?>
+                                <span class="tsol-site-status tsol-site-status--warning" data-accountability-gemini-status="missing"><?php esc_html_e('Not configured', 'tomschooloflife-plugin'); ?></span>
+                            <?php endif; ?>
+                        </p>
+                        <input
+                            id="tsol-accountability-gemini-api-key"
+                            type="password"
+                            name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::GEMINI_API_KEY_OPTION); ?>"
+                            value=""
+                            class="regular-text"
+                            autocomplete="new-password"
+                            placeholder="<?php echo esc_attr($has_key ? __('Enter a new key to replace the saved key', 'tomschooloflife-plugin') : __('Paste an Accountability Modal Gemini API key', 'tomschooloflife-plugin')); ?>"
+                        >
+                        <p class="description"><?php echo esc_html($has_key ? __('Leave blank to keep the saved key. The existing value is never displayed.', 'tomschooloflife-plugin') : __('The key is stored in WordPress and is never printed back into this field.', 'tomschooloflife-plugin')); ?></p>
+                        <?php if ($has_key) : ?>
+                            <p>
+                                <label>
+                                    <input type="checkbox" name="tsol_accountability_clear_gemini_api_key" value="1">
+                                    <?php esc_html_e('Clear the saved Accountability Modal Gemini API key', 'tomschooloflife-plugin'); ?>
+                                </label>
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tsol-accountability-gemini-model"><?php esc_html_e('Gemini model', 'tomschooloflife-plugin'); ?></label></th>
+                    <td>
+                        <select id="tsol-accountability-gemini-model" name="<?php echo esc_attr(TSOL_Accountability_Modal_Settings::GEMINI_MODEL_OPTION); ?>">
+                            <?php foreach (TSOL_Accountability_Modal_Settings::get_gemini_model_options() as $value => $label) : ?>
+                                <option value="<?php echo esc_attr($value); ?>" <?php selected($value, $model); ?>><?php echo esc_html($label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tsol-accountability-fit-threshold"><?php esc_html_e('Strong-fit threshold', 'tomschooloflife-plugin'); ?></label></th>
+                    <td>
+                        <input id="tsol-accountability-fit-threshold" type="number" min="0" max="1" step="0.05" name="fit_threshold" value="<?php echo esc_attr($rules['fit_threshold']); ?>" class="small-text">
+                        <p class="description"><?php esc_html_e('Scores below this value show the all-groups fallback. Default: 0.5.', 'tomschooloflife-plugin'); ?></p>
                     </td>
                 </tr>
             </table>
 
-            <?php submit_button(__('Save display rules', 'tomschooloflife-plugin')); ?>
+            <div class="notice notice-info inline">
+                <p><?php esc_html_e('Privacy: non-scheduling intake answers and candidate group context are sent to Google Gemini for ranking. Member names and email addresses are not deliberately included in the prompt.', 'tomschooloflife-plugin'); ?></p>
+            </div>
+
+            <?php submit_button(__('Save AI matching settings', 'tomschooloflife-plugin')); ?>
         </form>
         <?php
     }
