@@ -80,9 +80,9 @@ $expected_content_target_ids = array_map('intval', get_posts(array(
 )));
 $listed_content_target_ids = array_map('intval', array_keys($content_targets));
 $assert(
-    194 === count($expected_content_target_ids)
+    196 === count($expected_content_target_ids)
         && empty(array_diff($expected_content_target_ids, $listed_content_target_ids)),
-    'MemberPress does not list every normalized TSOL Content record as an individual rule target.'
+    'MemberPress does not list every WordPress-owned TSOL Content record as an individual rule target.'
 );
 $assert(1 === count($collection_targets) && in_array('Masterclasses', array_values($collection_targets), true), 'MemberPress does not list the Masterclasses Collection as a rule target.');
 
@@ -120,7 +120,7 @@ foreach ($target_ids as $target_id) {
 }
 $assert(!$verification['activation_blocked_until_targets_are_published'] === $all_targets_published, 'The publication activation gate is incorrect.');
 $assert(('activated' === $phase ? 0 : 154) === $legacy_pointer_count, 'The historical migration legacy authorization-pointer count is incorrect.');
-$assert(('activated' === $phase ? 207 : 53) === $native_pointer_count, 'The combined native authorization-pointer count is incorrect.');
+$assert(('activated' === $phase ? 209 : 55) === $native_pointer_count, 'The combined native authorization-pointer count is incorrect.');
 
 $condition_count = (int) $wpdb->get_var(
     "SELECT COUNT(*) FROM {$wpdb->prefix}mepr_rule_access_conditions WHERE rule_id IN (" . implode(',', $owned_ids) . ')'

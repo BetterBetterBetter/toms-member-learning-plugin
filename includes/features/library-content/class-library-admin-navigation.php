@@ -17,6 +17,7 @@ class TSOL_Library_Admin_Navigation {
     const SETTINGS_TAB_AUTHENTICATION = 'authentication';
     const SETTINGS_TAB_IMPORT = 'import-legacy';
     const SETTINGS_TAB_ACCESS = 'access-overview';
+    const SETTINGS_TAB_SYNC = 'sync-status';
     const RECORD_COUNT_COLUMN = 'tsol_library_records';
 
     private $taxonomy_record_counts = array();
@@ -299,6 +300,9 @@ class TSOL_Library_Admin_Navigation {
                     $auth_settings->render(true);
                 } elseif (self::SETTINGS_TAB_IMPORT === $active_tab) {
                     $this->render_import(true);
+                } elseif (self::SETTINGS_TAB_SYNC === $active_tab) {
+                    $sync_status = new TSOL_Library_Catalogue_Sync_Status();
+                    $sync_status->render();
                 } else {
                     $this->render_access_overview(true);
                 }
@@ -406,6 +410,7 @@ class TSOL_Library_Admin_Navigation {
         if (current_user_can('manage_options')) {
             $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'tomschooloflife-plugin');
             $tabs[self::SETTINGS_TAB_IMPORT] = __('Import & Legacy', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'tomschooloflife-plugin');
         }
         if (current_user_can('edit_pages')) {
             $tabs[self::SETTINGS_TAB_ACCESS] = __('Access Overview', 'tomschooloflife-plugin');

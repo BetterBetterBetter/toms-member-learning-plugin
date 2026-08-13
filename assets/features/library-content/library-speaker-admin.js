@@ -108,8 +108,84 @@
         });
     }
 
+    function arrangeEditorialFlow() {
+        var $details = $('#tsol-library-speaker-details');
+        var $aboutHeading = $('.tsol-speaker-about-heading').first();
+        var $bodyEditor = $('#postdivrich');
+
+        if (!$details.length || !$aboutHeading.length || !$bodyEditor.length) {
+            return;
+        }
+
+        $details.insertBefore($aboutHeading);
+        $details.attr('data-speaker-details-section', '');
+        $aboutHeading.add($bodyEditor).wrapAll($('<div>', {
+            'class': 'tsol-speaker-about-section',
+            'data-speaker-about-section': '',
+        }));
+    }
+
+    function initShortBioGuidance() {
+        var $field = $('#tsol-library-speaker-details #excerpt');
+
+        if (!$field.length) {
+            return;
+        }
+
+        var strings = settings.strings || {};
+        var recommendedLength = 160;
+        var countId = 'tsol-library-speaker-short-bio-count';
+        var warningId = 'tsol-library-speaker-short-bio-warning';
+        var $status = $('<span>', {
+            'class': 'tsol-speaker-short-bio-status',
+            'data-speaker-short-bio-status': '',
+        });
+        var $count = $('<span>', {
+            id: countId,
+            'class': 'tsol-speaker-short-bio-status__count',
+            'data-speaker-short-bio-count': '',
+        });
+        var $warning = $('<span>', {
+            id: warningId,
+            'class': 'tsol-speaker-short-bio-status__warning',
+            'data-speaker-short-bio-warning': '',
+            role: 'status',
+            hidden: true,
+            text: strings.shortBioLongWarning || 'Longer bios may be shortened in compact Library displays.',
+        });
+
+        function normalizedLength() {
+            var value = $.trim(String($field.val() || '')).replace(/\s+/g, ' ');
+
+            return Array.from(value).length;
+        }
+
+        function countLabel(length) {
+            return String(strings.shortBioCountTemplate || '%1$d / %2$d recommended')
+                .replace('%1$d', String(length))
+                .replace('%2$d', String(recommendedLength));
+        }
+
+        function update() {
+            var length = normalizedLength();
+            var isLong = length > recommendedLength;
+
+            $count.text(countLabel(length));
+            $status.toggleClass('is-over-recommended', isLong);
+            $warning.prop('hidden', !isLong);
+        }
+
+        $status.append($count, $warning);
+        $field.after($status);
+        $field.attr('aria-describedby', $.trim([$field.attr('aria-describedby'), countId, warningId].filter(Boolean).join(' ')));
+        $field.on('input', update);
+        update();
+    }
+
     $(document).ready(function() {
         enableHeadshotCropper();
+        arrangeEditorialFlow();
+        initShortBioGuidance();
 
         $('[data-speaker-social-editor]').each(function() {
             var $editor = $(this);

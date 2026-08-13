@@ -445,7 +445,6 @@ class TSOL_Library_Series_Import {
             TSOL_Library_Content_Model::META_CONTENT_TYPE => 'series',
             TSOL_Library_Content_Model::META_POSITION => 0,
             TSOL_Library_Content_Model::META_FEATURED => false,
-            TSOL_Library_Content_Model::META_CURRENT => true,
             TSOL_Library_Content_Model::META_MEDIA_ASSETS => array(),
             TSOL_Library_Content_Model::META_RESOURCES => array(),
             TSOL_Library_Content_Model::META_MIGRATION_KEY => $migration_key,

@@ -14,9 +14,11 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
 
     private $admin = null;
     private $access_column = null;
+    private $homepage_curation = null;
     private $navigation = null;
     private $speaker_admin = null;
     private $structure_admin = null;
+    private $sync_status = null;
     private $url_admin = null;
 
     public function init() {
@@ -25,12 +27,17 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
         add_action('init', array('TSOL_Library_Content_Changes', 'maybe_install'), 31);
         add_action('init', array('TSOL_Library_Catalogue_Webhook', 'maybe_install'), 32);
         add_action('init', array('TSOL_Library_Structure', 'maybe_migrate'), 33);
+        add_filter('wp_insert_post_data', array('TSOL_Library_Content_HTML_Sanitizer', 'sanitize_post_data'), 20, 2);
         TSOL_Library_Content_Changes::register_hooks();
         TSOL_Library_Catalogue_Webhook::register_hooks();
 
         if (is_admin()) {
+            $this->sync_status = new TSOL_Library_Catalogue_Sync_Status();
+            $this->sync_status->init();
             $this->navigation = new TSOL_Library_Admin_Navigation();
             $this->navigation->init();
+            $this->homepage_curation = new TSOL_Library_Homepage_Curation();
+            $this->homepage_curation->init();
             $this->access_column = new TSOL_Library_Content_Access_Column();
             $this->access_column->init();
             $this->url_admin = new TSOL_Library_URL_Admin();
@@ -47,5 +54,10 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
     public static function activate() {
         TSOL_Library_Content_Changes::install();
         TSOL_Library_Catalogue_Webhook::install();
+        TSOL_Library_Catalogue_Webhook::activate();
+    }
+
+    public static function deactivate() {
+        TSOL_Library_Catalogue_Webhook::deactivate();
     }
 }

@@ -6,7 +6,7 @@ custom-URI MemberPress rule.
 
 It creates:
 
-- one published `tsol_library_course` with one flat `Lessons` section;
+- one published `tsol_library_course` with seven ordered editorial sections;
 - 52 ordered published `tsol_library_item` lessons, each with one Vimeo asset;
 - one published MemberPress `single_tsol_library_course` rule;
 - an authorization pointer from the Course and all lessons to that Course.
@@ -30,6 +30,16 @@ php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop pre
 php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop apply --confirm=import-new-marketer-workshop-with-exact-legacy-access --skip-themes
 php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop verify --skip-themes
 php -d memory_limit=512M $(command -v wp) eval-file /Users/ryan/Projects/tomwoods/tsol/plugin/tests/library-new-marketer-workshop-contract.php --skip-themes
+```
+
+Sites that already contain the original flat import can apply the guarded
+forward-only structure migration. It verifies the legacy page, the legacy
+rule, all 52 owned lesson titles/media/relationships, and the old flat
+curriculum before changing only the Course registry and each lesson's section
+and local position:
+
+```sh
+php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop restructure --confirm=split-new-marketer-workshop-into-seven-sections --skip-themes
 ```
 
 Rollback is available only while all importer-owned targets remain byte-for-byte

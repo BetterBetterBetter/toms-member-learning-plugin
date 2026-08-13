@@ -38,9 +38,14 @@ foreach (TSOL_Library_Content_Model::post_types() as $post_type) {
     }
     if (TSOL_Library_Content_Model::COURSE_POST_TYPE !== $post_type) {
         $assert(!isset($meta[TSOL_Library_Content_Model::META_COURSE_SECTIONS]), sprintf('Course section registry is registered for %s.', $post_type));
+        $assert(!isset($meta[TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES]), sprintf('Course learning outcomes are registered for %s.', $post_type));
     }
     if (TSOL_Library_Content_Model::SERIES_POST_TYPE !== $post_type) {
         $assert(!isset($meta[TSOL_Library_Content_Model::META_SERIES_GROUPS]), sprintf('Series group registry is registered for %s.', $post_type));
+    }
+    if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== $post_type) {
+        $assert(!isset($meta[TSOL_Library_Content_Model::META_AVAILABILITY]), sprintf('Content availability is registered for %s.', $post_type));
+        $assert(!isset($meta[TSOL_Library_Content_Model::META_RELEASE_AT_GMT]), sprintf('Content release time is registered for %s.', $post_type));
     }
 }
 

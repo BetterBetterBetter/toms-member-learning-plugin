@@ -298,10 +298,10 @@ class TSOL_Library_Structure_Admin {
         ?>
         <section class="tsol-library-structure-group" data-structure-group data-group-key="<?php echo esc_attr($key); ?>"<?php echo $template ? ' data-template-group' : ''; ?>>
             <header class="tsol-library-structure-group__header">
-                <button type="button" class="tsol-library-structure-handle tsol-library-structure-handle--group" data-group-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), $display_title)); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
+                <button type="button" class="button-link tsol-library-structure-handle tsol-library-structure-handle--group" data-group-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), $display_title)); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
                     <span class="dashicons dashicons-move" aria-hidden="true"></span>
                 </button>
-                <button type="button" class="tsol-library-structure-disclosure" data-group-toggle aria-expanded="true" aria-label="<?php echo esc_attr(sprintf(__('Collapse %s', 'tomschooloflife-plugin'), $display_title)); ?>">
+                <button type="button" class="button-link tsol-library-structure-disclosure" data-group-toggle aria-expanded="true" aria-label="<?php echo esc_attr(sprintf(__('Collapse %s', 'tomschooloflife-plugin'), $display_title)); ?>">
                     <span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
                 </button>
                 <div class="tsol-library-structure-group__name">
@@ -361,14 +361,31 @@ class TSOL_Library_Structure_Admin {
             (int) $parent_id,
             (string) $item['editUrl']
         );
+        $is_coming_soon = TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === (string) ($item['availability'] ?? '');
+        $availability_label = __('Coming soon', 'tomschooloflife-plugin');
+        if ($is_coming_soon && !empty($item['releaseAt'])) {
+            $release_date_local = get_date_from_gmt((string) $item['releaseAt'], 'Y-m-d');
+            $availability_label = $release_date_local < current_datetime()->format('Y-m-d')
+                ? __('Coming soon · release date passed', 'tomschooloflife-plugin')
+                : sprintf(
+                    __('Coming soon · %s', 'tomschooloflife-plugin'),
+                    get_date_from_gmt(
+                        (string) $item['releaseAt'],
+                        get_option('date_format')
+                    )
+                );
+        }
         ?>
-        <li class="tsol-library-structure-item" data-structure-item data-item-id="<?php echo esc_attr((string) $item['id']); ?>" data-search-text="<?php echo esc_attr(strtolower((string) $item['title'] . ' ' . (string) $item['statusLabel'])); ?>">
-            <button type="button" class="tsol-library-structure-handle" data-item-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), (string) $item['title'])); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
+        <li class="tsol-library-structure-item" data-structure-item data-item-id="<?php echo esc_attr((string) $item['id']); ?>" data-search-text="<?php echo esc_attr(strtolower((string) $item['title'] . ' ' . (string) $item['statusLabel'] . ($is_coming_soon ? ' ' . $availability_label : ''))); ?>">
+            <button type="button" class="button-link tsol-library-structure-handle" data-item-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), (string) $item['title'])); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
                 <span class="dashicons dashicons-move" aria-hidden="true"></span>
             </button>
             <div class="tsol-library-structure-item__identity">
                 <a href="<?php echo esc_url($edit_url); ?>"><?php echo esc_html((string) $item['title']); ?></a>
                 <span class="tsol-library-structure-status tsol-library-structure-status--<?php echo esc_attr(sanitize_html_class((string) $item['status'])); ?>"><?php echo esc_html((string) $item['statusLabel']); ?></span>
+                <?php if ($is_coming_soon) : ?>
+                    <span class="tsol-library-structure-status tsol-library-structure-status--coming-soon"><?php echo esc_html($availability_label); ?></span>
+                <?php endif; ?>
             </div>
             <label class="tsol-library-structure-item__move">
                 <span><?php esc_html_e('Move to', 'tomschooloflife-plugin'); ?></span>

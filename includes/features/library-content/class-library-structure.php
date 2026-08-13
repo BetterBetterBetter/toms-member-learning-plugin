@@ -241,6 +241,8 @@ class TSOL_Library_Structure {
                 'title' => get_the_title($child),
                 'status' => (string) $child->post_status,
                 'statusLabel' => get_post_status_object($child->post_status) ? get_post_status_object($child->post_status)->label : $child->post_status,
+                'availability' => TSOL_Library_Content_Model::availability($child->ID),
+                'releaseAt' => TSOL_Library_Content_Model::release_at_gmt($child->ID),
                 'position' => (int) get_post_meta($child->ID, TSOL_Library_Content_Model::META_POSITION, true),
                 'editUrl' => get_edit_post_link($child->ID, 'raw'),
             );

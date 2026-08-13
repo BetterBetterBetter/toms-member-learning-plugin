@@ -230,6 +230,7 @@ class TomsSchoolOfLifePlugin {
 
     public static function deactivate() {
         TSOL_Library_Auth::deactivate();
+        TSOL_Library_Content::deactivate();
     }
 
     private function register_features() {

@@ -16,6 +16,7 @@ class TSOL_Library_Content_Admin {
     const NOTICE_PREFIX = 'tsol_library_editor_notice_';
     const COURSE_COLUMN = 'tsol-course';
     const SERIES_COLUMN = 'tsol-series';
+    const AVAILABILITY_COLUMN = 'tsol-availability';
     const SPEAKERS_COLUMN = 'tsol-speakers';
     const CONTENT_COUNT_COLUMN = 'tsol-content-count';
     const CONTENT_SCOPE_FILTER = 'tsol_content_scope';
@@ -35,12 +36,16 @@ class TSOL_Library_Content_Admin {
         add_action('save_post', array($this, 'save_post'), 30, 2);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('admin_notices', array($this, 'render_admin_notice'));
+        add_action('load-post.php', array($this, 'isolate_private_editor_integrations'), 99);
+        add_action('load-post-new.php', array($this, 'isolate_private_editor_integrations'), 99);
         add_action('wp_ajax_' . self::AJAX_ACTION, array($this, 'ajax_normalize_media_url'));
         add_filter('manage_edit-' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_columns', array($this, 'add_course_column'));
         add_filter('manage_edit-' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_columns', array($this, 'add_series_column'), 11);
+        add_filter('manage_edit-' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_columns', array($this, 'add_availability_column'), 12);
         add_filter('views_edit-' . TSOL_Library_Content_Model::ITEM_POST_TYPE, array($this, 'filter_content_status_views'));
         add_action('manage_' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_posts_custom_column', array($this, 'render_course_column'), 10, 2);
         add_action('manage_' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_posts_custom_column', array($this, 'render_series_column'), 10, 2);
+        add_action('manage_' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_posts_custom_column', array($this, 'render_availability_column'), 10, 2);
         foreach (array(TSOL_Library_Content_Model::COURSE_POST_TYPE, TSOL_Library_Content_Model::SERIES_POST_TYPE) as $parent_post_type) {
             add_filter('manage_edit-' . $parent_post_type . '_columns', array($this, 'add_content_count_column'), 12);
             add_action('manage_' . $parent_post_type . '_posts_custom_column', array($this, 'render_content_count_column'), 10, 2);
@@ -74,6 +79,45 @@ class TSOL_Library_Content_Admin {
         }
 
         return $with_course;
+    }
+
+    public function add_availability_column($columns) {
+        if (!is_array($columns) || isset($columns[self::AVAILABILITY_COLUMN])) {
+            return $columns;
+        }
+
+        $result = array();
+        foreach ($columns as $column => $label) {
+            $result[$column] = $label;
+            if ('title' === $column) {
+                $result[self::AVAILABILITY_COLUMN] = __('Availability', 'tomschooloflife-plugin');
+            }
+        }
+        return $result;
+    }
+
+    public function render_availability_column($column, $post_id) {
+        if (self::AVAILABILITY_COLUMN !== $column) {
+            return;
+        }
+
+        $availability = TSOL_Library_Content_Model::availability($post_id);
+        if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON !== $availability) {
+            esc_html_e('Available', 'tomschooloflife-plugin');
+            return;
+        }
+
+        esc_html_e('Coming soon', 'tomschooloflife-plugin');
+        $release_at_gmt = TSOL_Library_Content_Model::release_at_gmt($post_id);
+        if ('' !== $release_at_gmt) {
+            printf(
+                '<br><span class="description">%s</span>',
+                esc_html(get_date_from_gmt(
+                    $release_at_gmt,
+                    get_option('date_format')
+                ))
+            );
+        }
     }
 
     public function add_content_count_column($columns) {
@@ -412,14 +456,27 @@ class TSOL_Library_Content_Admin {
         // registered page-specific pop-up control is not applicable here.
         remove_meta_box('leadbox-select', $post_type, 'side');
 
-        add_meta_box(
-            'tsol-library-details',
-            __('TSOL Library details', 'tomschooloflife-plugin'),
-            array($this, 'render_details_meta_box'),
-            $post_type,
-            'normal',
-            'high'
-        );
+        if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
+            add_meta_box(
+                'tsol-library-placement',
+                __('Library placement', 'tomschooloflife-plugin'),
+                array($this, 'render_details_meta_box'),
+                $post_type,
+                'normal',
+                'high'
+            );
+        }
+
+        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
+            add_meta_box(
+                'tsol-library-series-settings',
+                __('Series settings', 'tomschooloflife-plugin'),
+                array($this, 'render_details_meta_box'),
+                $post_type,
+                'normal',
+                'high'
+            );
+        }
 
         if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
             add_meta_box(
@@ -442,6 +499,15 @@ class TSOL_Library_Content_Admin {
         }
 
         if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
+            add_meta_box(
+                'tsol-library-course-page-content',
+                __('What you’ll learn', 'tomschooloflife-plugin'),
+                array($this, 'render_course_page_content_meta_box'),
+                $post_type,
+                'normal',
+                'high'
+            );
+
             add_meta_box(
                 'tsol-library-curriculum',
                 __('Course curriculum', 'tomschooloflife-plugin'),
@@ -490,6 +556,22 @@ class TSOL_Library_Content_Admin {
                 'side',
                 'low'
             );
+        }
+    }
+
+    /**
+     * Library records have no WordPress frontend, so page-popup integrations
+     * are inapplicable. Keep LeadPages' generic TinyMCE callbacks off these
+     * screens to avoid both irrelevant controls and remote-response warnings.
+     */
+    public function isolate_private_editor_integrations() {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || !self::supports_post_type((string) $screen->post_type)) {
+            return;
+        }
+
+        foreach (array('admin_head-post.php', 'admin_head-post-new.php', 'mce_external_plugins', 'mce_buttons') as $hook_name) {
+            $this->remove_object_callbacks($hook_name, 'LeadpagesWP\\Admin\\TinyMCE\\LeadboxTinyMCE');
         }
     }
 
@@ -578,47 +660,20 @@ class TSOL_Library_Content_Admin {
                 'speakerMoveUp' => __('Move up', 'tomschooloflife-plugin'),
                 'speakerMoveDown' => __('Move down', 'tomschooloflife-plugin'),
                 'speakerRemove' => __('Remove', 'tomschooloflife-plugin'),
+                'courseBodyTitle' => __('About this course', 'tomschooloflife-plugin'),
+                'contentBodyTitle' => __('Description', 'tomschooloflife-plugin'),
+                'seriesBodyTitle' => __('Description', 'tomschooloflife-plugin'),
+                'excerptDescription' => __('Used as the short introduction on Library cards and pages, and as the preferred search description.', 'tomschooloflife-plugin'),
+                'excerptCountTemplate' => __('%1$d / %2$d recommended', 'tomschooloflife-plugin'),
+                'excerptLongWarning' => __('Search engines may truncate longer descriptions.', 'tomschooloflife-plugin'),
             ),
         ));
     }
 
     public function render_details_meta_box($post) {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
-
-        $content_type = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_CONTENT_TYPE, true);
-        if ('' === $content_type) {
-            $content_type = $this->default_content_type($post->post_type);
-        }
-        $position = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_POSITION, true);
-        $featured = (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_FEATURED, true);
-        $current = (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_CURRENT, true);
         ?>
         <div class="tsol-library-editor" data-library-editor>
-            <div class="tsol-library-field-grid">
-                <div class="tsol-library-field">
-                    <label for="tsol-library-content-type"><?php esc_html_e('Content type', 'tomschooloflife-plugin'); ?></label>
-                    <select id="tsol-library-content-type" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[content_type]">
-                        <?php foreach ($this->content_type_options($post->post_type) as $value => $label) : ?>
-                            <option value="<?php echo esc_attr($value); ?>" <?php selected($content_type, $value); ?>><?php echo esc_html($label); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <p class="description"><?php esc_html_e('Used for catalogue labels and filtering; it does not grant access.', 'tomschooloflife-plugin'); ?></p>
-                </div>
-
-                <?php if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== $post->post_type) : ?>
-                    <div class="tsol-library-field">
-                        <label for="tsol-library-position"><?php esc_html_e('Display position', 'tomschooloflife-plugin'); ?></label>
-                        <input type="number" min="0" step="1" id="tsol-library-position" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[position]" value="<?php echo esc_attr($position); ?>" />
-                        <p class="description"><?php esc_html_e('Optional catalogue order.', 'tomschooloflife-plugin'); ?></p>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <div class="tsol-library-checks">
-                <label><input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[featured]" value="1" <?php checked($featured); ?> /> <?php esc_html_e('Featured', 'tomschooloflife-plugin'); ?></label>
-                <label><input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[current]" value="1" <?php checked($current); ?> /> <?php esc_html_e('Current/recommended version', 'tomschooloflife-plugin'); ?></label>
-            </div>
-
             <?php if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type) : ?>
                 <?php
                 $item_label = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_ITEM_LABEL, true) ?: 'episode';
@@ -626,8 +681,6 @@ class TSOL_Library_Content_Admin {
                 $series_sort = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_SORT, true) ?: 'desc';
                 $ongoing = (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_ONGOING, true);
                 ?>
-                <hr />
-                <h3><?php esc_html_e('Series settings', 'tomschooloflife-plugin'); ?></h3>
                 <div class="tsol-library-field-grid">
                     <div class="tsol-library-field">
                         <label for="tsol-library-series-item-label"><?php esc_html_e('Item label', 'tomschooloflife-plugin'); ?></label>
@@ -703,8 +756,6 @@ class TSOL_Library_Content_Admin {
                 }
                 $placement_type = $course_id > 0 ? 'course' : ($series_id > 0 ? 'series' : 'standalone');
                 ?>
-                <hr />
-                <h3><?php esc_html_e('Structure placement', 'tomschooloflife-plugin'); ?></h3>
                 <p class="description"><?php esc_html_e('Choose where this content appears. Ordering and group names are managed in the parent structure builder.', 'tomschooloflife-plugin'); ?></p>
                 <div class="tsol-library-placement" data-library-placement data-saved-placement="<?php echo esc_attr($placement_type); ?>" data-saved-parent-id="<?php echo esc_attr((string) ($course_id > 0 ? $course_id : $series_id)); ?>">
                     <div class="tsol-library-field">
@@ -1039,8 +1090,44 @@ class TSOL_Library_Content_Admin {
     }
 
     public function render_curriculum_meta_box($post) {
+        wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
         $structure_admin = new TSOL_Library_Structure_Admin();
         $structure_admin->render_compact_summary($post);
+    }
+
+    public function render_course_page_content_meta_box($post) {
+        wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
+        $outcomes = get_post_meta(
+            $post->ID,
+            TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+            true
+        );
+        $outcomes = is_array($outcomes) && !empty($outcomes) ? $outcomes : array('');
+        ?>
+        <div class="tsol-library-course-page-editor" data-library-course-page-editor>
+            <input type="hidden" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[course_learning_outcomes_present]" value="1" />
+            <section class="tsol-library-course-page-editor__section" aria-label="<?php esc_attr_e('Learning outcomes', 'tomschooloflife-plugin'); ?>">
+                <div class="tsol-library-section-intro">
+                    <p class="description"><?php esc_html_e('Add four to six concise outcomes. Titles appear prominently, with optional supporting text beneath each one.', 'tomschooloflife-plugin'); ?></p>
+                </div>
+
+                <div class="tsol-library-outcome-list" data-outcome-rows>
+                    <?php foreach (array_values($outcomes) as $index => $outcome) : ?>
+                        <?php $this->render_learning_outcome_row($index, is_array($outcome) ? ($outcome['text'] ?? '') : $outcome); ?>
+                    <?php endforeach; ?>
+                </div>
+
+                <script type="text/html" data-outcome-template>
+                    <?php $this->render_learning_outcome_row('__index__', ''); ?>
+                </script>
+
+                <div class="tsol-library-outcome-add">
+                    <button type="button" class="button button-secondary" data-outcome-add><?php esc_html_e('Add outcome', 'tomschooloflife-plugin'); ?></button>
+                    <span class="description"><?php esc_html_e('Up to 12 outcomes.', 'tomschooloflife-plugin'); ?></span>
+                </div>
+            </section>
+        </div>
+        <?php
     }
 
     public function render_series_episodes_meta_box($post) {
@@ -1051,8 +1138,38 @@ class TSOL_Library_Content_Admin {
     public function render_media_meta_box($post) {
         $assets = get_post_meta($post->ID, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
         $assets = is_array($assets) && !empty($assets) ? $assets : array(array());
+        $availability = TSOL_Library_Content_Model::availability($post->ID);
+        $release_at_gmt = TSOL_Library_Content_Model::release_at_gmt($post->ID);
+        $release_date_local = '';
+        if ('' !== $release_at_gmt) {
+            $release_date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $release_at_gmt, new DateTimeZone('UTC'));
+            if ($release_date) {
+                $release_date_local = $release_date->setTimezone(wp_timezone())->format('Y-m-d');
+            }
+        }
+        $release_is_past = '' !== $release_date_local && $release_date_local < current_datetime()->format('Y-m-d');
         ?>
         <div class="tsol-library-media-editor" data-library-media-editor>
+            <div class="tsol-library-availability" data-library-availability>
+                <div class="tsol-library-field-grid">
+                    <div class="tsol-library-field">
+                        <label for="tsol-library-availability"><?php esc_html_e('Availability', 'tomschooloflife-plugin'); ?></label>
+                        <select id="tsol-library-availability" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[availability]" data-library-availability-select>
+                            <option value="available" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE); ?>><?php esc_html_e('Available now', 'tomschooloflife-plugin'); ?></option>
+                            <option value="coming_soon" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON); ?>><?php esc_html_e('Coming soon', 'tomschooloflife-plugin'); ?></option>
+                        </select>
+                        <p class="description"><?php esc_html_e('Coming-soon content appears in its course or series but cannot be played by members.', 'tomschooloflife-plugin'); ?></p>
+                    </div>
+                    <div class="tsol-library-field" data-library-release-field>
+                        <label for="tsol-library-release-date"><?php esc_html_e('Release date', 'tomschooloflife-plugin'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'tomschooloflife-plugin'); ?></span></label>
+                        <input type="date" id="tsol-library-release-date" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[release_date_local]" value="<?php echo esc_attr($release_date_local); ?>" />
+                        <p class="description"><?php esc_html_e('Displayed as a date only. Reaching this date does not automatically publish or unlock the video.', 'tomschooloflife-plugin'); ?></p>
+                        <?php if ($release_is_past && TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability) : ?>
+                            <p class="notice notice-warning inline"><strong><?php esc_html_e('This release date has passed.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('The video remains Coming soon until an administrator attaches its media and changes Availability to Available now.', 'tomschooloflife-plugin'); ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
             <div class="tsol-library-section-intro">
                 <div>
                     <p><?php esc_html_e('Paste one stable media URL. WordPress will infer the provider, video ID, private Vimeo reference, or attachment automatically.', 'tomschooloflife-plugin'); ?></p>
@@ -1179,37 +1296,60 @@ class TSOL_Library_Content_Admin {
         $payload = isset($_POST[self::PAYLOAD_NAME]) && is_array($_POST[self::PAYLOAD_NAME])
             ? wp_unslash($_POST[self::PAYLOAD_NAME])
             : array();
-        $content_type = isset($payload['content_type']) ? sanitize_key($payload['content_type']) : '';
-        $allowed_types = array_keys($this->content_type_options($post->post_type));
-        if (!in_array($content_type, $allowed_types, true)) {
-            $content_type = '';
-        }
 
         $media_result = $this->sanitize_media_rows(isset($payload['media_assets']) ? $payload['media_assets'] : array());
         $resource_result = $this->sanitize_resource_rows(isset($payload['resources']) ? $payload['resources'] : array());
         $errors = array_merge($media_result['errors'], $resource_result['errors']);
         $course_id = 0;
         $series_id = 0;
-
-        if ('' === $content_type) {
-            $errors[] = __('Choose a Library content type.', 'tomschooloflife-plugin');
+        $availability = TSOL_Library_Content_Model::sanitize_availability($payload['availability'] ?? '');
+        $release_at_gmt = '';
+        $release_date_local = trim((string) ($payload['release_date_local'] ?? ($payload['release_at_local'] ?? '')));
+        if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability && '' !== $release_date_local) {
+            $release_date = DateTimeImmutable::createFromFormat('!Y-m-d', $release_date_local, wp_timezone());
+            $date_errors = DateTimeImmutable::getLastErrors();
+            if (!$release_date || (is_array($date_errors) && ((int) $date_errors['warning_count'] > 0 || (int) $date_errors['error_count'] > 0))) {
+                $errors[] = __('Enter a valid release date.', 'tomschooloflife-plugin');
+            } else {
+                $release_at_gmt = $release_date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+            }
         }
+
         if (
             'publish' === $post->post_status
             && TSOL_Library_Content_Model::ITEM_POST_TYPE === $post->post_type
+            && TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE === $availability
             && empty($media_result['items'])
         ) {
             $errors[] = __('Published Library Items and lessons require at least one valid media URL.', 'tomschooloflife-plugin');
         }
 
-        update_post_meta($post_id, TSOL_Library_Content_Model::META_CONTENT_TYPE, $content_type);
-        if (isset($payload['position']) || TSOL_Library_Content_Model::ITEM_POST_TYPE !== $post->post_type) {
-            update_post_meta($post_id, TSOL_Library_Content_Model::META_POSITION, isset($payload['position']) ? absint($payload['position']) : 0);
-        }
-        update_post_meta($post_id, TSOL_Library_Content_Model::META_FEATURED, !empty($payload['featured']));
-        update_post_meta($post_id, TSOL_Library_Content_Model::META_CURRENT, !empty($payload['current']));
         if (!metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_UUID)) {
             update_post_meta($post_id, TSOL_Library_Content_Model::META_UUID, wp_generate_uuid4());
+        }
+        $content_uuid = sanitize_text_field((string) get_post_meta($post_id, TSOL_Library_Content_Model::META_UUID, true));
+        if (!metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_MIGRATION_KEY)) {
+            update_post_meta(
+                $post_id,
+                TSOL_Library_Content_Model::META_MIGRATION_KEY,
+                sanitize_key('manual-' . $post->post_type . '-' . $content_uuid)
+            );
+        }
+        if (!metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION)) {
+            update_post_meta($post_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, 'manual-1');
+        }
+        if (!metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_CONTENT_FINGERPRINT)) {
+            update_post_meta($post_id, TSOL_Library_Content_Model::META_CONTENT_FINGERPRINT, hash('sha256', 'manual:' . $content_uuid));
+        }
+        if (
+            TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
+            && !empty($payload['course_learning_outcomes_present'])
+        ) {
+            update_post_meta(
+                $post_id,
+                TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+                TSOL_Library_Content_Model::sanitize_course_learning_outcomes($payload['learning_outcomes'] ?? array())
+            );
         }
         $speaker_ids = isset($payload['speaker_ids']) && is_array($payload['speaker_ids'])
             ? array_values(array_unique(array_filter(array_map('absint', $payload['speaker_ids']))))
@@ -1259,6 +1399,12 @@ class TSOL_Library_Content_Admin {
             update_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_ONGOING, !empty($payload['series_ongoing']));
         }
         if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post->post_type) {
+            update_post_meta($post_id, TSOL_Library_Content_Model::META_AVAILABILITY, $availability);
+            if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability && '' !== $release_at_gmt) {
+                update_post_meta($post_id, TSOL_Library_Content_Model::META_RELEASE_AT_GMT, $release_at_gmt);
+            } else {
+                delete_post_meta($post_id, TSOL_Library_Content_Model::META_RELEASE_AT_GMT);
+            }
             update_post_meta($post_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, $media_result['items']);
             update_post_meta($post_id, TSOL_Library_Content_Model::META_RESOURCES, $resource_result['items']);
 
@@ -1352,13 +1498,27 @@ class TSOL_Library_Content_Admin {
                     $this->next_structure_item_position($post_id, $course_id, $series_id, $section_key)
                 );
             }
+
+            foreach (array_unique(array_filter(array($old_course_id, $old_series_id))) as $old_parent_id) {
+                if (!in_array((int) $old_parent_id, array($course_id, $series_id), true)) {
+                    TSOL_Library_Content_Changes::record_current_state((int) $old_parent_id);
+                }
+            }
         }
+
+        update_post_meta(
+            $post_id,
+            TSOL_Library_Content_Model::META_CONTENT_TYPE,
+            $this->derived_content_type($post, $course_id)
+        );
 
         $migration_version = (string) get_post_meta($post_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, true);
         $access_migration_state = get_option('tsol_library_access_rules_migration_state', array());
         $native_import_access_active = is_array($access_migration_state)
             && 'activated' === (string) ($access_migration_state['phase'] ?? '');
-        $should_follow_native_parent = '' === $migration_version || $native_import_access_active;
+        $should_follow_native_parent = '' === $migration_version
+            || 0 === strpos($migration_version, 'manual-')
+            || $native_import_access_active;
 
         if ($should_follow_native_parent || !metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID)) {
             $authorization_post_id = (int) $post_id;
@@ -1651,6 +1811,51 @@ class TSOL_Library_Content_Admin {
         <?php
     }
 
+    private function render_learning_outcome_row($index, $outcome) {
+        $outcome = trim((string) $outcome);
+        $separator = ' — ';
+        $separator_position = strpos($outcome, $separator);
+        $title = false === $separator_position ? $outcome : trim(substr($outcome, 0, $separator_position));
+        $description = false === $separator_position ? '' : trim(substr($outcome, $separator_position + strlen($separator)));
+        $name = self::PAYLOAD_NAME . '[learning_outcomes][' . $index . ']';
+        $title_id = 'tsol-library-outcome-title-' . $index;
+        $description_id = 'tsol-library-outcome-description-' . $index;
+        ?>
+        <div class="tsol-library-outcome-row" data-outcome-row>
+            <div class="tsol-library-outcome-row__order">
+                <button type="button" class="button-link tsol-library-outcome-row__handle" data-outcome-handle>
+                    <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                    <span class="screen-reader-text"><?php esc_html_e('Drag to reorder outcome', 'tomschooloflife-plugin'); ?></span>
+                </button>
+                <strong class="tsol-library-outcome-row__number" data-outcome-position><?php echo esc_html((string) ((int) $index + 1)); ?></strong>
+            </div>
+            <div class="tsol-library-outcome-row__content">
+                <div class="tsol-library-field tsol-library-outcome-row__title">
+                    <label for="<?php echo esc_attr($title_id); ?>"><?php esc_html_e('Outcome title', 'tomschooloflife-plugin'); ?></label>
+                    <input id="<?php echo esc_attr($title_id); ?>" type="text" name="<?php echo esc_attr($name); ?>[title]" value="<?php echo esc_attr($title); ?>" placeholder="<?php esc_attr_e('e.g. Choose the right working weight', 'tomschooloflife-plugin'); ?>" data-outcome-title />
+                </div>
+                <div class="tsol-library-field tsol-library-outcome-row__description">
+                    <label for="<?php echo esc_attr($description_id); ?>"><?php esc_html_e('Supporting text', 'tomschooloflife-plugin'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'tomschooloflife-plugin'); ?></span></label>
+                    <textarea id="<?php echo esc_attr($description_id); ?>" name="<?php echo esc_attr($name); ?>[description]" rows="2" placeholder="<?php esc_attr_e('e.g. Calculate the correct starting weight instead of guessing.', 'tomschooloflife-plugin'); ?>" data-outcome-description><?php echo esc_textarea($description); ?></textarea>
+                </div>
+            </div>
+            <div class="tsol-library-outcome-row__actions">
+                <div class="tsol-library-outcome-row__move-actions">
+                    <button type="button" class="button-link" data-row-up>
+                        <span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span>
+                        <span class="screen-reader-text"><?php esc_html_e('Move outcome up', 'tomschooloflife-plugin'); ?></span>
+                    </button>
+                    <button type="button" class="button-link" data-row-down>
+                        <span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+                        <span class="screen-reader-text"><?php esc_html_e('Move outcome down', 'tomschooloflife-plugin'); ?></span>
+                    </button>
+                </div>
+                <button type="button" class="button-link button-link-delete" data-outcome-remove><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+            </div>
+        </div>
+        <?php
+    }
+
     private function render_resource_row($index, $resource) {
         $name = self::PAYLOAD_NAME . '[resources][' . $index . ']';
         $label = isset($resource['label']) ? (string) $resource['label'] : '';
@@ -1858,34 +2063,14 @@ class TSOL_Library_Content_Admin {
         return $maximum + 1;
     }
 
-    private function content_type_options($post_type) {
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
-            return array('course' => __('Course', 'tomschooloflife-plugin'));
-        }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
-            return array('series' => __('Series', 'tomschooloflife-plugin'));
-        }
-
-        return array(
-            'lesson' => __('Course lesson', 'tomschooloflife-plugin'),
-            'session' => __('TSOL session', 'tomschooloflife-plugin'),
-            'webinar' => __('Webinar', 'tomschooloflife-plugin'),
-            'recording' => __('Standalone recording', 'tomschooloflife-plugin'),
-            'live_event' => __('Live event', 'tomschooloflife-plugin'),
-            'orientation' => __('Orientation', 'tomschooloflife-plugin'),
-            'member_call' => __('Member call', 'tomschooloflife-plugin'),
-            'book_club' => __('Book club', 'tomschooloflife-plugin'),
-        );
-    }
-
-    private function default_content_type($post_type) {
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
+    private function derived_content_type(WP_Post $post, $course_id = 0) {
+        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type) {
             return 'course';
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
+        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type) {
             return 'series';
         }
-        return 'recording';
+        return (int) $course_id > 0 ? 'lesson' : 'recording';
     }
 
     private function provider_label($provider) {
@@ -1920,5 +2105,21 @@ class TSOL_Library_Content_Admin {
 
     private function notice_key($post_id) {
         return self::NOTICE_PREFIX . get_current_user_id() . '_' . absint($post_id);
+    }
+
+    private function remove_object_callbacks($hook_name, $class_name) {
+        global $wp_filter;
+        if (!isset($wp_filter[$hook_name]) || !$wp_filter[$hook_name] instanceof WP_Hook) {
+            return;
+        }
+
+        foreach ($wp_filter[$hook_name]->callbacks as $priority => $callbacks) {
+            foreach ($callbacks as $callback) {
+                $function = $callback['function'] ?? null;
+                if (is_array($function) && isset($function[0]) && is_object($function[0]) && is_a($function[0], $class_name)) {
+                    remove_filter($hook_name, $function, (int) $priority);
+                }
+            }
+        }
     }
 }

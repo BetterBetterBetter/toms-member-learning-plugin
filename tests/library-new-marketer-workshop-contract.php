@@ -18,6 +18,7 @@ $preview = $migration->preview();
 $verification = $migration->verify();
 
 $assert(52 === (int) $preview['course']['lessons'], 'The locked source does not contain 52 lessons.');
+$assert(7 === (int) $preview['course']['sections'], 'The workshop preview does not contain seven sections.');
 $assert(28 === (int) $preview['native_memberpress_rule']['condition_count'], 'The locked legacy rule does not contain 28 conditions.');
 $assert(0 === (int) $preview['native_memberpress_rule']['permission_changes'], 'The preview reports a permission change.');
 $assert('applied' === (string) $verification['phase'], 'The workshop import is not applied.');
@@ -38,6 +39,22 @@ $assert($course instanceof WP_Post && 'publish' === $course->post_status, 'The w
 $assert('The New Marketer Workshop' === (string) get_the_title($course_id), 'The workshop Course title changed.');
 $assert(empty(wp_get_object_terms($course_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, array('fields' => 'ids'))), 'The workshop was incorrectly classified as a Masterclass or another Collection.');
 
+$expected_sections = array(
+    'Goals, Offers & Your Market' => 4,
+    'Build Your Marketing Platform' => 8,
+    'Offers, Content & Monetization' => 7,
+    'Community, Affiliates & Authority' => 5,
+    'Product & Marketing Systems' => 7,
+    'Audience, Traffic & Brand Growth' => 10,
+    'Scale, Automate & Put It Into Practice' => 11,
+);
+$registry = TSOL_Library_Content_Model::sanitize_structure_registry(
+    get_post_meta($course_id, TSOL_Library_Content_Model::META_COURSE_SECTIONS, true)
+);
+$assert(array_keys($expected_sections) === array_map(static function ($section) {
+    return (string) $section['title'];
+}, $registry), 'The workshop section order or titles changed.');
+
 $lesson_ids = get_posts(array(
     'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
     'post_status' => 'publish',
@@ -51,10 +68,23 @@ $lesson_ids = get_posts(array(
     ),
 ));
 $assert(52 === count($lesson_ids), 'The published workshop curriculum does not contain 52 lessons.');
+$actual_sections = array_fill_keys(array_keys($expected_sections), array());
 foreach (array_map('intval', $lesson_ids) as $lesson_id) {
     $assert($course_id === (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true), 'A workshop lesson does not delegate to the Course rule.');
     $assets = get_post_meta($lesson_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
     $assert(is_array($assets) && 1 === count($assets), 'A workshop lesson does not have exactly one media asset.');
+    $section_title = (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_TITLE, true);
+    if (!array_key_exists($section_title, $actual_sections)) {
+        $failures[] = 'A workshop lesson belongs to an unexpected section.';
+    } else {
+        $actual_sections[$section_title][] = (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_POSITION, true);
+    }
+}
+foreach ($expected_sections as $section_title => $expected_count) {
+    $positions = $actual_sections[$section_title];
+    sort($positions, SORT_NUMERIC);
+    $assert($expected_count === count($positions), sprintf('Workshop section %s has the wrong lesson count.', $section_title));
+    $assert(range(1, $expected_count) === $positions, sprintf('Workshop section %s does not have contiguous lesson positions.', $section_title));
 }
 
 $owned_rule_ids = get_posts(array(

@@ -52,6 +52,9 @@ class TSOL_Library_Content_Changes {
         add_action('before_delete_post', array(__CLASS__, 'record_deleted_post'), 10, 2);
         add_action('deleted_post', array(__CLASS__, 'record_post_deleted'), 10, 2);
         add_action('set_object_terms', array(__CLASS__, 'record_term_change'), 100, 6);
+        add_action('created_term', array(__CLASS__, 'record_edited_term'), 100, 3);
+        add_action('edited_term', array(__CLASS__, 'record_edited_term'), 100, 3);
+        add_action('delete_term', array(__CLASS__, 'record_deleted_term'), 10, 5);
         add_action('added_post_meta', array(__CLASS__, 'record_meta_change'), 100, 4);
         add_action('updated_post_meta', array(__CLASS__, 'record_meta_change'), 100, 4);
         add_action('deleted_post_meta', array(__CLASS__, 'record_meta_change'), 100, 4);
@@ -113,6 +116,7 @@ class TSOL_Library_Content_Changes {
             return;
         }
         if (self::has_library_identity($post)) {
+            self::record_parent_state($post);
             self::record((int) $post_id, 'delete');
         }
     }
@@ -134,6 +138,32 @@ class TSOL_Library_Content_Changes {
             TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
             TSOL_Library_Content_Model::TOPIC_TAXONOMY,
         ), true)) {
+            self::record_current_state((int) $object_id);
+        }
+    }
+
+    public static function record_edited_term($term_id, $tt_id, $taxonomy) {
+        unset($tt_id);
+        if (!self::is_projected_taxonomy($taxonomy)) {
+            return;
+        }
+
+        $object_ids = get_objects_in_term((int) $term_id, (string) $taxonomy);
+        if (is_wp_error($object_ids)) {
+            return;
+        }
+        foreach ($object_ids as $object_id) {
+            self::record_current_state((int) $object_id);
+        }
+    }
+
+    public static function record_deleted_term($term_id, $tt_id, $taxonomy, $deleted_term, $object_ids) {
+        unset($term_id, $tt_id, $deleted_term);
+        if (!self::is_projected_taxonomy($taxonomy)) {
+            return;
+        }
+
+        foreach ((array) $object_ids as $object_id) {
             self::record_current_state((int) $object_id);
         }
     }
@@ -178,6 +208,20 @@ class TSOL_Library_Content_Changes {
             return;
         }
         self::record($post_id, TSOL_Library_Content_Catalogue::is_exportable_post($post) ? 'upsert' : 'delete');
+        self::record_parent_state($post);
+    }
+
+    private static function record_parent_state(WP_Post $post) {
+        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== (string) $post->post_type) {
+            return;
+        }
+
+        $course_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_COURSE_ID, true);
+        $series_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        $parent_id = $course_id > 0 ? $course_id : $series_id;
+        if ($parent_id > 0) {
+            self::record_current_state($parent_id);
+        }
     }
 
     private static function has_library_identity(WP_Post $post) {
@@ -186,6 +230,13 @@ class TSOL_Library_Content_Changes {
         }
 
         return (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_UUID, true) !== '';
+    }
+
+    private static function is_projected_taxonomy($taxonomy) {
+        return in_array((string) $taxonomy, array(
+            TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
+            TSOL_Library_Content_Model::TOPIC_TAXONOMY,
+        ), true);
     }
 
     private static function speaker_content_ids($speaker_id) {

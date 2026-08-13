@@ -49,17 +49,40 @@ do {
 } while ($page['has_more']);
 
 $ids = array_map('intval', array_column($all, 'wordpress_id'));
-$assert(count($all) === 207, 'Complete catalogue did not contain 207 normalized records.');
-$assert(count(array_unique($ids)) === 207, 'Complete catalogue contained duplicate WordPress IDs.');
+$assert(count($all) === 209, 'Complete catalogue did not contain 209 WordPress-owned records.');
+$assert(count(array_unique($ids)) === 209, 'Complete catalogue contained duplicate WordPress IDs.');
 $assert($ids === array_values(array_unique($ids)), 'Catalogue pagination was not deterministic.');
 $type_counts = array_count_values(array_column($all, 'record_type'));
 $assert(($type_counts['course'] ?? 0) === 7, 'Catalogue did not contain seven courses.');
 $assert(($type_counts['series'] ?? 0) === 6, 'Catalogue did not contain the six locked Series.');
-$assert(($type_counts['lesson'] ?? 0) === 73, 'Catalogue did not contain 73 lessons.');
-$assert(($type_counts['item'] ?? 0) === 121, 'Catalogue did not contain 121 playable content items.');
+$assert(($type_counts['lesson'] ?? 0) === 75, 'Catalogue did not contain 75 lessons.');
+$assert(($type_counts['item'] ?? 0) === 121, 'Catalogue did not contain 121 Series items.');
 $assert(array_sum(array_map(static function ($item) { return count($item['media']); }, $all)) === 199, 'Catalogue did not contain 199 playable media records.');
 $assert(array_sum(array_map(static function ($item) { return count($item['resources']); }, $all)) >= 30, 'Catalogue lost one or more of the 30 locked imported resources.');
-$assert(array_sum(array_map(static function ($item) { return 'course' === $item['record_type'] ? count($item['course']['sections']) : 0; }, $all)) === 8, 'Catalogue did not contain eight course sections.');
+$assert(array_sum(array_map(static function ($item) { return 'course' === $item['record_type'] ? count($item['course']['sections']) : 0; }, $all)) === 14, 'Catalogue did not contain fourteen course sections.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('availability', $item) || !array_key_exists('release_at', $item);
+})) === 0, 'A catalogue record omitted the availability contract.');
+$assert(count(array_filter($all, static function ($item) {
+    return in_array((string) $item['record_type'], array('course', 'series'), true)
+        && ('available' !== (string) $item['availability'] || null !== $item['release_at']);
+})) === 0, 'A Course or Series emitted item-only availability metadata.');
+$coming_soon_records = array_values(array_filter($all, static function ($item) {
+    return 'coming_soon' === (string) ($item['availability'] ?? '');
+}));
+$assert(2 === count($coming_soon_records), 'Catalogue did not contain the two approved coming-soon Medicine Cabinet lessons.');
+$coming_soon_by_title = array();
+foreach ($coming_soon_records as $coming_soon_record) {
+    $coming_soon_by_title[(string) $coming_soon_record['title']] = $coming_soon_record;
+    $assert('lesson' === (string) $coming_soon_record['record_type'], 'Coming-soon availability was assigned outside a Course lesson.');
+    $assert(106936 === (int) ($coming_soon_record['course']['course_id'] ?? 0), 'A coming-soon lesson was assigned outside The $100 Medicine Cabinet.');
+    $assert(array() === $coming_soon_record['media'], 'A Medicine Cabinet placeholder unexpectedly exposes playable media.');
+}
+$assert('2026-08-11T23:00:00+00:00' === (string) ($coming_soon_by_title['Session 3']['release_at'] ?? ''), 'Session 3 did not retain its informational release time.');
+$assert('2026-08-18T23:00:00+00:00' === (string) ($coming_soon_by_title['Session 4']['release_at'] ?? ''), 'Session 4 did not retain its informational release time.');
+$assert(count(array_filter($all, static function ($item) {
+    return 'available' === (string) ($item['availability'] ?? '') && null !== ($item['release_at'] ?? null);
+})) === 0, 'An Available record retained a coming-soon release time.');
 $series_records = array_values(array_filter($all, static function ($item) { return 'series' === $item['record_type']; }));
 $assert(6 === count($series_records), 'Catalogue did not emit exactly six Series records.');
 $series_expected = array(
@@ -120,18 +143,90 @@ if (1 === count($new_marketer_courses)) {
             && (int) ($item['course']['course_id'] ?? 0) === (int) $new_marketer_course['wordpress_id'];
     }));
     $assert(52 === count($new_marketer_lessons), 'The New Marketer Workshop did not project all 52 lessons.');
-    $assert(1 === count($new_marketer_course['course']['sections']), 'The New Marketer Workshop did not project its flat Lessons section.');
+    $expected_workshop_sections = array(
+        'Goals, Offers & Your Market' => 4,
+        'Build Your Marketing Platform' => 8,
+        'Offers, Content & Monetization' => 7,
+        'Community, Affiliates & Authority' => 5,
+        'Product & Marketing Systems' => 7,
+        'Audience, Traffic & Brand Growth' => 10,
+        'Scale, Automate & Put It Into Practice' => 11,
+    );
+    $actual_workshop_sections = array();
+    foreach ($new_marketer_course['course']['sections'] as $section) {
+        $actual_workshop_sections[(string) $section['title']] = count($section['lesson_ids']);
+    }
+    $assert($expected_workshop_sections === $actual_workshop_sections, 'The New Marketer Workshop did not project its exact seven-section curriculum.');
 }
 $assert(count(array_filter($all, static function ($item) { return array_key_exists('collections', $item); })) === 0, 'Retired mixed-content Collections remain in the catalogue contract.');
 $assert(count(array_filter($all, static function ($item) { return (int) $item['authorization_post_id'] <= 0; })) === 0, 'A catalogue record omitted its authorization source.');
 $assert(count(array_filter($all, static function ($item) { return (string) $item['migration_key'] === ''; })) === 0, 'A catalogue record omitted its stable migration key.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('current', $item) || false !== $item['current'];
+})) === 0, 'The retired version state was not neutralized in the compatibility catalogue payload.');
+$assert(count(array_filter($all, static function ($item) {
+    $expected = in_array((string) $item['record_type'], array('course', 'series', 'lesson'), true)
+        ? (string) $item['record_type']
+        : 'recording';
+    return $expected !== (string) ($item['content_type'] ?? '');
+})) === 0, 'Catalogue classification was not derived from the canonical record structure.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('featured', $item) || false !== $item['featured'];
+})) === 0, 'The retired per-record Featured flag was not neutralized in the compatibility catalogue payload.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('last_updated_at', $item) || '' === (string) $item['last_updated_at'];
+})) === 0, 'A catalogue record omitted its automatic Last updated timestamp.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('homepage', $item)
+        || (!in_array((string) $item['record_type'], array('course', 'series'), true) && null !== $item['homepage']);
+})) === 0, 'Homepage placement leaked to Content or was omitted from the catalogue contract.');
+$homepage_positions = array();
+foreach ($all as $item) {
+    if (!is_array($item['homepage'])) {
+        continue;
+    }
+    $rail = (string) ($item['homepage']['rail'] ?? '');
+    $position = (int) ($item['homepage']['position'] ?? 0);
+    $assert(isset(TSOL_Library_Homepage_Curation::rails()[$rail]), 'Catalogue emitted an unknown homepage section.');
+    $assert($position > 0 && !isset($homepage_positions[$rail][$position]), 'Catalogue emitted a duplicate or invalid homepage position.');
+    $homepage_positions[$rail][$position] = true;
+}
+$sample_course_id = (int) ($ids[array_search('course', array_column($all, 'record_type'), true)] ?? 0);
+$sample_series_id = (int) ($ids[array_search('series', array_column($all, 'record_type'), true)] ?? 0);
+$sample_lesson_id = (int) ($ids[array_search('lesson', array_column($all, 'record_type'), true)] ?? 0);
+$sanitized_homepage = TSOL_Library_Homepage_Curation::sanitize_rails(array(
+    'featured' => array($sample_course_id, $sample_course_id, $sample_lesson_id, PHP_INT_MAX),
+    'courses' => array($sample_series_id),
+    'series' => array($sample_series_id),
+));
+$assert(array($sample_course_id) === $sanitized_homepage['featured'], 'Homepage validation retained a duplicate, Content record, or invalid ID.');
+$assert(array() === $sanitized_homepage['courses'], 'Homepage validation accepted a Series in the Courses rail.');
+$assert(array($sample_series_id) === $sanitized_homepage['series'], 'Homepage validation rejected a valid Series.');
 $assert(count(array_filter($all, static function ($item) { return preg_match('~https?://~i', (string) $item['excerpt']); })) === 0, 'Catalogue browse metadata exposed a protected asset URL through an excerpt.');
 $assert(count(array_filter($all, static function ($item) { return !array_key_exists('overview_html', $item); })) === 0, 'Catalogue record omitted its automatic Description field.');
+$assert(count(array_filter($all, static function ($item) { return !array_key_exists('public_description_html', $item); })) === 0, 'Catalogue record omitted its native-body public Course description field.');
+$assert(count(array_filter($all, static function ($item) { return !array_key_exists('learning_outcomes', $item); })) === 0, 'Catalogue record omitted its Course learning-outcomes field.');
 foreach ($all as $item) {
     $overview_html = isset($item['overview_html']) ? (string) $item['overview_html'] : '';
+    $public_description_html = isset($item['public_description_html']) ? (string) $item['public_description_html'] : '';
     $assert(false === stripos($overview_html, '<script'), 'Unsafe script markup survived in an automatic Library Description.');
     $assert(false === stripos($overview_html, '<iframe'), 'Legacy player markup survived in an automatic Library Description.');
+    $assert(false === stripos($overview_html, '<style'), 'Pasted style markup survived in an automatic Library Description.');
+    $assert(false === stripos($overview_html, '<h1'), 'A page-level heading survived in an automatic Library Description.');
+    $assert(!preg_match('~\s(?:style|class|id|data-[\w-]+|on[\w-]+)\s*=~i', $overview_html), 'Pasted presentation attributes survived in an automatic Library Description.');
     $assert(!preg_match('~<(p|div|figure|span|a)(?:\s[^>]*)?>(?:(?:\s|&nbsp;|&#160;|&#x0*a0;|\xC2\xA0)|<br\s*/?>|<!--.*?-->)*</\1\s*>~is', $overview_html), 'A visually empty block survived in an automatic Library Description.');
+    $assert(false === stripos($public_description_html, '<script'), 'Unsafe script markup survived in a public Course description.');
+    $assert(false === stripos($public_description_html, '<iframe'), 'Legacy player markup survived in a public Course description.');
+    $assert(false === stripos($public_description_html, '<style'), 'Pasted style markup survived in a public Course description.');
+    $assert(false === stripos($public_description_html, '<h1'), 'A page-level heading survived in a public Course description.');
+    $assert(!preg_match('~\s(?:style|class|id|data-[\w-]+|on[\w-]+)\s*=~i', $public_description_html), 'Pasted presentation attributes survived in a public Course description.');
+    $assert(is_array($item['learning_outcomes']), 'Catalogue learning outcomes are not an ordered array.');
+    if ('course' === (string) $item['record_type']) {
+        $assert($overview_html === $public_description_html, 'A Course public description diverged from its sanitized native body.');
+    } else {
+        $assert('' === $public_description_html, 'A non-Course record emitted a public Course description.');
+        $assert(array() === $item['learning_outcomes'], 'A non-Course record emitted Course learning outcomes.');
+    }
 }
 $assert(count(array_filter($all, static function ($item) { return !array_key_exists('speaker_source', $item); })) === 0, 'Catalogue record omitted its effective Speaker source.');
 $assert(count(array_filter($all, static function ($item) {
@@ -246,6 +341,8 @@ if (!is_wp_error($fixture_id)) {
     })) > 0, 'Incremental cursor did not emit the fixture upsert.');
     $assert(!empty($fixture_upserts) && $fixture_upserts[0]['item']['excerpt'] === '', 'Protected body content leaked into catalogue browse metadata.');
     $assert(!empty($fixture_upserts) && false !== strpos((string) $fixture_upserts[0]['item']['overview_html'], 'Protected body must not become browse metadata.'), 'Main editor content was not automatically projected into the protected Library Description.');
+    $assert(!empty($fixture_upserts) && '' === (string) $fixture_upserts[0]['item']['public_description_html'], 'A Content record emitted a public Course description.');
+    $assert(!empty($fixture_upserts) && array() === $fixture_upserts[0]['item']['learning_outcomes'], 'A Content record emitted Course learning outcomes.');
     $assert(!empty($fixture_upserts) && 'draft' === $fixture_upserts[0]['item']['status'], 'The protected projection did not retain draft status for administrator preview.');
     $assert(!empty($fixture_upserts) && $fixture_upserts[0]['item']['media'] === array(), 'Missing media metadata emitted a phantom asset.');
     $assert(!empty($fixture_upserts) && $fixture_upserts[0]['item']['resources'] === array(), 'Missing resource metadata emitted a phantom resource.');
@@ -286,6 +383,78 @@ if (!is_wp_error($fixture_id)) {
 
     wp_delete_post($fixture_id, true);
     $wpdb->delete($changes_table, array('post_id' => $fixture_id), array('%d'));
+}
+
+$aggregate_parent_id = wp_insert_post(array(
+    'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+    'post_status' => 'draft',
+    'post_title' => 'TSOL last-updated parent contract fixture',
+), true);
+$aggregate_child_id = is_wp_error($aggregate_parent_id) ? $aggregate_parent_id : wp_insert_post(array(
+    'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+    'post_status' => 'publish',
+    'post_title' => 'TSOL last-updated child contract fixture',
+), true);
+$assert(!is_wp_error($aggregate_parent_id) && !is_wp_error($aggregate_child_id), 'Could not create Last updated contract fixtures.');
+if (!is_wp_error($aggregate_parent_id) && !is_wp_error($aggregate_child_id)) {
+    $aggregate_parent_id = (int) $aggregate_parent_id;
+    $aggregate_child_id = (int) $aggregate_child_id;
+    foreach (array($aggregate_parent_id, $aggregate_child_id) as $aggregate_id) {
+        update_post_meta($aggregate_id, TSOL_Library_Content_Model::META_UUID, wp_generate_uuid4());
+        update_post_meta($aggregate_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $aggregate_id);
+    }
+    update_post_meta($aggregate_child_id, TSOL_Library_Content_Model::META_COURSE_ID, $aggregate_parent_id);
+    wp_update_post(array(
+        'ID' => $aggregate_parent_id,
+        'post_content' => '<h1 class="pasted-title" style="color: red">Public Course heading</h1><p data-pasted="yes">Public <strong>Course landing copy</strong>.</p><style>.leak{color:red}</style><script>alert("no")</script>',
+    ));
+    update_post_meta(
+        $aggregate_parent_id,
+        TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+        array('Understand the method.', 'Apply the method independently.')
+    );
+    $wpdb->update($wpdb->posts, array(
+        'post_modified' => '2025-01-02 03:04:05',
+        'post_modified_gmt' => '2025-01-02 03:04:05',
+    ), array('ID' => $aggregate_parent_id), array('%s', '%s'), array('%d'));
+    $wpdb->update($wpdb->posts, array(
+        'post_modified' => '2026-02-03 04:05:06',
+        'post_modified_gmt' => '2026-02-03 04:05:06',
+    ), array('ID' => $aggregate_child_id), array('%s', '%s'), array('%d'));
+    clean_post_cache($aggregate_parent_id);
+    clean_post_cache($aggregate_child_id);
+
+    $aggregate_record = TSOL_Library_Content_Catalogue::record($aggregate_parent_id);
+    $assert(false !== strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<strong>Course landing copy</strong>'), 'Catalogue omitted allowed public Course description markup.');
+    $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<script'), 'Catalogue exposed unsafe public Course description markup.');
+    $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<style'), 'Catalogue exposed pasted Course style markup.');
+    $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), 'class='), 'Catalogue exposed a pasted Course class attribute.');
+    $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), 'style='), 'Catalogue exposed a pasted Course style attribute.');
+    $assert(false !== strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<h2>Public Course heading</h2>'), 'Catalogue did not normalize a pasted Course H1 to a section-level heading.');
+    $assert(
+        (string) ($aggregate_record['overview_html'] ?? '') === (string) ($aggregate_record['public_description_html'] ?? ''),
+        'Catalogue did not derive the public Course description from the sanitized native body.'
+    );
+    $assert(
+        array('Understand the method.', 'Apply the method independently.') === ($aggregate_record['learning_outcomes'] ?? null),
+        'Catalogue omitted ordered Course learning outcomes.'
+    );
+    $assert(
+        '2026-02-03T04:05:06' === (string) ($aggregate_record['last_updated_at'] ?? ''),
+        'Course Last updated did not roll up its newest published lesson (received ' . wp_json_encode($aggregate_record['last_updated_at'] ?? null) . ').'
+    );
+
+    $aggregate_cursor = TSOL_Library_Content_Changes::current_cursor();
+    wp_update_post(array('ID' => $aggregate_child_id, 'post_content' => 'Updated child content.'));
+    $aggregate_changes = TSOL_Library_Content_Catalogue::changes($aggregate_cursor, 100);
+    $assert(count(array_filter($aggregate_changes['changes'], static function ($change) use ($aggregate_parent_id) {
+        return (int) $change['post_id'] === $aggregate_parent_id && 'upsert' === $change['action'];
+    })) > 0, 'Updating a published child did not enqueue its parent aggregate for synchronization.');
+
+    wp_delete_post($aggregate_child_id, true);
+    wp_delete_post($aggregate_parent_id, true);
+    $wpdb->delete($changes_table, array('post_id' => $aggregate_child_id), array('%d'));
+    $wpdb->delete($changes_table, array('post_id' => $aggregate_parent_id), array('%d'));
 }
 
 if (!empty($failures)) {

@@ -230,6 +230,24 @@
         reindex();
     }
 
+    function initAvailabilityEditor($editor) {
+        var $select = $editor.find('[data-library-availability-select]');
+        var $releaseField = $editor.find('[data-library-release-field]');
+
+        if (!$select.length || !$releaseField.length) {
+            return;
+        }
+
+        function updateReleaseField() {
+            var comingSoon = $select.val() === 'coming_soon';
+            $releaseField.prop('hidden', !comingSoon);
+            $releaseField.find('input').prop('disabled', !comingSoon);
+        }
+
+        $select.on('change', updateReleaseField);
+        updateReleaseField();
+    }
+
     function initResourceEditor($editor) {
         var $rows = $editor.find('[data-resource-rows]');
         var template = $editor.find('[data-resource-template]').html();
@@ -288,6 +306,249 @@
         });
 
         reindex();
+    }
+
+    function initCoursePageEditor($editor) {
+        var $rows = $editor.find('[data-outcome-rows]');
+        var template = $editor.find('[data-outcome-template]').html();
+        var nextIndex = $rows.children('[data-outcome-row]').length;
+        var maximumOutcomes = 12;
+
+        function reindex() {
+            reindexRows($rows, '[data-outcome-row]', 'learning_outcomes');
+            $rows.children('[data-outcome-row]').each(function(index) {
+                var $row = $(this);
+                var position = index + 1;
+
+                $row.find('[data-outcome-position]').text(position);
+                $row.find('[data-outcome-handle]').attr('aria-label', 'Drag outcome ' + position + ' to reorder');
+                $row.find('[data-row-up]').attr('aria-label', 'Move outcome ' + position + ' up');
+                $row.find('[data-row-down]').attr('aria-label', 'Move outcome ' + position + ' down');
+                $row.find('[data-outcome-remove]').attr('aria-label', 'Remove outcome ' + position);
+            });
+            $editor.find('[data-outcome-add]').prop('disabled', $rows.children('[data-outcome-row]').length >= maximumOutcomes);
+        }
+
+        $editor.on('click', '[data-outcome-add]', function() {
+            if ($rows.children('[data-outcome-row]').length >= maximumOutcomes) {
+                return;
+            }
+
+            var $row = $(replaceIndex(template, nextIndex));
+
+            nextIndex += 1;
+            $rows.append($row);
+            if ($rows.hasClass('ui-sortable')) {
+                $rows.sortable('refresh');
+            }
+            reindex();
+            $row.find('[data-outcome-title]').trigger('focus');
+        });
+
+        $editor.on('click', '[data-outcome-remove]', function() {
+            var $row = $(this).closest('[data-outcome-row]');
+
+            if ($rows.children('[data-outcome-row]').length === 1) {
+                $row.find('[data-outcome-title], [data-outcome-description]').val('');
+            } else {
+                $row.remove();
+            }
+            reindex();
+        });
+
+        $editor.on('click', '[data-row-up], [data-row-down]', function() {
+            var $button = $(this);
+
+            moveRow($button.closest('[data-outcome-row]'), $button.is('[data-row-up]') ? 'up' : 'down');
+            reindex();
+        });
+
+        if ($.fn.sortable) {
+            $rows.sortable({
+                cancel: 'input, textarea, select, option',
+                handle: '[data-outcome-handle]',
+                items: '> [data-outcome-row]',
+                placeholder: 'tsol-library-outcome-row--placeholder',
+                forcePlaceholderSize: true,
+                tolerance: 'pointer',
+                update: reindex,
+            });
+        }
+
+        reindex();
+    }
+
+    function arrangeCourseEditorialFlow() {
+        if (config().postType !== 'tsol_library_course') {
+            return;
+        }
+
+        var $bodyEditor = $('#postdivrich');
+        var $excerpt = $('#postexcerpt');
+        var $outcomes = $('#tsol-library-course-page-content');
+        var $curriculum = $('#tsol-library-curriculum');
+
+        if (!$bodyEditor.length || !$excerpt.length || !$outcomes.length || !$curriculum.length) {
+            return;
+        }
+
+        var copy = strings();
+        var headingId = 'tsol-library-course-body-heading';
+        var $flow = $('<div>', {
+            'class': 'tsol-library-course-editorial-flow',
+            'data-course-editorial-flow': '',
+        });
+        var $bodySection = $('<section>', {
+            'class': 'tsol-library-course-body-section',
+            'aria-labelledby': headingId,
+            'data-course-body-section': '',
+        });
+        var $bodyHeading = $('<h2>', {
+            id: headingId,
+            text: copy.courseBodyTitle || 'About this course',
+        });
+        $flow.insertBefore($bodyEditor);
+        $flow.append($excerpt, $outcomes, $curriculum);
+        $bodySection.append($bodyHeading, $bodyEditor);
+        $flow.append($bodySection);
+    }
+
+    function arrangeSeriesEditorialFlow() {
+        if (config().postType !== 'tsol_library_series') {
+            return;
+        }
+
+        var $bodyEditor = $('#postdivrich');
+        var $excerpt = $('#postexcerpt');
+        var $settings = $('#tsol-library-series-settings');
+        var $episodes = $('#tsol-library-series-episodes');
+
+        if (!$bodyEditor.length || !$excerpt.length || !$settings.length || !$episodes.length) {
+            return;
+        }
+
+        var copy = strings();
+        var headingId = 'tsol-library-series-body-heading';
+        var $flow = $('<div>', {
+            'class': 'tsol-library-editorial-flow tsol-library-series-editorial-flow',
+            'data-series-editorial-flow': '',
+        });
+        var $bodySection = $('<section>', {
+            'class': 'tsol-library-editorial-body-section',
+            'aria-labelledby': headingId,
+            'data-series-body-section': '',
+        });
+        var $bodyHeading = $('<h2>', {
+            id: headingId,
+            text: copy.seriesBodyTitle || 'Description',
+        });
+
+        $flow.insertBefore($bodyEditor);
+        $flow.append($excerpt, $settings, $episodes);
+        $bodySection.append($bodyHeading, $bodyEditor);
+        $flow.append($bodySection);
+    }
+
+    function arrangeContentEditorialFlow() {
+        if (config().postType !== 'tsol_library_item') {
+            return;
+        }
+
+        var $bodyEditor = $('#postdivrich');
+        var $excerpt = $('#postexcerpt');
+        var $placement = $('#tsol-library-placement');
+        var $media = $('#tsol-library-media');
+        var $resources = $('#tsol-library-resources');
+
+        if (!$bodyEditor.length || !$excerpt.length || !$placement.length || !$media.length || !$resources.length) {
+            return;
+        }
+
+        var copy = strings();
+        var headingId = 'tsol-library-content-body-heading';
+        var $flow = $('<div>', {
+            'class': 'tsol-library-editorial-flow tsol-library-content-editorial-flow',
+            'data-content-editorial-flow': '',
+        });
+        var $bodySection = $('<section>', {
+            'class': 'tsol-library-editorial-body-section',
+            'aria-labelledby': headingId,
+            'data-content-body-section': '',
+        });
+        var $bodyHeading = $('<h2>', {
+            id: headingId,
+            text: copy.contentBodyTitle || 'Description',
+        });
+
+        $flow.insertAfter($placement);
+        $flow.append($media, $excerpt);
+        $bodySection.append($bodyHeading, $bodyEditor);
+        $flow.append($bodySection, $resources);
+    }
+
+    function initExcerptGuidance() {
+        var $box = $('#postexcerpt');
+        var $field = $box.find('#excerpt');
+
+        if (!$box.length || !$field.length) {
+            return;
+        }
+
+        var copy = strings();
+        var recommendedLength = 160;
+        var countId = 'tsol-library-excerpt-count';
+        var warningId = 'tsol-library-excerpt-warning';
+        var $description = $box.find('.inside > p').first();
+        var $status = $('<div>', {
+            'class': 'tsol-library-excerpt-status',
+            'data-library-excerpt-status': '',
+        });
+        var $count = $('<span>', {
+            id: countId,
+            'class': 'tsol-library-excerpt-status__count',
+            'data-library-excerpt-count': '',
+        });
+        var $warning = $('<span>', {
+            id: warningId,
+            'class': 'tsol-library-excerpt-status__warning',
+            'data-library-excerpt-warning': '',
+            role: 'status',
+            hidden: true,
+            text: copy.excerptLongWarning || 'Search engines may truncate longer descriptions.',
+        });
+
+        function normalizedLength() {
+            var value = $.trim(String($field.val() || '')).replace(/\s+/g, ' ');
+
+            return Array.from(value).length;
+        }
+
+        function countLabel(length) {
+            return String(copy.excerptCountTemplate || '%1$d / %2$d recommended')
+                .replace('%1$d', String(length))
+                .replace('%2$d', String(recommendedLength));
+        }
+
+        function update() {
+            var length = normalizedLength();
+            var isLong = length > recommendedLength;
+
+            $count.text(countLabel(length));
+            $status.toggleClass('is-over-recommended', isLong);
+            $warning.prop('hidden', !isLong);
+        }
+
+        if ($description.length) {
+            $description.text(
+                copy.excerptDescription || 'Used as the short introduction on Library cards and pages, and as the preferred search description.'
+            );
+        }
+
+        $status.append($count, $warning);
+        $field.after($status);
+        $field.attr('aria-describedby', $.trim([$field.attr('aria-describedby'), countId, warningId].filter(Boolean).join(' ')));
+        $field.on('input', update);
+        update();
     }
 
     function speakerProfile($option) {
@@ -727,11 +988,20 @@
     }
 
     $(document).ready(function() {
+        arrangeCourseEditorialFlow();
+        arrangeSeriesEditorialFlow();
+        arrangeContentEditorialFlow();
+        initExcerptGuidance();
         $('[data-library-media-editor]').each(function() {
-            initMediaEditor($(this));
+            var $editor = $(this);
+            initAvailabilityEditor($editor);
+            initMediaEditor($editor);
         });
         $('[data-library-resource-editor]').each(function() {
             initResourceEditor($(this));
+        });
+        $('[data-library-course-page-editor]').each(function() {
+            initCoursePageEditor($(this));
         });
         $('[data-speaker-picker]').each(function() {
             initSpeakerPicker($(this));

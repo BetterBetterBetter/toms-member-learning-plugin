@@ -30,19 +30,14 @@
 
 .tsol-content-access--protected {
     align-items: center;
-    background: #f0f6fc;
-    border: 1px solid #72aee6;
-    border-radius: 999px;
-    color: #135e96;
+    color: var(--wp-admin-theme-color, #3858e9);
     cursor: pointer;
-    padding: 3px 9px;
     text-decoration: none;
 }
 
 .tsol-content-access--protected:hover,
 .tsol-content-access--protected:focus {
-    background: #e2eef9;
-    color: #0a4b78;
+    color: var(--wp-admin-theme-color-darker-20, #183ad6);
     text-decoration: underline;
 }
 
@@ -55,9 +50,8 @@
 }
 
 .tsol-content-access-dialog {
-    border: 0;
-    border-radius: 6px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
+    border: 1px solid #8c8f94;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
     box-sizing: border-box;
     color: #1d2327;
     max-height: min(80vh, 760px);
@@ -75,7 +69,8 @@
     border-bottom: 1px solid #dcdcde;
     display: flex;
     justify-content: space-between;
-    padding: 16px 20px;
+    min-height: 50px;
+    padding: 0 0 0 20px;
 }
 
 .tsol-content-access-dialog__header h2 {
@@ -88,20 +83,24 @@
     align-items: center;
     background: transparent;
     border: 0;
-    border-radius: 3px;
     color: #50575e;
     cursor: pointer;
     display: inline-flex;
     justify-content: center;
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 50px;
+    min-width: 50px;
     padding: 0;
 }
 
 .tsol-content-access-dialog__close:hover,
 .tsol-content-access-dialog__close:focus {
-    background: #f0f0f1;
-    color: #1d2327;
+    background: transparent;
+    color: var(--wp-admin-theme-color-darker-20, #183ad6);
+}
+
+.tsol-content-access-dialog__close:focus {
+    box-shadow: inset 0 0 0 var(--wp-admin-border-width-focus, 1.5px) var(--wp-admin-theme-color, #3858e9);
+    outline: 2px solid transparent;
 }
 
 .tsol-content-access-dialog__close .dashicons {

@@ -59,13 +59,17 @@ require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-librar
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-security.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-entitlements.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-revocation.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-account-security.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-media-normalizer.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-resource-normalizer.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-model.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-html-sanitizer.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-homepage-curation.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-catalogue.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-catalogue-webhook.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-changes.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-catalogue-sync-status.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-admin-navigation.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-url-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-admin.php';
@@ -87,12 +91,15 @@ if (defined('WP_CLI') && WP_CLI) {
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-access-rules/class-library-access-rules-migration-cli.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-new-marketer-workshop/class-library-new-marketer-workshop-import.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-new-marketer-workshop/class-library-new-marketer-workshop-import-cli.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-course-body-publication/class-library-course-body-publication.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-course-body-publication/class-library-course-body-publication-cli.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal-cli.php';
     WP_CLI::add_command(TSOL_Library_Catalogue_Import_CLI::COMMAND, 'TSOL_Library_Catalogue_Import_CLI');
     WP_CLI::add_command(TSOL_Library_Series_Import_CLI::COMMAND, 'TSOL_Library_Series_Import_CLI');
     WP_CLI::add_command(TSOL_Library_Access_Rules_Migration_CLI::COMMAND, 'TSOL_Library_Access_Rules_Migration_CLI');
     WP_CLI::add_command(TSOL_Library_New_Marketer_Workshop_Import_CLI::COMMAND, 'TSOL_Library_New_Marketer_Workshop_Import_CLI');
+    WP_CLI::add_command(TSOL_Library_Course_Body_Publication_CLI::COMMAND, 'TSOL_Library_Course_Body_Publication_CLI');
     WP_CLI::add_command(TSOL_Library_Publication_Rehearsal_CLI::COMMAND, 'TSOL_Library_Publication_Rehearsal_CLI');
 }
 

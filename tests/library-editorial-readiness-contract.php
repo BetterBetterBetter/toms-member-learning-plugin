@@ -44,6 +44,8 @@ $series_items = 0;
 $media_assets = 0;
 $resource_count = 0;
 $provider_counts = array();
+$manual_records = 0;
+$coming_soon_items = 0;
 $warnings = array(
     'empty_excerpts' => 0,
     'empty_descriptions' => 0,
@@ -63,9 +65,14 @@ foreach ($ids as $id) {
     $assert(!in_array($post->post_status, array('trash', 'auto-draft'), true), sprintf('Library record %d is not reviewable.', $id));
     $assert('' !== trim(wp_strip_all_tags((string) $post->post_title)), sprintf('Library record %d has no title.', $id));
     $assert('' !== (string) $post->post_name, sprintf('Library record %d has no slug.', $id));
-    $assert('' !== (string) get_post_meta($id, TSOL_Library_Content_Model::META_CONTENT_TYPE, true), sprintf('Library record %d has no content type.', $id));
-    $assert('' !== (string) get_post_meta($id, TSOL_Library_Content_Model::META_MIGRATION_KEY, true), sprintf('Library record %d has no migration key.', $id));
-    $assert((int) get_post_meta($id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true) > 0, sprintf('Library record %d has no legacy provenance.', $id));
+    $migration_key = (string) get_post_meta($id, TSOL_Library_Content_Model::META_MIGRATION_KEY, true);
+    $assert('' !== $migration_key, sprintf('Library record %d has no stable editorial identity.', $id));
+    if (0 === strpos($migration_key, 'manual-')) {
+        $manual_records++;
+        $assert(0 === (int) get_post_meta($id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true), sprintf('WordPress-native Library record %d claims false legacy provenance.', $id));
+    } else {
+        $assert((int) get_post_meta($id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true) > 0, sprintf('Imported Library record %d has no legacy provenance.', $id));
+    }
 
     $uuid = (string) get_post_meta($id, TSOL_Library_Content_Model::META_UUID, true);
     $assert((bool) wp_is_uuid($uuid), sprintf('Library record %d has an invalid UUID.', $id));
@@ -122,9 +129,20 @@ foreach ($ids as $id) {
         $series_item_counts[$series_id] = ($series_item_counts[$series_id] ?? 0) + 1;
     }
 
+    $availability = TSOL_Library_Content_Model::availability($id);
+    $release_at_gmt = TSOL_Library_Content_Model::release_at_gmt($id);
+    $assert(in_array($availability, array(TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE, TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON), true), sprintf('Library content %d has an invalid availability state.', $id));
+    if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability) {
+        $coming_soon_items++;
+    } else {
+        $assert('' === $release_at_gmt, sprintf('Available Library content %d retained a coming-soon release time.', $id));
+    }
+
     $assets = get_post_meta($id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
     $assets = is_array($assets) ? $assets : array();
-    $assert(!empty($assets), sprintf('Library content %d has no playable media.', $id));
+    if (TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE === $availability) {
+        $assert(!empty($assets), sprintf('Available Library content %d has no playable media.', $id));
+    }
     foreach ($assets as $index => $asset) {
         $normalized = TSOL_Library_Media_Normalizer::normalize_asset($asset, $index + 1);
         $assert(!is_wp_error($normalized), sprintf('Library content %d has invalid media.', $id));
@@ -153,9 +171,11 @@ foreach ($ids as $id) {
 
 $assert(7 === $counts[TSOL_Library_Content_Model::COURSE_POST_TYPE], 'The catalogue does not contain seven Courses.');
 $assert(6 === $counts[TSOL_Library_Content_Model::SERIES_POST_TYPE], 'The catalogue does not contain six Series.');
-$assert(194 === $counts[TSOL_Library_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 194 playable content records.');
-$assert(73 === $course_items, 'The catalogue does not contain 73 Course lessons.');
+$assert(196 === $counts[TSOL_Library_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 196 reviewable Content records.');
+$assert(75 === $course_items, 'The catalogue does not contain 75 Course lessons.');
 $assert(121 === $series_items, 'The catalogue does not contain 121 Series items.');
+$assert(2 === $manual_records, 'The catalogue does not contain the two approved WordPress-native Medicine Cabinet lessons.');
+$assert(2 === $coming_soon_items, 'The catalogue does not contain the two approved coming-soon lessons.');
 $assert(199 === $media_assets, 'The catalogue does not contain the expected 199 media assets.');
 $assert(30 <= $resource_count, 'The catalogue lost one or more of the 30 locked imported resources.');
 $assert(7 === count(array_filter($course_item_counts)), 'A Course has no curriculum.');
@@ -188,6 +208,8 @@ WP_CLI::line(wp_json_encode(array(
     'series' => $counts[TSOL_Library_Content_Model::SERIES_POST_TYPE],
     'course_lessons' => $course_items,
     'series_items' => $series_items,
+    'wordpress_native_records' => $manual_records,
+    'coming_soon_items' => $coming_soon_items,
     'media_assets' => $media_assets,
     'media_providers' => $provider_counts,
     'resources' => $resource_count,

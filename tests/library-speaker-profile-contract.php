@@ -34,6 +34,7 @@ try {
         $assert(true === $speaker_type->show_ui && false === $speaker_type->show_in_rest, 'Speaker profiles do not have the required private wp-admin configuration.');
     }
     $assert(post_type_supports(TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'editor'), 'Speaker About does not use the native WordPress editor.');
+    $assert(post_type_supports(TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'excerpt'), 'Speaker Short bio does not use the native WordPress excerpt.');
     $assert(post_type_supports(TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'thumbnail'), 'Speaker Headshot does not use the native Featured Image workflow.');
     $assert(!post_type_supports(TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'author'), 'Speaker profiles unexpectedly expose WordPress authorship.');
     $assert(!in_array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE, TSOL_Library_Content_Model::post_types(), true), 'Speaker profiles are exposed as MemberPress authorization targets.');
@@ -80,7 +81,8 @@ try {
         'post_status' => 'publish',
         'post_title' => 'TSOL Speaker profile contract fixture',
         'post_name' => 'tsol-speaker-profile-contract-' . strtolower(wp_generate_password(8, false, false)),
-        'post_content' => '<p>A concise public biography for the disposable <strong>contract speaker</strong>.</p>',
+        'post_content' => '<h1 class="pasted-title" style="color: red">Speaker biography</h1><p data-pasted="yes">A concise public biography for the disposable <strong>contract speaker</strong>.</p><style>.leak{color:red}</style>',
+        'post_excerpt' => '<p style="color: red">A short <strong>course-page</strong> biography.</p><style>.leak{color:red}</style>',
     ), true);
     if (is_wp_error($speaker)) {
         throw new RuntimeException($speaker->get_error_message());
@@ -111,13 +113,14 @@ try {
     $assert(is_array($saved_links) && 2 === count($saved_links), 'Repeatable Speaker social links were not saved.');
     $assert($created_attachment_id === (int) get_post_thumbnail_id($created_speaker_id), 'Speaker Headshot was not stored as the native Featured Image.');
     $assert(TSOL_Library_Content_Model::ensure_speaker_image_size($created_attachment_id), 'WordPress could not prepare the square Speaker headshot rendition.');
+    $assert('A short course-page biography.' === (string) get_post_field('post_excerpt', $created_speaker_id), 'Speaker Short bio was not stored as sanitized plain text.');
 
     ob_start();
     $speaker_admin->render_about_heading(get_post($created_speaker_id));
     $speaker_admin->render_details_meta_box(get_post($created_speaker_id));
     $speaker_admin->render_publication_guidance(get_post($created_speaker_id));
     $profile_html = ob_get_clean();
-    foreach (array('About', 'Job title', 'Organisation / company', 'Website', 'Social links', 'data-speaker-social-template', 'Publishing makes this speaker available in the Library catalogue.') as $expected_copy) {
+    foreach (array('About', 'Short bio', 'course instructor sections', 'If left blank, the Library creates a shortened summary from About.', 'Job title', 'Organisation / company', 'Website', 'Social links', 'data-speaker-social-template', 'Publishing makes this speaker available in the Library catalogue.') as $expected_copy) {
         $assert(false !== strpos($profile_html, $expected_copy), 'Speaker editor omitted: ' . $expected_copy);
     }
     foreach (array('Add only public profiles. Links must use HTTP or HTTPS.', 'The title is the speaker’s full name.') as $removed_copy) {
@@ -169,12 +172,25 @@ try {
     $assert(!array_key_exists('taxonomy', $catalogue_speaker), 'Catalogue still models a Speaker profile as a taxonomy term.');
     $assert('Research Director' === ($catalogue_speaker['job_title'] ?? ''), 'Catalogue omitted the Speaker job title.');
     $assert('Example Institute' === ($catalogue_speaker['organization'] ?? ''), 'Catalogue omitted the Speaker organisation.');
+    $assert('A short course-page biography.' === ($catalogue_speaker['short_bio'] ?? ''), 'Catalogue omitted the editorial Speaker Short bio.');
     $assert(false !== strpos((string) ($catalogue_speaker['about'] ?? ''), '<strong>contract speaker</strong>'), 'Catalogue did not preserve safe WYSIWYG formatting in Speaker About.');
+    $assert(false !== strpos((string) ($catalogue_speaker['about'] ?? ''), '<h2>Speaker biography</h2>'), 'Catalogue did not normalize a pasted Speaker H1 to a section-level heading.');
+    $assert(false === strpos((string) ($catalogue_speaker['about'] ?? ''), '<style'), 'Catalogue exposed pasted Speaker style markup.');
+    $assert(false === strpos((string) ($catalogue_speaker['about'] ?? ''), 'class='), 'Catalogue exposed a pasted Speaker class attribute.');
+    $assert(false === strpos((string) ($catalogue_speaker['about'] ?? ''), 'style='), 'Catalogue exposed a pasted Speaker style attribute.');
     $assert('https://example.test/speaker' === ($catalogue_speaker['website_url'] ?? ''), 'Catalogue omitted the Speaker website.');
     $assert(2 === count($catalogue_speaker['social_links'] ?? array()), 'Catalogue omitted repeatable Speaker social links.');
     $assert($created_attachment_id === (int) ($catalogue_speaker['image']['wordpress_id'] ?? 0), 'Catalogue omitted the Speaker headshot identity.');
     $assert('Contract speaker headshot' === ($catalogue_speaker['image']['alt'] ?? ''), 'Catalogue omitted the Headshot alternative text.');
-    $assert('20260811.1' === TSOL_Library_Content_Catalogue::SCHEMA_VERSION, 'Speaker profile catalogue schema version is not explicit.');
+    wp_update_post(array('ID' => $created_speaker_id, 'post_excerpt' => ''));
+    $fallback_record = TSOL_Library_Content_Catalogue::record($created_content_id);
+    $assert(
+        'Speaker biography A concise public biography for the disposable contract speaker.' === ($fallback_record['speakers'][0]['short_bio'] ?? ''),
+        'Catalogue did not create a plain-text Short bio fallback from Speaker About.'
+    );
+    wp_update_post(array('ID' => $created_speaker_id, 'post_excerpt' => 'A short course-page biography.'));
+
+    $assert('20260813.5' === TSOL_Library_Content_Catalogue::SCHEMA_VERSION, 'Speaker profile catalogue schema version is not explicit.');
 
     wp_update_post(array('ID' => $created_speaker_id, 'post_status' => 'draft'));
     $draft_speaker_record = TSOL_Library_Content_Catalogue::record($created_content_id);

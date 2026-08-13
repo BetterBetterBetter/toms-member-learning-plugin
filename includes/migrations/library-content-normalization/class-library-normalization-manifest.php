@@ -172,7 +172,6 @@ class TSOL_Library_Normalization_Manifest {
                     'kind' => 'numbered_session',
                     'collection' => 'tsol-sessions-' . $year,
                     'position' => $session_number,
-                    'current' => false,
                 );
             } elseif (0 === strpos($post->post_title, 'Live Event:')) {
                 $year = (int) mysql2date('Y', $post->post_date, false);
@@ -182,7 +181,6 @@ class TSOL_Library_Normalization_Manifest {
                     'kind' => 'live_event',
                     'collection' => $collection,
                     'position' => $live_event_positions[$collection],
-                    'current' => false,
                 );
             } elseif (isset($special_lookup[(int) $post->ID])) {
                 $special = $special_lookup[(int) $post->ID];
@@ -196,7 +194,6 @@ class TSOL_Library_Normalization_Manifest {
                     'kind' => $kind,
                     'collection' => $special['collection'],
                     'position' => $special['position'],
-                    'current' => 103832 === (int) $post->ID,
                 );
             }
 

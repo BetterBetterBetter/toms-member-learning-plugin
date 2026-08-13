@@ -88,7 +88,7 @@ try {
         )),
     ));
     $assert(7 === count($library_course_ids), 'The TSOL Library Course inventory is not seven reviewable records.');
-    $assert(194 === count($library_item_ids), 'The TSOL Library Content inventory is not 194 reviewable records.');
+    $assert(196 === count($library_item_ids), 'The TSOL Library Content inventory is not 196 reviewable records.');
     $assert(empty($discarded_library_ids), 'A TSOL Library record is trashed or auto-drafted.');
 
     $target_id = 0;

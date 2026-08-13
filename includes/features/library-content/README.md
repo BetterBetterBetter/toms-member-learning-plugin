@@ -25,6 +25,14 @@ back off from 10 seconds to one hour and remain recoverable; the Library worker
 also polls the journal every 60 seconds, so webhook delivery is an acceleration
 path rather than a second source of truth.
 
+Normal browser saves send a non-blocking wake immediately after the outbox row
+is committed. A separate recurring one-minute watchdog confirms deliveries and
+recovers work even if a one-off WordPress cron event is consumed during a
+failure. Post create/update/status/delete, projected metadata, relationships,
+Speaker changes, curriculum changes, and assigned Collection or Topic
+create/rename/delete events all advance affected catalogue records. Creating an
+unused term does not advance the journal because it changes no projected page.
+
 Configure `TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET` as a host-managed WordPress
 constant and use the same dedicated 32-byte-or-longer secret in the Library app.
 Do not reuse the Library authentication client secret. The Library URL remains
@@ -32,6 +40,11 @@ the validated Library Authentication origin. Ensure production WordPress cron
 runs at least once per minute in addition to the plugin's immediate cron spawn.
 The webhook never contains catalogue, media, member, or MemberPress data and
 cannot grant access; the app always pulls the existing protected change feed.
+Administrators can compare the WordPress and School cursors, pending deliveries,
+retry state, last confirmed delivery, worker state, and schema under **TSOL
+Library → Settings → Sync Status**. The same local delivery assessment is
+registered in WordPress Site Health. Its signed status request exposes only
+allowlisted operational state and is private and `no-store`.
 
 ## WordPress model
 
@@ -40,8 +53,11 @@ cannot grant access; the app always pulls the existing protected change feed.
 - `tsol_library_item`: a private, admin-visible lesson, session, webinar,
   event, call, orientation, book club, or standalone recording.
 - `tsol_library_speaker`: a private, admin-visible presenter profile. The post
-  title is the full name, the native classic editor owns About, and Featured
-  Image owns the headshot. Selecting or uploading an image advances through
+  title is the full name, the native Excerpt owns the plain-text Short bio, the
+  native classic editor owns About, and Featured Image owns the headshot. The
+  Short bio is the preferred Course-instructor summary; when it is empty,
+  catalogue schema `20260813.5` projects a 50-word plain-text fallback from the
+  sanitized About body. Selecting or uploading an image advances through
   WordPress's native crop screen with a required 1:1 selection; WordPress keeps
   the original and sets a new cropped attachment as the headshot. Job title,
   organisation, website, and repeatable social links are post metadata.
@@ -68,6 +84,13 @@ slugs remain owned by the parent record. The hostname is deliberately omitted
 because it belongs to deployment configuration, not editorial content. Changing a published slug requires a
 redirect review because prior sharing URLs do not redirect automatically.
 
+Record classification is structural rather than an editorial choice. Course
+and Series derive their catalogue type from their post type; Content derives a
+Course lesson from Course placement and otherwise emits the recording
+compatibility value while Series context identifies an episode. The protected
+catalogue no longer requires stored content-type metadata to export a valid
+record.
+
 Course curriculum uses a canonical ordered section registry on the Course in
 `_tsol_library_course_sections`. Series uses the equivalent
 `_tsol_library_series_groups` registry. Each entry has a stable parent-local
@@ -81,12 +104,34 @@ WordPress attachment identity, playable kind, and position.
 
 Creating a Course, Series, or Content record in its dedicated post type makes
 it Library content automatically. There is no separate editorial inclusion
-switch. Technical catalogue export still requires a content type, immutable
-UUID, and authorization pointer. The protected projection retains draft,
+switch. Technical catalogue export requires an immutable UUID and authorization
+pointer. The protected projection retains draft,
 pending, private, and scheduled records for administrator preview; WordPress
 publication status controls whether ordinary members can see them in the
 Library application. `_tsol_library_include` remains registered only as a
 frozen-import compatibility marker and is not a runtime or editor gate.
+
+Content playback availability is separate from WordPress publication status.
+`available` is the default; `coming_soon` lets a published lesson or episode
+appear in its parent structure while every catalogue reference remains
+non-interactive. Direct Library watch requests return to the public parent, and
+protected video features remain unavailable to members and administrators. It
+may carry an optional date-only release date. For compatibility with the
+catalogue timestamp contract, WordPress stores the start of the selected date
+canonically in UTC and the Library renders only the calendar date. The date is
+informational and does not schedule an unlock. Administrators must attach
+stable media and manually change the record to `available`; a passed date
+remains coming soon and is
+called out as overdue in the Content editor and Structure Builder. Publishing
+an available Content record requires normalized media, while an authorized
+coming-soon child may be published before media is attached.
+
+The catalogue projects `availability` and nullable RFC 3339 `release_at`.
+Courses and Series derive **Coming soon** when every published child is coming
+soon and **Currently releasing** when published available and upcoming
+children are mixed. The derived rollout is display-only and never changes an
+authorization pointer, MemberPress Rule, taxonomy, or parent publication
+status.
 
 Courses and Series store their ordered Speaker relationships as repeated
 `_tsol_library_speaker_id` post metadata. Content stores an explicit
@@ -100,13 +145,66 @@ grant access. Draft Speaker profiles can be assigned while editing but are
 omitted from catalogue output until the profile itself is published;
 publication still creates no WordPress frontend route.
 
-The native Excerpt is the short member-facing introduction and the native main
-editor is the long-form member-facing Description. Both synchronize
-automatically for every Library record. The projection strips legacy
-players, scripts, shortcodes, and visually empty layout blocks before applying
-the WordPress post-HTML allowlist. Description HTML is protected member data:
-the Library application selects it only after the live WordPress/MemberPress
-access decision succeeds. Structured Media remains the only playback source.
+The native Excerpt is the short member-facing introduction. The native body is
+the long-form Description for Series and Content, and the public **About this
+course** source for Courses. It synchronizes automatically; Course records
+project the same sanitized value into `overview_html` and the explicitly public
+`public_description_html` field, while public application queries select only
+the latter. Series and Content Description HTML remains protected member data
+and is selected only after the live WordPress/MemberPress access decision.
+Structured Media remains the only playback source.
+
+Course, Series, and Content Excerpt editors show a live **160 recommended**
+character count because the same text is used for compact cards, page
+introductions, sharing, and preferred search descriptions. This is deliberately
+advisory: WordPress does not truncate or reject longer editorial copy. Speaker
+Short bio uses the same advisory count but a compact-display warning because it
+is an instructor summary, not the Speaker profile's current search description.
+
+All native WYSIWYG bodies on Course, Series, Content, and Speaker records cross
+one strict semantic HTML boundary both before WordPress stores a new edit and
+again during catalogue export. The allowlist is deliberately small:
+
+- paragraphs and line breaks;
+- H2–H4 headings (`h1` becomes `h2`; H5/H6 become `h4`);
+- ordered/unordered lists and list items;
+- strong/bold and emphasis/italic text;
+- block quotes; and
+- HTTP(S), `mailto:`, safe root-relative, or page-fragment links with only
+  `href` and optional `title`. Schemeless domain names are normalized to HTTPS.
+
+The sanitizer removes pasted `style`, `class`, `id`, `data-*`, and event
+attributes; layout wrappers; images; forms; embedded/executable elements and
+their content; block-editor comments; shortcodes; unsafe/relative link
+destinations; and visually empty blocks. Application CSS therefore owns all
+presentation. Never widen this allowlist merely to preserve copied styling;
+add an intentional semantic application component instead.
+
+The dedicated **Course landing page** panel now owns only the ordered **What
+you’ll learn** outcomes. Its native WordPress-style builder exposes an editable
+title and optional supporting sentence, plus working drag, keyboard move, add,
+and remove controls. WordPress combines each row as `Title — supporting text`
+so the catalogue remains an ordered plain-text array and existing projected
+data needs no migration. Empty outcomes are ignored, duplicates are removed,
+and the public learning section is omitted until at least one outcome is saved.
+Downloads, bonus links, passwords, and member-only instructions must be added
+to a lesson’s structured Resources panel, never the Course body.
+
+Before catalogue schema `20260813.3` is synchronized in an environment that
+contains the legacy imports, run the guarded `tsol
+library-course-body-publication apply` command. It privately archives the three
+resource-only Course bodies, moves their usable links into the first protected
+lesson, and archives/removes the retired duplicate public-description metadata.
+Its underscore-prefixed archives are migration recovery data and are never
+part of the catalogue contract.
+
+`published_at` is the WordPress publication date. `last_updated_at` is
+automatic: Content uses its own WordPress modified time, while a Course or
+Series uses the newest of its own modified time and its published children.
+Draft children cannot change the public parent date. Child saves and deletes
+journal the affected parent so the rebuildable projection can refresh the
+aggregate without polling every record. Editors do not maintain a second date
+field manually.
 
 An item can belong to a Course or Series, never both. Series numbers are
 rendered from position rather than duplicated in titles. Series own their
@@ -127,6 +225,7 @@ determine Series membership or order.
 - Collections
 - Topics
 - Speakers
+- Homepage
 - Settings, with capability-aware tabs for:
   - Authentication
   - Import & Legacy
@@ -152,6 +251,32 @@ pointer. When ordering is dirty, child edit links open in a new tab so the
 unsaved structure remains available. Individual Content editors expose explicit Standalone/Course/Series
 placement plus a registry-backed section/group select; raw position and copied
 group-title controls are hidden from normal administration.
+
+Course editors have no generic Details box. Series editors have a focused
+`Series settings` box, and Content editors have a focused `Library placement`
+box. Record type, parent display position, and the former per-record Featured
+checkbox are not editorial controls. The dedicated Homepage screen owns four
+ordered Course/Series rails—Featured, Courses, Masterclasses, and Series—with
+pointer drag, Up/Down controls, rail selects, search, and explicit save.
+Rail choices are type-safe: Series can use Featured/Series, Masterclasses can
+use Featured/Masterclasses, and ordinary Courses can use Featured/Courses.
+Stale-tab protection rejects an overwrite when another administrator saved a
+new layout after the current screen loaded.
+
+Editor panels follow the corresponding Library reading order where there is a
+clear rendered counterpart. Courses use Excerpt, What you’ll learn, Curriculum,
+then About this course. Content keeps non-rendered Placement separate, followed
+by Media, Excerpt, Description, and Resources. Series uses Excerpt, Series
+settings, Episodes, then its Description; the Description remains last because
+it has no current public Series-page block. Speaker identity/details precede
+the About editor. Access, import provenance, taxonomy, publication, and featured
+image controls remain in the side column because they are workflow context, not
+linear page sections.
+Drafts may be arranged but remain invisible to ordinary visitors until
+published. Homepage placement never grants access and never changes search
+eligibility. Catalogue schema `20260813.3` exposes this as nullable `homepage`
+placement metadata and retains `featured: false` only for compatibility with
+the current projection.
 
 Course and Series editors use the visual direct-Speaker relationship picker.
 On Content, the same panel first offers `Inherit from parent`, `Choose speakers
@@ -208,7 +333,9 @@ Run against the local working site with a 512 MB CLI memory limit:
 ```bash
 php -d memory_limit=512M /usr/local/bin/wp tsol library-catalogue-import verify --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp tsol library-series-import verify --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp tsol library-course-body-publication verify --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-tsol-model-contract.php --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-html-sanitizer-contract.php --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-admin-contract.php --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-url-admin-contract.php --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-structure-builder-contract.php --skip-themes
@@ -220,15 +347,17 @@ php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/libr
 ```
 
 Focused browser verification is available from `test/e2e` with
-`npm run test:library-structure`; `npm run test:library-full` also exercises the
+`npm run test:library-structure` and `npm run test:library-homepage`;
+`npm run test:library-full` also exercises the
 imported Course and 96-episode Series summaries/builders without changing their
 structure.
 
-The locked local inventory is six courses, six Series, 142 content records (21
-course lessons and 121 Series items), one Collection
-containing five Masterclass courses, zero standalone items, 148 equivalent
-source authorization delegations, 154 projected records, and zero legacy or
-MemberPress mutations.
+The current local inventory is seven courses, six Series, 194 content records
+(73 course lessons and 121 Series items), one Collection containing five
+Masterclass courses, zero standalone items, and 207 projected records. The
+original guarded import retains its locked 148 equivalent source authorization
+delegations and 154 owned records; the additive New Marketer Workshop module
+owns the remaining Course and 52 lessons.
 
 ## Future AI assistance
 

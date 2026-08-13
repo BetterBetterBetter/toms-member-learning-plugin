@@ -23,6 +23,7 @@ class TSOL_Library_Auth {
     public function init() {
         $this->settings->init();
         TSOL_Library_Auth_Revocation::register_hooks();
+        TSOL_Library_Account_Security::register_hooks();
         add_action('init', array($this, 'mark_auth_request_uncacheable'), 0);
         add_action('init', array($this, 'maybe_install'));
         add_filter('rocket_cache_reject_uri', array($this, 'exclude_auth_routes_from_wp_rocket'), 10, 2);

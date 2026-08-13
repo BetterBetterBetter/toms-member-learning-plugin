@@ -30,8 +30,9 @@ Supported development/deployed plugin basenames:
 - `includes/features/cookie-consent/class-cookie-consent.php` - Cookie consent frontend feature.
 - `includes/features/cookie-consent/class-cookie-consent-admin.php` - Cookie consent admin tabs.
 - `includes/features/cookie-consent/class-cookie-consent-settings.php` - Cookie consent settings and sanitization.
-- `includes/features/library-auth/` - Narrow WordPress identity and MemberPress content-authorization bridge for the standalone Library.
-- `includes/features/library-content/` - Private TSOL-owned courses/content/Speaker profiles, editorial UI, catalogue projection, and read-only MemberPress access presentation.
+- `includes/features/library-auth/` - Narrow WordPress identity, MemberPress content-authorization, and Library-session security bridge for the standalone Library.
+- `includes/features/library-auth/class-library-account-security.php` - MemberPress Account Security tab and confirmed all-device Library-session revocation action.
+- `includes/features/library-content/` - Private TSOL-owned courses/content/Speaker profiles, public Course landing fields, editorial UI, catalogue projection, and read-only MemberPress access presentation.
 - `includes/migrations/library-catalogue-import/` - Guarded local clone-only importer from the locked legacy inventory.
 - `assets/admin/` - Admin page assets.
 - `assets/features/accountability-modal/` - Accountability modal assets.
@@ -100,6 +101,15 @@ The plugin also registers a **TSOL Library Footer** menu location under WordPres
 
 Every authenticated WordPress account can enter and browse the Library. Access to each protected course or lesson is decided from that content's existing MemberPress rules, including drip and expiry behavior; unprotected published content is available to signed-in users. WordPress users with `manage_options` retain full administrator access. The plugin does not maintain a second membership or staff allowlist.
 
+The MemberPress Account page includes a **Security** tab for signing the member
+out of the standalone Library on every device. The authenticated action uses a
+POST request, WordPress nonce, and explicit confirmation before placing the
+existing `user.sessions_forced_logout` event in the durable signed revocation
+outbox. It revokes Library sessions only; the current WordPress, MemberPress,
+or upstream Access login may remain active. A narrow MemberPress view filter
+keeps the Security link available when an older child-theme account override
+omits the standard custom-navigation hook.
+
 The URL and client ID can be managed in the plugin UI. Development and staging
 may use the write-only client-secret option, which never renders the stored
 value. Production requires the host-managed `TSOL_LIBRARY_CLIENT_SECRET`
@@ -135,6 +145,7 @@ Run the WordPress contract checks from the plugin directory with:
 ```bash
 wp eval-file tests/library-auth-contract.php --skip-themes
 wp eval-file tests/library-auth-revocation-contract.php --skip-themes
+wp eval-file tests/library-account-security-contract.php --skip-themes
 ```
 
 ## Library Content
@@ -147,7 +158,10 @@ untouched; MemberPress Rules remains the sole live access authority.
 The local clone importer currently produces six draft courses and 142 draft
 content records while delegating all 148 access mappings to their unchanged
 legacy sources. Watch routes use immutable content UUIDs, kept separate from
-authorization pointers. See `includes/features/library-content/README.md` and
+authorization pointers. The native Course body is the public **About this
+course** source; protected downloads and links belong in lesson Resources.
+Every Library/Speaker body sent to the application passes through the shared
+strict semantic HTML sanitizer. See `includes/features/library-content/README.md` and
 `../plans/tsol-library-content-model.md` for the model and verification record.
 
 ## Development

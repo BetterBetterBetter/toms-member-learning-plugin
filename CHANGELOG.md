@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a MemberPress Account Security tab with an explicitly confirmed, nonce-protected action that queues durable all-device Library session revocation without implying that WordPress, MemberPress, or Access sessions are also cleared.
+- Made the native Course body the single public **About this course** source, retained ordered learning outcomes as structured fields, and removed the duplicate Course WYSIWYG.
+- Added a strict semantic HTML boundary for every Library and Speaker WYSIWYG synchronized to the standalone application, stripping pasted styling, layout wrappers, embeds, scripts, and unsafe links on save and export.
+- Added a guarded Course-body publication migration that privately archives legacy resource-only bodies, moves their downloads and links into protected lesson Resources, and retires duplicate public-description metadata.
 - Added durable, HMAC-signed catalogue wake-ups with request coalescing, bounded retries, and the existing incremental journal as a polling fallback; no catalogue or MemberPress data is sent in the webhook.
 - Replaced the Speaker headshot attachment-editor workaround with WordPress's native select-then-crop media workflow, requiring an interactive 1:1 crop while retaining the original upload.
 - Removed the redundant editable Library inclusion checkbox: the dedicated Course, Series, and Content post types now establish Library identity automatically, while WordPress status controls member visibility and non-published records remain available for administrator preview in the protected projection.

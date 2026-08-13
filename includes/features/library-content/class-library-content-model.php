@@ -24,9 +24,10 @@ class TSOL_Library_Content_Model {
     const META_CONTENT_TYPE = '_tsol_library_content_type';
     const META_POSITION = '_tsol_library_position';
     const META_FEATURED = '_tsol_library_featured';
-    const META_CURRENT = '_tsol_library_current';
     const META_MEDIA_ASSETS = '_tsol_library_media_assets';
     const META_RESOURCES = '_tsol_library_resources';
+    const META_AVAILABILITY = '_tsol_library_availability';
+    const META_RELEASE_AT_GMT = '_tsol_library_release_at_gmt';
     const META_MIGRATION_KEY = '_tsol_library_migration_key';
     const META_MIGRATION_VERSION = '_tsol_library_migration_version';
     const META_LEGACY_SOURCE_ID = '_tsol_library_legacy_source_post_id';
@@ -48,9 +49,13 @@ class TSOL_Library_Content_Model {
     const META_SECTION_TITLE = '_tsol_library_section_title';
     const META_SECTION_POSITION = '_tsol_library_section_position';
     const META_COURSE_SECTIONS = '_tsol_library_course_sections';
+    const META_COURSE_LEARNING_OUTCOMES = '_tsol_library_course_learning_outcomes';
     const META_SERIES_GROUPS = '_tsol_library_series_groups';
     const META_SPEAKER_IDS = '_tsol_library_speaker_id';
     const META_SPEAKER_MODE = '_tsol_library_speaker_mode';
+
+    const AVAILABILITY_AVAILABLE = 'available';
+    const AVAILABILITY_COMING_SOON = 'coming_soon';
 
     const SPEAKER_MODE_INHERIT = 'inherit';
     const SPEAKER_MODE_DIRECT = 'direct';
@@ -79,9 +84,10 @@ class TSOL_Library_Content_Model {
             self::META_CONTENT_TYPE,
             self::META_POSITION,
             self::META_FEATURED,
-            self::META_CURRENT,
             self::META_MEDIA_ASSETS,
             self::META_RESOURCES,
+            self::META_AVAILABILITY,
+            self::META_RELEASE_AT_GMT,
             self::META_MIGRATION_KEY,
             self::META_MIGRATION_VERSION,
             self::META_LEGACY_SOURCE_ID,
@@ -103,6 +109,7 @@ class TSOL_Library_Content_Model {
             self::META_SECTION_TITLE,
             self::META_SECTION_POSITION,
             self::META_COURSE_SECTIONS,
+            self::META_COURSE_LEARNING_OUTCOMES,
             self::META_SERIES_GROUPS,
             self::META_SPEAKER_IDS,
             self::META_SPEAKER_MODE,
@@ -117,14 +124,53 @@ class TSOL_Library_Content_Model {
     public static function metadata_keys_for_post_type($post_type) {
         $keys = array_values(array_diff(self::metadata_keys(), array(
             self::META_COURSE_SECTIONS,
+            self::META_COURSE_LEARNING_OUTCOMES,
             self::META_SERIES_GROUPS,
+            self::META_AVAILABILITY,
+            self::META_RELEASE_AT_GMT,
         )));
         if (self::COURSE_POST_TYPE === $post_type) {
             $keys[] = self::META_COURSE_SECTIONS;
+            $keys[] = self::META_COURSE_LEARNING_OUTCOMES;
         } elseif (self::SERIES_POST_TYPE === $post_type) {
             $keys[] = self::META_SERIES_GROUPS;
+        } elseif (self::ITEM_POST_TYPE === $post_type) {
+            $keys[] = self::META_AVAILABILITY;
+            $keys[] = self::META_RELEASE_AT_GMT;
         }
         return $keys;
+    }
+
+    public static function sanitize_availability($value) {
+        $availability = sanitize_key((string) $value);
+        return self::AVAILABILITY_COMING_SOON === $availability
+            ? self::AVAILABILITY_COMING_SOON
+            : self::AVAILABILITY_AVAILABLE;
+    }
+
+    public static function availability($post_id) {
+        return self::sanitize_availability(
+            get_post_meta((int) $post_id, self::META_AVAILABILITY, true)
+        );
+    }
+
+    public static function sanitize_release_at_gmt($value) {
+        $value = trim((string) $value);
+        if ('' === $value) {
+            return '';
+        }
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $value, new DateTimeZone('UTC'));
+        $errors = DateTimeImmutable::getLastErrors();
+        if (!$date || (is_array($errors) && ((int) $errors['warning_count'] > 0 || (int) $errors['error_count'] > 0))) {
+            return '';
+        }
+        return $date->format('Y-m-d H:i:s');
+    }
+
+    public static function release_at_gmt($post_id) {
+        return self::sanitize_release_at_gmt(
+            get_post_meta((int) $post_id, self::META_RELEASE_AT_GMT, true)
+        );
     }
 
     public static function direct_speaker_ids($post_id) {
@@ -411,6 +457,46 @@ class TSOL_Library_Content_Model {
         return array_values($resources);
     }
 
+    public static function sanitize_course_learning_outcomes($value) {
+        if (!is_array($value)) {
+            return array();
+        }
+
+        $outcomes = array();
+        $seen = array();
+        foreach (array_slice(array_values($value), 0, 12) as $row) {
+            if (is_array($row) && (array_key_exists('title', $row) || array_key_exists('description', $row))) {
+                $title = trim(sanitize_text_field((string) ($row['title'] ?? '')));
+                $description = trim(sanitize_textarea_field((string) ($row['description'] ?? '')));
+
+                if ('' === $title) {
+                    $text = $description;
+                } elseif ('' === $description) {
+                    $text = $title;
+                } else {
+                    $text = $title . ' — ' . $description;
+                }
+            } else {
+                // Retain compatibility with the original single-field editor and catalogue imports.
+                $text = is_array($row) ? ($row['text'] ?? '') : $row;
+                $text = trim(sanitize_textarea_field((string) $text));
+            }
+
+            if ('' === $text) {
+                continue;
+            }
+
+            $identity = function_exists('mb_strtolower') ? mb_strtolower($text) : strtolower($text);
+            if (isset($seen[$identity])) {
+                continue;
+            }
+            $seen[$identity] = true;
+            $outcomes[] = $text;
+        }
+
+        return $outcomes;
+    }
+
     /**
      * Make the private TSOL content types available as native MemberPress Rule
      * targets without making them publicly queryable in WordPress.
@@ -544,7 +630,7 @@ class TSOL_Library_Content_Model {
             'map_meta_cap' => true,
             'rewrite' => false,
             'query_var' => false,
-            'supports' => array('title', 'editor', 'thumbnail', 'revisions'),
+            'supports' => array('title', 'editor', 'excerpt', 'thumbnail', 'revisions'),
         ));
     }
 
@@ -594,7 +680,6 @@ class TSOL_Library_Content_Model {
             self::register_meta($post_type, self::META_CONTENT_TYPE, 'string', 'sanitize_key');
             self::register_meta($post_type, self::META_POSITION, 'integer', 'absint');
             self::register_meta($post_type, self::META_FEATURED, 'boolean', 'rest_sanitize_boolean');
-            self::register_meta($post_type, self::META_CURRENT, 'boolean', 'rest_sanitize_boolean');
             self::register_meta($post_type, self::META_MEDIA_ASSETS, 'array', array(__CLASS__, 'sanitize_media_assets'));
             self::register_meta($post_type, self::META_RESOURCES, 'array', array(__CLASS__, 'sanitize_resources'));
             self::register_meta($post_type, self::META_MIGRATION_KEY, 'string', 'sanitize_key');
@@ -630,7 +715,10 @@ class TSOL_Library_Content_Model {
         }
 
         self::register_meta(self::COURSE_POST_TYPE, self::META_COURSE_SECTIONS, 'array', array(__CLASS__, 'sanitize_structure_registry'));
+        self::register_meta(self::COURSE_POST_TYPE, self::META_COURSE_LEARNING_OUTCOMES, 'array', array(__CLASS__, 'sanitize_course_learning_outcomes'));
         self::register_meta(self::SERIES_POST_TYPE, self::META_SERIES_GROUPS, 'array', array(__CLASS__, 'sanitize_structure_registry'));
+        self::register_meta(self::ITEM_POST_TYPE, self::META_AVAILABILITY, 'string', array(__CLASS__, 'sanitize_availability'));
+        self::register_meta(self::ITEM_POST_TYPE, self::META_RELEASE_AT_GMT, 'string', array(__CLASS__, 'sanitize_release_at_gmt'));
 
         self::register_meta(self::SPEAKER_POST_TYPE, self::SPEAKER_META_UUID, 'string', 'sanitize_text_field');
         self::register_meta(self::SPEAKER_POST_TYPE, self::SPEAKER_META_JOB_TITLE, 'string', 'sanitize_text_field');

@@ -22,10 +22,13 @@ class TSOL_Library_New_Marketer_Workshop_Import {
     const SOURCE_RULE_FINGERPRINT = 'c57e90ebc48083e6afef4abd5be9b35be144ef1b421c5446e718f6dd55577d91';
     const EXPECTED_LESSONS = 52;
     const EXPECTED_CONDITIONS = 28;
+    const STRUCTURE_VERSION = '20260813.1';
+    const LEGACY_STRUCTURE_VERSION = '20260812.1-flat';
 
     const STATE_OPTION = 'tsol_library_new_marketer_workshop_import_state';
     const LOCK_OPTION = 'tsol_library_new_marketer_workshop_import_lock';
     const APPLY_CONFIRMATION = 'import-new-marketer-workshop-with-exact-legacy-access';
+    const RESTRUCTURE_CONFIRMATION = 'split-new-marketer-workshop-into-seven-sections';
     const ROLLBACK_CONFIRMATION = 'remove-unchanged-new-marketer-workshop-import';
 
     const META_IMPORT_VERSION = '_tsol_library_new_marketer_import_version';
@@ -44,7 +47,13 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'course' => array(
                 'title' => 'The New Marketer Workshop',
                 'slug' => 'the-new-marketer-workshop',
-                'sections' => 1,
+                'sections' => count(self::sections()),
+                'section_summary' => array_map(static function ($section) {
+                    return array(
+                        'title' => (string) $section['title'],
+                        'lessons' => (int) $section['end'] - (int) $section['start'] + 1,
+                    );
+                }, self::sections()),
                 'lessons' => count($source['lessons']),
                 'course_collections' => 0,
             ),
@@ -67,6 +76,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'phase' => empty($state) ? 'not_started' : (string) ($state['phase'] ?? 'unknown'),
             'created_posts' => count((array) ($state['created_post_ids'] ?? array())),
             'created_rules' => empty($state['created_rule_id']) ? 0 : 1,
+            'structure_version' => (string) ($state['structure_version'] ?? self::LEGACY_STRUCTURE_VERSION),
             'targets' => $this->target_counts(),
         );
     }
@@ -122,6 +132,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
                 $this->clear_memberpress_rule_cache();
 
                 $state['phase'] = 'applied';
+                $state['structure_version'] = self::STRUCTURE_VERSION;
                 $state['target_fingerprint'] = $this->target_fingerprint($state['created_post_ids']);
                 $state['applied_at'] = gmdate('c');
                 $state['updated_at'] = gmdate('c');
@@ -147,6 +158,9 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         if ('applied' !== (string) ($state['phase'] ?? '')) {
             throw new RuntimeException('The New Marketer Workshop import is not applied.');
         }
+        if (self::STRUCTURE_VERSION !== (string) ($state['structure_version'] ?? self::LEGACY_STRUCTURE_VERSION)) {
+            throw new RuntimeException('The New Marketer Workshop needs the guarded seven-section structure migration.');
+        }
 
         $course_id = (int) ($state['course_id'] ?? 0);
         $rule_id = (int) ($state['created_rule_id'] ?? 0);
@@ -168,6 +182,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         return array(
             'schema_version' => self::VERSION,
             'phase' => 'applied',
+            'structure_version' => self::STRUCTURE_VERSION,
             'source_fingerprint' => $source['fingerprint'],
             'source_rule_fingerprint' => $source_rule['fingerprint'],
             'normalized' => $this->target_counts(),
@@ -180,6 +195,72 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'permission_changes' => 0,
             'identities_emitted' => 0,
         );
+    }
+
+    public function restructure() {
+        $this->assert_environment();
+        return $this->with_lock(function () {
+            $source = $this->source_spec();
+            $source_rule = $this->source_rule_spec();
+            $state = $this->state();
+            $this->assert_state_compatible($state);
+            if ('applied' !== (string) ($state['phase'] ?? '')) {
+                throw new RuntimeException('The New Marketer Workshop import is not applied.');
+            }
+
+            $structure_version = (string) ($state['structure_version'] ?? self::LEGACY_STRUCTURE_VERSION);
+            if (self::STRUCTURE_VERSION === $structure_version) {
+                return $this->verify();
+            }
+            if (self::LEGACY_STRUCTURE_VERSION !== $structure_version) {
+                throw new RuntimeException('The stored workshop structure belongs to an unknown version.');
+            }
+
+            $course_id = (int) ($state['course_id'] ?? 0);
+            $rule_id = (int) ($state['created_rule_id'] ?? 0);
+            // Validate every importer-owned title, media reference, relationship,
+            // provenance field, and permission before changing presentation.
+            // The historical all-meta fingerprint is deliberately not used here:
+            // registered editorial fields were added after the original import,
+            // which changes that serialization even when their values are empty.
+            $this->assert_targets($source, $course_id, 'publish', self::legacy_sections());
+            $this->assert_native_rule($source_rule, $course_id, $rule_id, 'publish');
+
+            $lesson_ids = $this->lesson_ids($course_id);
+            $groups = array();
+            foreach (self::sections() as $section) {
+                $groups[] = array(
+                    'key' => (string) $section['key'],
+                    'title' => (string) $section['title'],
+                    'items' => array_slice(
+                        $lesson_ids,
+                        (int) $section['start'] - 1,
+                        (int) $section['end'] - (int) $section['start'] + 1
+                    ),
+                );
+            }
+
+            $snapshot = TSOL_Library_Structure::snapshot($course_id);
+            if (is_wp_error($snapshot)) {
+                throw new RuntimeException($snapshot->get_error_message());
+            }
+            $result = TSOL_Library_Structure::save_display_structure(
+                $course_id,
+                array('groups' => $groups),
+                (string) $snapshot['revision']
+            );
+            if (is_wp_error($result)) {
+                throw new RuntimeException($result->get_error_message());
+            }
+
+            $state['structure_version'] = self::STRUCTURE_VERSION;
+            $state['target_fingerprint'] = $this->target_fingerprint($state['created_post_ids']);
+            $state['restructured_at'] = gmdate('c');
+            $state['updated_at'] = gmdate('c');
+            $this->save_state($state);
+
+            return $this->verify();
+        });
     }
 
     public function rollback() {
@@ -396,6 +477,90 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         );
     }
 
+    private static function sections() {
+        return array(
+            array(
+                'key' => 'course-new-marketer-goals-offers-market',
+                'title' => 'Goals, Offers & Your Market',
+                'position' => 1,
+                'start' => 1,
+                'end' => 4,
+            ),
+            array(
+                'key' => 'course-new-marketer-marketing-platform',
+                'title' => 'Build Your Marketing Platform',
+                'position' => 2,
+                'start' => 5,
+                'end' => 12,
+            ),
+            array(
+                'key' => 'course-new-marketer-offers-content-monetization',
+                'title' => 'Offers, Content & Monetization',
+                'position' => 3,
+                'start' => 13,
+                'end' => 19,
+            ),
+            array(
+                'key' => 'course-new-marketer-community-affiliates-authority',
+                'title' => 'Community, Affiliates & Authority',
+                'position' => 4,
+                'start' => 20,
+                'end' => 24,
+            ),
+            array(
+                'key' => 'course-new-marketer-product-marketing-systems',
+                'title' => 'Product & Marketing Systems',
+                'position' => 5,
+                'start' => 25,
+                'end' => 31,
+            ),
+            array(
+                'key' => 'course-new-marketer-audience-traffic-brand',
+                'title' => 'Audience, Traffic & Brand Growth',
+                'position' => 6,
+                'start' => 32,
+                'end' => 41,
+            ),
+            array(
+                'key' => 'course-new-marketer-scale-automate-implementation',
+                'title' => 'Scale, Automate & Put It Into Practice',
+                'position' => 7,
+                'start' => 42,
+                'end' => 52,
+            ),
+        );
+    }
+
+    private static function legacy_sections() {
+        return array(array(
+            'key' => 'course-new-marketer-workshop-lessons',
+            'title' => 'Lessons',
+            'position' => 1,
+            'start' => 1,
+            'end' => self::EXPECTED_LESSONS,
+        ));
+    }
+
+    private static function section_registry($sections) {
+        return array_map(static function ($section) {
+            return array(
+                'key' => (string) $section['key'],
+                'title' => (string) $section['title'],
+                'position' => (int) $section['position'],
+            );
+        }, $sections);
+    }
+
+    private static function section_for_lesson($position, $sections) {
+        $position = (int) $position;
+        foreach ($sections as $section) {
+            if ($position >= (int) $section['start'] && $position <= (int) $section['end']) {
+                return $section;
+            }
+        }
+        return null;
+    }
+
     private function create_course($source, &$state) {
         $source_post = $source['post'];
         $course_key = 'new-marketer-workshop-course';
@@ -412,11 +577,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         ), $this->base_meta($source_post, $course_key, 'course', $source['fingerprint']), $state);
 
         update_post_meta($course_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $course_id);
-        update_post_meta($course_id, TSOL_Library_Content_Model::META_COURSE_SECTIONS, array(array(
-            'key' => 'course-new-marketer-workshop-lessons',
-            'title' => 'Lessons',
-            'position' => 1,
-        )));
+        update_post_meta($course_id, TSOL_Library_Content_Model::META_COURSE_SECTIONS, self::section_registry(self::sections()));
         return $course_id;
     }
 
@@ -429,12 +590,16 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'lesson',
             hash('sha256', serialize(array($lesson['title'], $lesson['asset'])))
         );
-        $meta[TSOL_Library_Content_Model::META_POSITION] = $position;
+        $section = self::section_for_lesson($position, self::sections());
+        if (null === $section) {
+            throw new RuntimeException(sprintf('Workshop lesson %d has no curriculum section.', $position));
+        }
+        $meta[TSOL_Library_Content_Model::META_POSITION] = $position - (int) $section['start'] + 1;
         $meta[TSOL_Library_Content_Model::META_MEDIA_ASSETS] = array($lesson['asset']);
         $meta[TSOL_Library_Content_Model::META_COURSE_ID] = $course_id;
-        $meta[TSOL_Library_Content_Model::META_SECTION_KEY] = 'course-new-marketer-workshop-lessons';
-        $meta[TSOL_Library_Content_Model::META_SECTION_TITLE] = 'Lessons';
-        $meta[TSOL_Library_Content_Model::META_SECTION_POSITION] = 1;
+        $meta[TSOL_Library_Content_Model::META_SECTION_KEY] = (string) $section['key'];
+        $meta[TSOL_Library_Content_Model::META_SECTION_TITLE] = (string) $section['title'];
+        $meta[TSOL_Library_Content_Model::META_SECTION_POSITION] = (int) $section['position'];
         $meta[TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID] = $course_id;
 
         $this->create_post(array(
@@ -471,7 +636,6 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             TSOL_Library_Content_Model::META_CONTENT_TYPE => $content_type,
             TSOL_Library_Content_Model::META_POSITION => 0,
             TSOL_Library_Content_Model::META_FEATURED => false,
-            TSOL_Library_Content_Model::META_CURRENT => 'course' === $content_type,
             TSOL_Library_Content_Model::META_SPEAKER_MODE => 'course' === $content_type
                 ? TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT
                 : TSOL_Library_Content_Model::SPEAKER_MODE_INHERIT,
@@ -524,7 +688,8 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         return $rule_id;
     }
 
-    private function assert_targets($source, $course_id, $expected_status) {
+    private function assert_targets($source, $course_id, $expected_status, $sections = null) {
+        $sections = is_array($sections) ? $sections : self::sections();
         $course = get_post($course_id);
         if (!$course instanceof WP_Post
             || TSOL_Library_Content_Model::COURSE_POST_TYPE !== $course->post_type
@@ -542,7 +707,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         $registry = TSOL_Library_Content_Model::sanitize_structure_registry(
             get_post_meta($course_id, TSOL_Library_Content_Model::META_COURSE_SECTIONS, true)
         );
-        $expected_registry = array(array('key' => 'course-new-marketer-workshop-lessons', 'title' => 'Lessons', 'position' => 1));
+        $expected_registry = self::section_registry($sections);
         if (maybe_serialize($expected_registry) !== maybe_serialize($registry)) {
             throw new RuntimeException('The New Marketer Workshop section registry changed.');
         }
@@ -556,20 +721,22 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             $lesson = get_post($lesson_id);
             $expected = $source['lessons'][$index];
             $position = $index + 1;
+            $section = self::section_for_lesson($position, $sections);
             $key = sprintf('new-marketer-workshop-lesson-%02d-%s', $position, $expected['provider_id']);
             if (!$lesson instanceof WP_Post
                 || TSOL_Library_Content_Model::ITEM_POST_TYPE !== $lesson->post_type
                 || $expected_status !== $lesson->post_status
                 || (string) $expected['display_title'] !== (string) $lesson->post_title
-                || $position !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_POSITION, true)
+                || null === $section
+                || $position - (int) $section['start'] + 1 !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_POSITION, true)
             ) {
                 throw new RuntimeException(sprintf('Imported workshop lesson %d is missing or changed.', $position));
             }
             $this->assert_owned_target($lesson_id, $key, $course_id);
             if ($course_id !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_COURSE_ID, true)
-                || 'course-new-marketer-workshop-lessons' !== (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_KEY, true)
-                || 'Lessons' !== (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_TITLE, true)
-                || 1 !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_POSITION, true)
+                || (string) $section['key'] !== (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_KEY, true)
+                || (string) $section['title'] !== (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_TITLE, true)
+                || (int) $section['position'] !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_POSITION, true)
             ) {
                 throw new RuntimeException(sprintf('Imported workshop lesson %d lost its curriculum relationship.', $position));
             }
@@ -759,9 +926,8 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',
-            'orderby' => 'meta_value_num',
+            'orderby' => 'ID',
             'order' => 'ASC',
-            'meta_key' => TSOL_Library_Content_Model::META_POSITION,
             'suppress_filters' => true,
             'meta_query' => array(
                 'relation' => 'AND',
@@ -769,6 +935,12 @@ class TSOL_Library_New_Marketer_Workshop_Import {
                 array('key' => TSOL_Library_Content_Model::META_COURSE_ID, 'value' => (int) $course_id, 'type' => 'NUMERIC'),
             ),
         )));
+        usort($ids, static function ($left, $right) {
+            return strnatcasecmp(
+                (string) get_post_meta((int) $left, self::META_IMPORT_KEY, true),
+                (string) get_post_meta((int) $right, self::META_IMPORT_KEY, true)
+            );
+        });
         return $ids;
     }
 

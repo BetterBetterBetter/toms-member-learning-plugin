@@ -36,6 +36,20 @@ class TSOL_Library_New_Marketer_Workshop_Import_CLI {
     }
 
     /**
+     * Replace the original flat curriculum with seven ordered sections.
+     *
+     * ## OPTIONS
+     *
+     * --confirm=<confirmation>
+     * : Must be split-new-marketer-workshop-into-seven-sections.
+     */
+    public function restructure($args, $assoc_args) {
+        unset($args);
+        $this->confirm($assoc_args, TSOL_Library_New_Marketer_Workshop_Import::RESTRUCTURE_CONFIRMATION);
+        $this->run('restructure');
+    }
+
+    /**
      * Delete only unchanged importer-owned targets and the importer-owned rule.
      *
      * ## OPTIONS

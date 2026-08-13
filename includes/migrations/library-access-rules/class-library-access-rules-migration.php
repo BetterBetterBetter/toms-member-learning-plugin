@@ -431,18 +431,14 @@ class TSOL_Library_Access_Rules_Migration {
             'order' => 'ASC',
             'suppress_filters' => true,
             // This migration's persisted plan is the locked 20260810.1
-            // rehearsal inventory. Later additive imports own and verify
-            // their access rules independently and must not silently expand
-            // this historical migration's scope.
+            // rehearsal inventory. Later imports and WordPress-native records
+            // own their access lifecycle independently and must not silently
+            // expand this historical migration's scope.
             'meta_query' => array(
-                'relation' => 'AND',
                 array(
-                    'key' => TSOL_Library_Content_Model::META_MIGRATION_KEY,
-                    'compare' => 'EXISTS',
-                ),
-                array(
-                    'key' => '_tsol_library_new_marketer_import_version',
-                    'compare' => 'NOT EXISTS',
+                    'key' => TSOL_Library_Content_Model::META_MIGRATION_VERSION,
+                    'value' => array('20260809.4', '20260810.3'),
+                    'compare' => 'IN',
                 ),
             ),
         );

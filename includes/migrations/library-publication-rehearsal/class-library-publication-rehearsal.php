@@ -191,7 +191,6 @@ class TSOL_Library_Publication_Rehearsal {
             if (in_array($post->post_status, array('trash', 'auto-draft'), true)
                 || '' === trim(wp_strip_all_tags((string) $post->post_title))
                 || '' === (string) get_post_meta($id, TSOL_Library_Content_Model::META_UUID, true)
-                || '' === (string) get_post_meta($id, TSOL_Library_Content_Model::META_CONTENT_TYPE, true)
             ) {
                 throw new RuntimeException(sprintf('Publication target %d is editorially incomplete.', $id));
             }

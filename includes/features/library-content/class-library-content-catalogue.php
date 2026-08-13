@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260811.1';
+    const SCHEMA_VERSION = '20260813.5';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -117,24 +117,52 @@ class TSOL_Library_Content_Catalogue {
         // URLs, download instructions, passwords, or transcript fragments.
         $excerpt = preg_replace('~https?://[^\s<]+~iu', ' ', $excerpt);
         $excerpt = trim(preg_replace('/\s+/u', ' ', (string) $excerpt));
-        $overview_html = self::description_html((string) $post->post_content);
+        $overview_html = TSOL_Library_Content_HTML_Sanitizer::sanitize((string) $post->post_content);
+        $public_description_html = TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
+            ? $overview_html
+            : '';
+        $learning_outcomes = TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
+            ? TSOL_Library_Content_Model::sanitize_course_learning_outcomes(get_post_meta(
+                $post->ID,
+                TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+                true
+            ))
+            : array();
 
         $speaker_context = TSOL_Library_Content_Model::effective_speaker_context($post->ID);
+        $availability = TSOL_Library_Content_Model::ITEM_POST_TYPE === $post->post_type
+            ? TSOL_Library_Content_Model::availability($post->ID)
+            : TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE;
+        $release_at_gmt = TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability
+            ? TSOL_Library_Content_Model::release_at_gmt($post->ID)
+            : '';
         $record = array(
             'wordpress_id' => (int) $post->ID,
             'content_uuid' => sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_UUID, true)),
             'record_type' => self::record_type($post),
-            'content_type' => sanitize_key((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_CONTENT_TYPE, true)),
+            'content_type' => self::content_type($post),
             'status' => (string) $post->post_status,
+            'availability' => $availability,
+            'release_at' => '' !== $release_at_gmt
+                ? gmdate('c', strtotime($release_at_gmt . ' UTC'))
+                : null,
             'slug' => (string) $post->post_name,
             'title' => html_entity_decode(wp_strip_all_tags((string) $post->post_title), ENT_QUOTES | ENT_HTML5, get_bloginfo('charset')),
             'excerpt' => html_entity_decode(wp_strip_all_tags($excerpt), ENT_QUOTES | ENT_HTML5, get_bloginfo('charset')),
             'overview_html' => $overview_html,
+            'public_description_html' => $public_description_html,
+            'learning_outcomes' => $learning_outcomes,
             'published_at' => self::post_date($post->post_date_gmt),
             'modified_at' => self::post_date($post->post_modified_gmt),
+            'last_updated_at' => self::last_updated_at($post),
             'position' => (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_POSITION, true),
-            'featured' => (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_FEATURED, true),
-            'current' => (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_CURRENT, true),
+            // Transitional compatibility for the existing rebuildable Library
+            // projection. Homepage promotion now has its own explicit contract.
+            'featured' => false,
+            'homepage' => TSOL_Library_Homepage_Curation::placement($post->ID),
+            // Transitional compatibility for the existing rebuildable Library
+            // projection. WordPress no longer models a separate version state.
+            'current' => false,
             'thumbnail' => $thumbnail_url === '' ? null : array(
                 'url' => esc_url_raw($thumbnail_url),
                 'alt' => sanitize_text_field((string) get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true)),
@@ -157,50 +185,9 @@ class TSOL_Library_Content_Catalogue {
         return $record;
     }
 
-    private static function description_html($content) {
-        $description_source = strip_shortcodes((string) $content);
-
-        // The main editor is canonical Description copy for every Library
-        // Library record. Delivery markup remains structured Media instead of
-        // becoming a second player inside the Description.
-        $description_source = preg_replace(
-            '#<(script|style|iframe|video|audio|object)\b[^>]*>.*?</\1\s*>#is',
-            '',
-            $description_source
-        );
-        $description_source = preg_replace(
-            '#<(?:script|style|iframe|video|audio|object|embed)\b[^>]*/?>#is',
-            '',
-            (string) $description_source
-        );
-
-        // Also remove unregistered legacy shortcodes. They must never be
-        // executed by the projection or shown as broken front-end copy.
-        $description_source = preg_replace('/\[[A-Za-z0-9_-]+(?:\s[^\]]*)?\].*?\[\/[A-Za-z0-9_-]+\]/s', '', (string) $description_source);
-        $description_source = preg_replace('/\[(?:\/?)[A-Za-z0-9_-]+[^\]]*\]/', '', (string) $description_source);
-        $description_html = wp_kses_post(wpautop((string) $description_source));
-
-        // Removed embeds and legacy editor spacing can leave visually empty
-        // blocks. Prune them recursively so Tailwind's child spacing does not
-        // turn them into large blank areas on the watch page.
-        $empty_element_pattern = '~<(p|div|figure|span|a)(?:\s[^>]*)?>'
-            . '(?:(?:\s|&nbsp;|&#160;|&#x0*a0;|\xC2\xA0)|<br\s*/?>|<!--.*?-->)*'
-            . '</\1\s*>~is';
-        for ($pass = 0; $pass < 10; $pass++) {
-            $cleaned_html = preg_replace($empty_element_pattern, '', (string) $description_html);
-            if (!is_string($cleaned_html) || $cleaned_html === $description_html) {
-                break;
-            }
-            $description_html = $cleaned_html;
-        }
-
-        return trim((string) $description_html);
-    }
-
     public static function is_exportable_post(WP_Post $post) {
         return in_array((string) $post->post_type, TSOL_Library_Content_Model::post_types(), true)
             && !in_array((string) $post->post_status, array('auto-draft', 'inherit', 'trash'), true)
-            && '' !== (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_CONTENT_TYPE, true)
             && (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true) > 0
             && (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_UUID, true) !== '';
     }
@@ -216,6 +203,47 @@ class TSOL_Library_Content_Catalogue {
             return 'lesson';
         }
         return 'item';
+    }
+
+    private static function content_type(WP_Post $post) {
+        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type) {
+            return 'course';
+        }
+        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type) {
+            return 'series';
+        }
+        return (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_COURSE_ID, true) > 0
+            ? 'lesson'
+            : 'recording';
+    }
+
+    private static function last_updated_at(WP_Post $post) {
+        $last_updated_gmt = (string) $post->post_modified_gmt;
+        $parent_meta_key = TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
+            ? TSOL_Library_Content_Model::META_COURSE_ID
+            : (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type
+                ? TSOL_Library_Content_Model::META_SERIES_ID
+                : '');
+
+        if ('' !== $parent_meta_key) {
+            $child_ids = get_posts(array(
+                'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+                'post_status' => 'publish',
+                'numberposts' => -1,
+                'fields' => 'ids',
+                'meta_key' => $parent_meta_key,
+                'meta_value' => (int) $post->ID,
+                'suppress_filters' => true,
+            ));
+            foreach ($child_ids as $child_id) {
+                $child = get_post((int) $child_id);
+                if ($child instanceof WP_Post && strtotime((string) $child->post_modified_gmt) > strtotime($last_updated_gmt)) {
+                    $last_updated_gmt = (string) $child->post_modified_gmt;
+                }
+            }
+        }
+
+        return self::post_date($last_updated_gmt);
     }
 
     private static function series_context(WP_Post $post) {
@@ -477,6 +505,15 @@ class TSOL_Library_Content_Catalogue {
             if ('' === $image_url && $image_id > 0) {
                 $image_url = (string) wp_get_attachment_url($image_id);
             }
+            $about_html = TSOL_Library_Content_HTML_Sanitizer::sanitize((string) $speaker->post_content);
+            $short_bio = TSOL_Library_Content_HTML_Sanitizer::sanitize_plain_text_summary((string) $speaker->post_excerpt);
+            if ('' === $short_bio) {
+                $short_bio = wp_trim_words(
+                    TSOL_Library_Content_HTML_Sanitizer::sanitize_plain_text_summary($about_html),
+                    50,
+                    '…'
+                );
+            }
             $records[] = array(
                 'wordpress_id' => $speaker_id,
                 'content_uuid' => sanitize_text_field((string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_UUID, true)),
@@ -490,7 +527,8 @@ class TSOL_Library_Content_Catalogue {
                 ),
                 'job_title' => sanitize_text_field((string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, true)),
                 'organization' => sanitize_text_field((string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION, true)),
-                'about' => wp_kses_post(wpautop((string) $speaker->post_content)),
+                'short_bio' => $short_bio,
+                'about' => $about_html,
                 'website_url' => TSOL_Library_Content_Model::sanitize_speaker_url(
                     get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_WEBSITE_URL, true)
                 ),

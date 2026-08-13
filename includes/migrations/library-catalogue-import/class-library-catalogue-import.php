@@ -354,7 +354,6 @@ class TSOL_Library_Catalogue_Import {
         $content_type = isset($content_type_map[$item['kind']]) ? $content_type_map[$item['kind']] : 'recording';
         $meta = $this->base_meta($item, $source, (int) $item['source_id'], $content_type);
         $meta[TSOL_Library_Content_Model::META_POSITION] = (int) $item['position'];
-        $meta[TSOL_Library_Content_Model::META_CURRENT] = !empty($item['current']);
         $meta[TSOL_Library_Content_Model::META_MEDIA_ASSETS] = TSOL_Library_Media_Normalizer::extract_from_content($source->post_content);
         $meta[TSOL_Library_Content_Model::META_RESOURCES] = TSOL_Library_Resource_Normalizer::extract_from_content($source->post_content);
         $item_id = $this->create_post(array(
@@ -391,7 +390,6 @@ class TSOL_Library_Catalogue_Import {
             TSOL_Library_Content_Model::META_CONTENT_TYPE => (string) $content_type,
             TSOL_Library_Content_Model::META_POSITION => 0,
             TSOL_Library_Content_Model::META_FEATURED => false,
-            TSOL_Library_Content_Model::META_CURRENT => 'course' === $content_type,
             TSOL_Library_Content_Model::META_SPEAKER_MODE => 'course' === $content_type
                 ? TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT
                 : TSOL_Library_Content_Model::SPEAKER_MODE_INHERIT,

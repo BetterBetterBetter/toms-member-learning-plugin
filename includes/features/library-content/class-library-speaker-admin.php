@@ -38,6 +38,7 @@ class TSOL_Library_Speaker_Admin {
 
     public function add_meta_boxes($post) {
         remove_meta_box('leadbox-select', TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'side');
+        remove_meta_box('postexcerpt', TSOL_Library_Content_Model::SPEAKER_POST_TYPE, 'normal');
         add_meta_box(
             'tsol-library-speaker-details',
             __('Speaker details', 'tomschooloflife-plugin'),
@@ -104,6 +105,11 @@ class TSOL_Library_Speaker_Admin {
         }
         ?>
         <div class="tsol-speaker-profile-editor">
+            <label class="tsol-speaker-profile-field tsol-speaker-profile-field--first">
+                <span><?php esc_html_e('Short bio', 'tomschooloflife-plugin'); ?></span>
+                <textarea id="excerpt" name="excerpt" rows="4" aria-label="<?php esc_attr_e('Short bio', 'tomschooloflife-plugin'); ?>"><?php echo esc_textarea((string) $post->post_excerpt); ?></textarea>
+                <small class="description"><?php esc_html_e('Optional. Write two or three plain-text sentences for course instructor sections. If left blank, the Library creates a shortened summary from About.', 'tomschooloflife-plugin'); ?></small>
+            </label>
             <div class="tsol-speaker-profile-grid">
                 <label>
                     <span><?php esc_html_e('Job title', 'tomschooloflife-plugin'); ?></span>
@@ -216,6 +222,8 @@ class TSOL_Library_Speaker_Admin {
             'strings' => array(
                 'frameTitle' => __('Select and crop headshot', 'tomschooloflife-plugin'),
                 'selectAndCrop' => __('Select and crop', 'tomschooloflife-plugin'),
+                'shortBioCountTemplate' => __('%1$d / %2$d recommended', 'tomschooloflife-plugin'),
+                'shortBioLongWarning' => __('Longer bios may be shortened in compact Library displays.', 'tomschooloflife-plugin'),
             ),
         ));
     }

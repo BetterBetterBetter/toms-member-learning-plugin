@@ -2,6 +2,36 @@
     margin: 1.25rem 0 0.5rem;
 }
 
+#tsol-library-speaker-details {
+    margin-bottom: 20px;
+}
+
+#tsol-library-speaker-details .handle-order-higher,
+#tsol-library-speaker-details .handle-order-lower {
+    display: none;
+}
+
+#tsol-library-speaker-details .hndle {
+    cursor: default;
+}
+
+#tsol-library-speaker-details .toggle-indicator::before {
+    content: "\f142";
+    display: inline-block;
+    font: normal 20px/1 dashicons;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-decoration: none;
+}
+
+#tsol-library-speaker-details.closed .handlediv .toggle-indicator::before {
+    content: "\f140";
+}
+
+.tsol-speaker-about-section {
+    margin-bottom: 20px;
+}
+
 .tsol-speaker-profile-editor,
 .tsol-speaker-profile-editor * {
     box-sizing: border-box;
@@ -33,11 +63,46 @@
     margin-top: 1rem;
 }
 
+.tsol-speaker-profile-field--first {
+    margin: 0 0 1rem;
+}
+
 .tsol-speaker-profile-grid input,
-.tsol-speaker-profile-field > input {
+.tsol-speaker-profile-field > input,
+.tsol-speaker-profile-field > textarea {
     max-width: 100%;
     min-height: 36px;
     width: 100%;
+}
+
+.tsol-speaker-profile-field > textarea {
+    resize: vertical;
+}
+
+.tsol-speaker-short-bio-status {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    font-weight: 400;
+    gap: 0.25rem 0.75rem;
+}
+
+.tsol-speaker-short-bio-status__count {
+    color: #646970;
+    font-variant-numeric: tabular-nums;
+}
+
+.tsol-speaker-short-bio-status.is-over-recommended .tsol-speaker-short-bio-status__count,
+.tsol-speaker-short-bio-status__warning {
+    color: #8a4b08;
+}
+
+.tsol-speaker-short-bio-status.is-over-recommended .tsol-speaker-short-bio-status__count {
+    font-weight: 600;
+}
+
+.tsol-speaker-short-bio-status__warning[hidden] {
+    display: none;
 }
 
 .tsol-speaker-social-editor,
@@ -50,7 +115,6 @@
     align-items: end;
     background: #f6f7f7;
     border: 1px solid #dcdcde;
-    border-radius: 6px;
     display: grid;
     gap: 0.75rem;
     grid-template-columns: minmax(9rem, 0.45fr) minmax(14rem, 1fr) auto;
@@ -70,7 +134,6 @@
 }
 
 .tsol-speaker-list-headshot {
-    border-radius: 50%;
     display: block;
     height: 42px;
     object-fit: cover;

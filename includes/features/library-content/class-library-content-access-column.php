@@ -223,7 +223,7 @@ class TSOL_Library_Content_Access_Column {
         >
             <div class="tsol-content-access-dialog__header">
                 <h2 id="tsol-content-access-dialog-title"><?php esc_html_e('Content access', 'tomschooloflife-plugin'); ?></h2>
-                <button type="button" class="tsol-content-access-dialog__close" data-tsol-content-access-close aria-label="<?php echo esc_attr__('Close access details', 'tomschooloflife-plugin'); ?>">
+                <button type="button" class="button-link tsol-content-access-dialog__close" data-tsol-content-access-close aria-label="<?php echo esc_attr__('Close access details', 'tomschooloflife-plugin'); ?>">
                     <span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
                 </button>
             </div>
