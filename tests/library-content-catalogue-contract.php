@@ -71,15 +71,26 @@ $coming_soon_records = array_values(array_filter($all, static function ($item) {
     return 'coming_soon' === (string) ($item['availability'] ?? '');
 }));
 $assert(2 === count($coming_soon_records), 'Catalogue did not contain the two approved coming-soon Medicine Cabinet lessons.');
-$coming_soon_by_title = array();
+$coming_soon_by_migration_key = array();
 foreach ($coming_soon_records as $coming_soon_record) {
-    $coming_soon_by_title[(string) $coming_soon_record['title']] = $coming_soon_record;
+    $coming_soon_by_migration_key[(string) $coming_soon_record['migration_key']] = $coming_soon_record;
     $assert('lesson' === (string) $coming_soon_record['record_type'], 'Coming-soon availability was assigned outside a Course lesson.');
     $assert(106936 === (int) ($coming_soon_record['course']['course_id'] ?? 0), 'A coming-soon lesson was assigned outside The $100 Medicine Cabinet.');
     $assert(array() === $coming_soon_record['media'], 'A Medicine Cabinet placeholder unexpectedly exposes playable media.');
 }
-$assert('2026-08-11T23:00:00+00:00' === (string) ($coming_soon_by_title['Session 3']['release_at'] ?? ''), 'Session 3 did not retain its informational release time.');
-$assert('2026-08-18T23:00:00+00:00' === (string) ($coming_soon_by_title['Session 4']['release_at'] ?? ''), 'Session 4 did not retain its informational release time.');
+$expected_coming_soon = array(
+    'manual-tsol_library_item-1e605183-98c5-4224-b71d-23efaae75d94' => array(3, '2026-08-11T23:00:00+00:00'),
+    'manual-tsol_library_item-0e24585f-75a6-4da4-9c9a-6eac89dfcb1a' => array(4, '2026-08-18T23:00:00+00:00'),
+);
+foreach ($expected_coming_soon as $migration_key => $expected) {
+    $record = $coming_soon_by_migration_key[$migration_key] ?? null;
+    $assert(is_array($record), sprintf('Medicine Cabinet lesson position %d is missing from the coming-soon catalogue.', $expected[0]));
+    if (!is_array($record)) {
+        continue;
+    }
+    $assert($expected[0] === (int) $record['position'], sprintf('Medicine Cabinet lesson %s changed position.', $migration_key));
+    $assert($expected[1] === (string) $record['release_at'], sprintf('Medicine Cabinet lesson %s did not retain its informational release time.', $migration_key));
+}
 $assert(count(array_filter($all, static function ($item) {
     return 'available' === (string) ($item['availability'] ?? '') && null !== ($item['release_at'] ?? null);
 })) === 0, 'An Available record retained a coming-soon release time.');
