@@ -226,6 +226,7 @@ class TomsSchoolOfLifePlugin {
     public static function activate() {
         TSOL_Library_Auth::activate();
         TSOL_Library_Content::activate();
+        TSOL_Library_Announcements::activate();
     }
 
     public static function deactivate() {
@@ -238,6 +239,7 @@ class TomsSchoolOfLifePlugin {
             new TSOL_Accountability_Modal(),
             new TSOL_Cookie_Consent(),
             new TSOL_Library_Content(),
+            new TSOL_Library_Announcements(),
         );
 
         /**

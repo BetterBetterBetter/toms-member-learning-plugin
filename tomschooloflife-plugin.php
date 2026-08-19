@@ -60,6 +60,15 @@ require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-librar
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-entitlements.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-revocation.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-account-security.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audience-contract.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audience-resolver.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-flags.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-model.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audience-builder.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audit.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-preview.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-admin.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcements.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-media-normalizer.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-resource-normalizer.php';

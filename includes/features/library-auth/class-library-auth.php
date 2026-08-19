@@ -122,6 +122,11 @@ class TSOL_Library_Auth {
                 'user_id' => array('required' => true, 'validate_callback' => static function ($value) { return absint($value) > 0; }),
             ),
         ));
+        register_rest_route('tsol-library/v1', '/announcement-audience/candidates', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array($this, 'announcement_audience_candidates'),
+            'permission_callback' => array($this, 'public_rest_endpoint'),
+        ));
         register_rest_route('tsol-library/v1', '/catalogue', array(
             'methods' => WP_REST_Server::READABLE,
             'callback' => array($this, 'catalogue'),
@@ -428,6 +433,44 @@ class TSOL_Library_Auth {
             'duration_ms' => $this->duration_ms($started_at),
         ));
         return $this->rest_response(array('items' => $items, 'checked_at' => gmdate('c')));
+    }
+
+    public function announcement_audience_candidates(WP_REST_Request $request) {
+        $started_at = microtime(true);
+        $auth_error = $this->server_client_auth($request, 'announcement_audience', 120);
+        if (is_wp_error($auth_error)) {
+            return $this->server_auth_error($auth_error, 'announcement_audience', $started_at);
+        }
+        if (strlen((string) $request->get_body()) > 64 * 1024) {
+            return $this->logged_rest_error('announcement_audience', 'invalid_request', 400, $started_at, 0, $auth_error);
+        }
+        $body = $request->get_json_params();
+        if (!is_array($body)) {
+            return $this->logged_rest_error('announcement_audience', 'invalid_request', 400, $started_at, 0, $auth_error);
+        }
+        $keys = array_keys($body);
+        sort($keys, SORT_STRING);
+        if ($keys !== array('afterUserId', 'definition', 'perPage')) {
+            return $this->logged_rest_error('announcement_audience', 'invalid_request', 400, $started_at, 0, $auth_error);
+        }
+        if (!is_int($body['afterUserId']) || !is_int($body['perPage'])) {
+            return $this->logged_rest_error('announcement_audience', 'invalid_request', 400, $started_at, 0, $auth_error);
+        }
+        $result = TSOL_Library_Announcement_Audience_Resolver::page($body['definition'], $body['afterUserId'], $body['perPage']);
+        if (is_wp_error($result)) {
+            $code = $result->get_error_code();
+            $status = 'memberpress_unavailable' === $code ? 503 : 400;
+            return $this->logged_rest_error('announcement_audience', $code, $status, $started_at, 0, $auth_error);
+        }
+        TSOL_Library_Auth_Logger::event('announcement_audience', array(
+            'outcome' => 'success',
+            'endpoint' => 'announcement_audience',
+            'client_id' => $auth_error,
+            'scanned_count' => $result['scannedCount'],
+            'candidate_count' => count($result['candidates']),
+            'duration_ms' => $this->duration_ms($started_at),
+        ));
+        return $this->rest_response($result);
     }
 
     public function catalogue(WP_REST_Request $request) {
@@ -926,6 +969,12 @@ class TSOL_Library_Auth {
             'unknown_content' => __('The requested content does not exist.', 'tomschooloflife-plugin'),
             'unknown_catalogue_content' => __('The requested Library catalogue record does not exist.', 'tomschooloflife-plugin'),
             'memberpress_unavailable' => __('MemberPress is unavailable.', 'tomschooloflife-plugin'),
+            'audience_definition_invalid' => __('The announcement audience definition is invalid.', 'tomschooloflife-plugin'),
+            'audience_schema_unsupported' => __('The announcement audience schema is unsupported.', 'tomschooloflife-plugin'),
+            'audience_request_invalid' => __('The announcement audience request is invalid.', 'tomschooloflife-plugin'),
+            'audience_cursor_invalid' => __('The announcement audience cursor is invalid.', 'tomschooloflife-plugin'),
+            'unknown_audience_content' => __('The selected announcement content does not exist.', 'tomschooloflife-plugin'),
+            'unknown_audience_membership' => __('The selected announcement membership does not exist.', 'tomschooloflife-plugin'),
             'server_error' => __('The authentication service encountered an error.', 'tomschooloflife-plugin'),
         );
         $headers = $code === 'invalid_token' ? array('WWW-Authenticate' => 'Bearer') : array();
