@@ -16,6 +16,7 @@ $assert = static function ($condition, $message) use (&$failures) {
 $base = (new TSOL_Library_Catalogue_Import())->verify();
 $report = (new TSOL_Library_Series_Import())->verify();
 $target_status = (string) $report['target_status'];
+$reviewable_statuses = array('publish', 'draft', 'pending', 'private', 'future');
 $authorization_mode = (string) $report['authorization_mode'];
 $assert(148 === (int) $base['authorization_delegations_equivalent'], 'The original 148 authorization delegations changed.');
 $assert(6 === (int) $report['series'] && 121 === (int) $report['episodes'], 'The structure is not six Series containing all 121 non-course items.');
@@ -40,7 +41,7 @@ $all_episode_ids = array();
 foreach ($expected as $key => $shape) {
     $series_id = (int) ($report['series_ids'][$key] ?? 0);
     $series = get_post($series_id);
-    $assert($series instanceof WP_Post && $target_status === $series->post_status, sprintf('%s does not have the expected rehearsal status.', $shape[0]));
+    $assert($series instanceof WP_Post && in_array((string) $series->post_status, $reviewable_statuses, true), sprintf('%s is not in a reviewable editorial status.', $shape[0]));
     $assert($series instanceof WP_Post && $shape[0] === (string) $series->post_title, sprintf('%s title changed.', $shape[0]));
     $assert($shape[2] === (string) get_post_meta($series_id, TSOL_Library_Content_Model::META_SERIES_ITEM_LABEL_PLURAL, true), sprintf('%s plural label changed.', $shape[0]));
     $assert($shape[3] === (string) get_post_meta($series_id, TSOL_Library_Content_Model::META_SERIES_SORT, true), sprintf('%s ordering changed.', $shape[0]));
@@ -49,7 +50,7 @@ foreach ($expected as $key => $shape) {
 
     $episode_ids = get_posts(array(
         'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
-        'post_status' => $target_status,
+        'post_status' => $reviewable_statuses,
         'numberposts' => -1,
         'fields' => 'ids',
         'meta_key' => TSOL_Library_Content_Model::META_SERIES_ID,
@@ -77,13 +78,12 @@ $standalone_count = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$wpdb->posts} p
      LEFT JOIN {$wpdb->postmeta} c ON c.post_id=p.ID AND c.meta_key=%s
      LEFT JOIN {$wpdb->postmeta} s ON s.post_id=p.ID AND s.meta_key=%s
-     WHERE p.post_type=%s AND p.post_status=%s
+     WHERE p.post_type=%s AND p.post_status NOT IN ('trash','auto-draft','inherit')
        AND COALESCE(CAST(c.meta_value AS UNSIGNED),0)=0
        AND COALESCE(CAST(s.meta_value AS UNSIGNED),0)=0",
     TSOL_Library_Content_Model::META_COURSE_ID,
     TSOL_Library_Content_Model::META_SERIES_ID,
-    TSOL_Library_Content_Model::ITEM_POST_TYPE,
-    $target_status
+    TSOL_Library_Content_Model::ITEM_POST_TYPE
 ));
 $assert(0 === $standalone_count, 'A normalized content item remains standalone.');
 
@@ -127,5 +127,6 @@ WP_CLI::line(wp_json_encode(array(
     'authorization_delegations_equivalent' => $base['authorization_delegations_equivalent'],
     'authorization_mode' => $authorization_mode,
     'target_status' => $target_status,
+    'target_statuses' => $report['target_statuses'],
 ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 WP_CLI::success('Six-Series and Collections contract passed without legacy or MemberPress mutation.');

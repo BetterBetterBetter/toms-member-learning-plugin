@@ -25,7 +25,8 @@ wp tsol library-series-import rollback --confirm=remove-normalized-series-struct
 ```
 
 The command refuses to mutate any host other than `tomschooloflife.test`.
-Verification is phase-aware: it expects drafts with legacy pointers during the
-original import/review state and published records with exact native
-Course/Series pointers after the guarded access activation. The current local
-state is published and native; no production transition is authorized.
+Verification is phase-aware for authorization pointers and continues to guard
+the exact imported identities, groups, positions, labels, and ongoing state.
+Publication status is now independent editorial state: published, draft,
+pending, private, and scheduled records remain reviewable without weakening
+the migration-owned structure checks. No production transition is authorized.

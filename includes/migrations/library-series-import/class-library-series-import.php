@@ -184,7 +184,8 @@ class TSOL_Library_Series_Import {
         }
 
         $authorization_mode = (string) ($catalogue_report['authorization_mode'] ?? 'legacy_delegation');
-        $target_status = 'publish' === (string) ($catalogue_report['target_status'] ?? '') ? 'publish' : 'draft';
+        $reviewable_statuses = array('publish', 'draft', 'pending', 'private', 'future');
+        $target_statuses = array();
 
         $series_ids = array();
         $groups = array();
@@ -194,7 +195,7 @@ class TSOL_Library_Series_Import {
             $series = get_post($series_id);
             if (!$series instanceof WP_Post
                 || TSOL_Library_Content_Model::SERIES_POST_TYPE !== $series->post_type
-                || $target_status !== $series->post_status
+                || !in_array((string) $series->post_status, $reviewable_statuses, true)
                 || self::VERSION !== (string) get_post_meta($series_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, true)
                 || $migration_key !== (string) get_post_meta($series_id, TSOL_Library_Content_Model::META_MIGRATION_KEY, true)
                 || (string) $definition['title'] !== (string) $series->post_title
@@ -205,6 +206,7 @@ class TSOL_Library_Series_Import {
             ) {
                 throw new RuntimeException(sprintf('Importer-owned Series %s is missing or changed.', $definition['title']));
             }
+            $target_statuses[(string) $series->post_status] = ($target_statuses[(string) $series->post_status] ?? 0) + 1;
             $expected_registry = $this->series_group_registry($entries);
             $actual_registry = TSOL_Library_Content_Model::sanitize_structure_registry(
                 get_post_meta($series_id, TSOL_Library_Content_Model::META_SERIES_GROUPS, true)
@@ -218,7 +220,7 @@ class TSOL_Library_Series_Import {
                 $post = $this->target_for_entry($entry);
                 $episode_state = $state['episodes'][(string) $post->ID] ?? null;
                 if (!is_array($episode_state)
-                    || $target_status !== $post->post_status
+                    || !in_array((string) $post->post_status, $reviewable_statuses, true)
                     || $series_id !== (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_ID, true)
                     || (string) $entry['series_group_key'] !== (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_GROUP_KEY, true)
                     || (string) $entry['series_group_title'] !== (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_GROUP_TITLE, true)
@@ -231,6 +233,7 @@ class TSOL_Library_Series_Import {
                 ) {
                     throw new RuntimeException(sprintf('Series episode %s no longer matches its guarded structure.', $entry['migration_key']));
                 }
+                $target_statuses[(string) $post->post_status] = ($target_statuses[(string) $post->post_status] ?? 0) + 1;
                 $group_key = (string) $entry['series_group_key'];
                 $groups[$migration_key][$group_key] = isset($groups[$migration_key][$group_key]) ? $groups[$migration_key][$group_key] + 1 : 1;
             }
@@ -243,10 +246,14 @@ class TSOL_Library_Series_Import {
             throw new RuntimeException('Retired mixed-content Collections remain after the structure migration.');
         }
 
+        ksort($target_statuses, SORT_STRING);
+        $target_status = 1 === count($target_statuses) ? (string) array_key_first($target_statuses) : 'mixed';
+
         return array(
             'schema_version' => self::VERSION,
             'phase' => 'applied',
             'target_status' => $target_status,
+            'target_statuses' => $target_statuses,
             'authorization_mode' => $authorization_mode,
             'series_ids' => $series_ids,
             'series' => count($series_entries),
