@@ -103,6 +103,8 @@ if (defined('WP_CLI') && WP_CLI) {
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-new-marketer-workshop/class-library-new-marketer-workshop-import-cli.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-course-body-publication/class-library-course-body-publication.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-course-body-publication/class-library-course-body-publication-cli.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-resource-backfill/class-library-resource-backfill.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-resource-backfill/class-library-resource-backfill-cli.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal-cli.php';
     WP_CLI::add_command(TSOL_Library_Catalogue_Import_CLI::COMMAND, 'TSOL_Library_Catalogue_Import_CLI');
@@ -110,6 +112,7 @@ if (defined('WP_CLI') && WP_CLI) {
     WP_CLI::add_command(TSOL_Library_Access_Rules_Migration_CLI::COMMAND, 'TSOL_Library_Access_Rules_Migration_CLI');
     WP_CLI::add_command(TSOL_Library_New_Marketer_Workshop_Import_CLI::COMMAND, 'TSOL_Library_New_Marketer_Workshop_Import_CLI');
     WP_CLI::add_command(TSOL_Library_Course_Body_Publication_CLI::COMMAND, 'TSOL_Library_Course_Body_Publication_CLI');
+    WP_CLI::add_command(TSOL_Library_Resource_Backfill_CLI::COMMAND, 'TSOL_Library_Resource_Backfill_CLI');
     WP_CLI::add_command(TSOL_Library_Publication_Rehearsal_CLI::COMMAND, 'TSOL_Library_Publication_Rehearsal_CLI');
 }
 

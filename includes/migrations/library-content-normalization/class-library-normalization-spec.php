@@ -55,12 +55,11 @@ class TSOL_Library_Normalization_Spec {
 
     public static function expected_resource_summary() {
         return array(
-            'pages_with_resources' => 27,
-            'resources' => 30,
+            'pages_with_resources' => 31,
+            'resources' => 40,
             'types' => array(
-                'pdf' => 25,
-                'pptx' => 4,
-                'xlsx' => 1,
+                'download' => 30,
+                'link' => 10,
             ),
         );
     }

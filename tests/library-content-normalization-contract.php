@@ -150,12 +150,18 @@ $resources = TSOL_Library_Resource_Normalizer::extract_from_content(
     '<a href="https://files.example.test/session-workbook.pdf">Workbook</a>'
     . '<a href="https://files.example.test/session-workbook.pdf">Duplicate</a>'
     . '<a href="https://files.example.test/slides.pptx">Slides</a>'
+    . '<h3>Mary\'s Newsletter Sign up: <a href="https://liberty-intl.org/contact/">https://liberty-intl.org/contact/</a></h3>'
+    . '<p>Email <a href="mailto:mary@example.test">Mary</a></p>'
+    . '<iframe src="https://tracking.example.test/embed"></iframe>'
 );
-$assert(2 === count($resources), 'Downloadable resources were not inferred and deduplicated.');
-if (2 === count($resources)) {
+$assert(4 === count($resources), 'Linked resources were not inferred and deduplicated.');
+if (4 === count($resources)) {
     $assert('download' === $resources[0]['type'], 'Resource type was not inferred as a download.');
-    $assert('Session Workbook' === $resources[0]['label'], 'Resource label was not inferred from its filename.');
-    $assert(1 === (int) $resources[0]['position'] && 2 === (int) $resources[1]['position'], 'Resource ordering was not stable.');
+    $assert('Workbook' === $resources[0]['label'], 'Descriptive resource anchor text was not preserved.');
+    $assert('link' === $resources[2]['type'], 'A non-file HTTP link was not inferred as a link resource.');
+    $assert("Mary's Newsletter Sign up" === $resources[2]['label'], 'A URL-only anchor did not inherit its descriptive surrounding text.');
+    $assert('mailto:mary@example.test' === $resources[3]['url'], 'A linked email address was not retained as a resource.');
+    $assert(1 === (int) $resources[0]['position'] && 4 === (int) $resources[3]['position'], 'Resource ordering was not stable.');
 }
 
 $before = $database_counts();
@@ -175,7 +181,7 @@ if (is_array($manifest)) {
     $assert($manifest['expected_resource_summary'] === $manifest['resource_summary'], 'Expected and actual resource summaries differ.');
     $assert(142 === (int) $manifest['media_summary']['playable_pages'], 'Media scan did not cover 142 playable pages.');
     $assert(147 === (int) $manifest['media_summary']['media_assets'], 'Media scan did not find the expected 147 playable assets.');
-    $assert(30 === (int) $manifest['resource_summary']['resources'], 'Resource scan did not find the expected 30 downloads.');
+    $assert(40 === (int) $manifest['resource_summary']['resources'], 'Resource scan did not find all 40 user-facing links and downloads.');
     $assert(0 === array_sum($manifest['writes']), 'Dry-run manifest reported a write.');
     $assert(1 === preg_match('/^[a-f0-9]{64}$/', $manifest['source_fingerprint']), 'Source fingerprint is not a SHA-256 value.');
     $assert(147 === count($manifest['source_entry_fingerprints']), 'Source fingerprint does not cover exactly 147 unique records.');

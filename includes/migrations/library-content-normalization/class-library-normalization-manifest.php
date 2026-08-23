@@ -492,9 +492,8 @@ class TSOL_Library_Normalization_Manifest {
         $resources = TSOL_Library_Resource_Normalizer::extract_from_content($post->post_content);
         $types = array();
         foreach ($resources as $resource) {
-            $path = (string) wp_parse_url($resource['url'], PHP_URL_PATH);
-            $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
-            $types[$extension] = isset($types[$extension]) ? $types[$extension] + 1 : 1;
+            $type = (string) $resource['type'];
+            $types[$type] = isset($types[$type]) ? $types[$type] + 1 : 1;
         }
         ksort($types, SORT_STRING);
 
