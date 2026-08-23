@@ -190,7 +190,7 @@ try {
     );
     wp_update_post(array('ID' => $created_speaker_id, 'post_excerpt' => 'A short course-page biography.'));
 
-    $assert('20260813.5' === TSOL_Library_Content_Catalogue::SCHEMA_VERSION, 'Speaker profile catalogue schema version is not explicit.');
+    $assert('20260821.2' === TSOL_Library_Content_Catalogue::SCHEMA_VERSION, 'Speaker profile catalogue schema version is not explicit.');
 
     wp_update_post(array('ID' => $created_speaker_id, 'post_status' => 'draft'));
     $draft_speaker_record = TSOL_Library_Content_Catalogue::record($created_content_id);

@@ -215,8 +215,10 @@ $assert(array() === $sanitized_homepage['courses'], 'Homepage validation accepte
 $assert(array($sample_series_id) === $sanitized_homepage['series'], 'Homepage validation rejected a valid Series.');
 $assert(count(array_filter($all, static function ($item) { return preg_match('~https?://~i', (string) $item['excerpt']); })) === 0, 'Catalogue browse metadata exposed a protected asset URL through an excerpt.');
 $assert(count(array_filter($all, static function ($item) { return !array_key_exists('overview_html', $item); })) === 0, 'Catalogue record omitted its automatic Description field.');
-$assert(count(array_filter($all, static function ($item) { return !array_key_exists('public_description_html', $item); })) === 0, 'Catalogue record omitted its native-body public Course description field.');
+$assert(count(array_filter($all, static function ($item) { return !array_key_exists('public_description_html', $item); })) === 0, 'Catalogue record omitted its explicit public description field.');
 $assert(count(array_filter($all, static function ($item) { return !array_key_exists('learning_outcomes', $item); })) === 0, 'Catalogue record omitted its Course learning-outcomes field.');
+$assert(count(array_filter($all, static function ($item) { return !array_key_exists('ai_assistant_enabled', $item); })) === 0, 'Catalogue record omitted its AI assistant setting.');
+$assert(count(array_filter($all, static function ($item) { return !array_key_exists('ai_assistant_questions', $item); })) === 0, 'Catalogue record omitted its AI assistant starter questions.');
 foreach ($all as $item) {
     $overview_html = isset($item['overview_html']) ? (string) $item['overview_html'] : '';
     $public_description_html = isset($item['public_description_html']) ? (string) $item['public_description_html'] : '';
@@ -226,16 +228,18 @@ foreach ($all as $item) {
     $assert(false === stripos($overview_html, '<h1'), 'A page-level heading survived in an automatic Library Description.');
     $assert(!preg_match('~\s(?:style|class|id|data-[\w-]+|on[\w-]+)\s*=~i', $overview_html), 'Pasted presentation attributes survived in an automatic Library Description.');
     $assert(!preg_match('~<(p|div|figure|span|a)(?:\s[^>]*)?>(?:(?:\s|&nbsp;|&#160;|&#x0*a0;|\xC2\xA0)|<br\s*/?>|<!--.*?-->)*</\1\s*>~is', $overview_html), 'A visually empty block survived in an automatic Library Description.');
-    $assert(false === stripos($public_description_html, '<script'), 'Unsafe script markup survived in a public Course description.');
-    $assert(false === stripos($public_description_html, '<iframe'), 'Legacy player markup survived in a public Course description.');
-    $assert(false === stripos($public_description_html, '<style'), 'Pasted style markup survived in a public Course description.');
-    $assert(false === stripos($public_description_html, '<h1'), 'A page-level heading survived in a public Course description.');
-    $assert(!preg_match('~\s(?:style|class|id|data-[\w-]+|on[\w-]+)\s*=~i', $public_description_html), 'Pasted presentation attributes survived in a public Course description.');
+    $assert(false === stripos($public_description_html, '<script'), 'Unsafe script markup survived in a public description.');
+    $assert(false === stripos($public_description_html, '<iframe'), 'Legacy player markup survived in a public description.');
+    $assert(false === stripos($public_description_html, '<style'), 'Pasted style markup survived in a public description.');
+    $assert(false === stripos($public_description_html, '<h1'), 'A page-level heading survived in a public description.');
+    $assert(!preg_match('~\s(?:style|class|id|data-[\w-]+|on[\w-]+)\s*=~i', $public_description_html), 'Pasted presentation attributes survived in a public description.');
     $assert(is_array($item['learning_outcomes']), 'Catalogue learning outcomes are not an ordered array.');
-    if ('course' === (string) $item['record_type']) {
-        $assert($overview_html === $public_description_html, 'A Course public description diverged from its sanitized native body.');
+    if (in_array((string) $item['record_type'], array('course', 'lesson'), true)) {
+        $assert($overview_html === $public_description_html, 'A Course or Lesson public description diverged from its sanitized native body.');
     } else {
-        $assert('' === $public_description_html, 'A non-Course record emitted a public Course description.');
+        $assert('' === $public_description_html, 'A Series, Episode, or Recording emitted a public description.');
+    }
+    if ('course' !== (string) $item['record_type']) {
         $assert(array() === $item['learning_outcomes'], 'A non-Course record emitted Course learning outcomes.');
     }
 }

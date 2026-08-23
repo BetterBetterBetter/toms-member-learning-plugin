@@ -26,7 +26,7 @@ $secret = 'catalogue-status-wordpress-contract-secret-123456789';
 $requests = array();
 $response_payload = array(
     'version' => 1,
-    'schema_version' => '20260813.5',
+    'schema_version' => '20260821.2',
     'cursor' => '50169',
     'last_successful_sync_at' => '2026-08-13T08:27:01.000Z',
     'latest_run' => array(
@@ -85,7 +85,7 @@ $assert(empty($invalid['ok']) && 'invalid_response' === ($invalid['error_code'] 
 
 $response_payload = array(
     'version' => 1,
-    'schema_version' => '20260813.5',
+    'schema_version' => '20260821.2',
     'cursor' => '50169',
     'last_successful_sync_at' => null,
     'latest_run' => array(

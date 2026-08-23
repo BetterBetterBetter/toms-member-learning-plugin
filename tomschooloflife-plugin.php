@@ -82,6 +82,7 @@ require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-lib
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-admin-navigation.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-url-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-admin.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-collection-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-speaker-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-access-column.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content.php';

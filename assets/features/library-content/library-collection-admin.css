@@ -1,0 +1,17 @@
+.tsol-library-collection-editor-wrap td {
+    max-width: 760px;
+}
+
+.tsol-library-collection-image__preview img {
+    display: block;
+    height: auto;
+    max-height: 220px;
+    max-width: 100%;
+    width: auto;
+}
+
+.tsol-library-collection-image__actions {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+}

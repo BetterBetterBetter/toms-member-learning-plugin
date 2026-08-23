@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260813.5';
+    const SCHEMA_VERSION = '20260821.4';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -118,7 +118,8 @@ class TSOL_Library_Content_Catalogue {
         $excerpt = preg_replace('~https?://[^\s<]+~iu', ' ', $excerpt);
         $excerpt = trim(preg_replace('/\s+/u', ' ', (string) $excerpt));
         $overview_html = TSOL_Library_Content_HTML_Sanitizer::sanitize((string) $post->post_content);
-        $public_description_html = TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
+        $record_type = self::record_type($post);
+        $public_description_html = in_array($record_type, array('course', 'lesson'), true)
             ? $overview_html
             : '';
         $learning_outcomes = TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
@@ -139,7 +140,7 @@ class TSOL_Library_Content_Catalogue {
         $record = array(
             'wordpress_id' => (int) $post->ID,
             'content_uuid' => sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_UUID, true)),
-            'record_type' => self::record_type($post),
+            'record_type' => $record_type,
             'content_type' => self::content_type($post),
             'status' => (string) $post->post_status,
             'availability' => $availability,
@@ -152,6 +153,18 @@ class TSOL_Library_Content_Catalogue {
             'overview_html' => $overview_html,
             'public_description_html' => $public_description_html,
             'learning_outcomes' => $learning_outcomes,
+            'ai_assistant_enabled' => in_array($post->post_type, array(
+                TSOL_Library_Content_Model::COURSE_POST_TYPE,
+                TSOL_Library_Content_Model::SERIES_POST_TYPE,
+            ), true) && (bool) get_post_meta($post->ID, TSOL_Library_Content_Model::META_AI_ASSISTANT_ENABLED, true),
+            'ai_assistant_questions' => in_array($post->post_type, array(
+                TSOL_Library_Content_Model::COURSE_POST_TYPE,
+                TSOL_Library_Content_Model::SERIES_POST_TYPE,
+            ), true) ? TSOL_Library_Content_Model::sanitize_ai_assistant_questions(get_post_meta(
+                $post->ID,
+                TSOL_Library_Content_Model::META_AI_ASSISTANT_QUESTIONS,
+                true
+            )) : array(),
             'published_at' => self::post_date($post->post_date_gmt),
             'modified_at' => self::post_date($post->post_modified_gmt),
             'last_updated_at' => self::last_updated_at($post),
@@ -477,12 +490,58 @@ class TSOL_Library_Content_Catalogue {
         }
 
         return array_values(array_map(static function ($term) use ($taxonomy) {
+            $description = trim(preg_replace('/\s+/u', ' ', html_entity_decode(
+                wp_strip_all_tags((string) $term->description),
+                ENT_QUOTES | ENT_HTML5,
+                get_bloginfo('charset')
+            )));
+            $overview_html = '';
+            $hero_image = null;
+            $featured_course_id = null;
+            if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
+                $overview_html = TSOL_Library_Content_HTML_Sanitizer::sanitize((string) get_term_meta(
+                    (int) $term->term_id,
+                    TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW,
+                    true
+                ));
+                $hero_image_id = (int) get_term_meta(
+                    (int) $term->term_id,
+                    TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID,
+                    true
+                );
+                $hero_image_url = $hero_image_id > 0 && wp_attachment_is_image($hero_image_id)
+                    ? (string) wp_get_attachment_image_url($hero_image_id, 'large')
+                    : '';
+                if ('' !== $hero_image_url) {
+                    $hero_image = array(
+                        'wordpress_id' => $hero_image_id,
+                        'url' => esc_url_raw($hero_image_url),
+                        'alt' => sanitize_text_field((string) get_post_meta($hero_image_id, '_wp_attachment_image_alt', true)),
+                    );
+                }
+                $requested_featured_course_id = (int) get_term_meta(
+                    (int) $term->term_id,
+                    TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID,
+                    true
+                );
+                if ($requested_featured_course_id > 0
+                    && TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($requested_featured_course_id)
+                    && has_term((int) $term->term_id, $taxonomy, $requested_featured_course_id)
+                ) {
+                    $featured_course_id = $requested_featured_course_id;
+                }
+            }
+
             return array(
                 'wordpress_id' => (int) $term->term_id,
                 'taxonomy' => (string) $taxonomy,
                 'slug' => (string) $term->slug,
                 'name' => html_entity_decode(wp_strip_all_tags((string) $term->name), ENT_QUOTES | ENT_HTML5, get_bloginfo('charset')),
                 'parent_wordpress_id' => (int) $term->parent ?: null,
+                'description' => $description,
+                'overview_html' => $overview_html,
+                'hero_image' => $hero_image,
+                'featured_course_wordpress_id' => $featured_course_id,
             );
         }, $terms));
     }

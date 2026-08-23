@@ -56,13 +56,16 @@ allowlisted operational state and is private and `no-store`.
   title is the full name, the native Excerpt owns the plain-text Short bio, the
   native classic editor owns About, and Featured Image owns the headshot. The
   Short bio is the preferred Course-instructor summary; when it is empty,
-  catalogue schema `20260813.5` projects a 50-word plain-text fallback from the
+  catalogue schema `20260821.2` projects a 50-word plain-text fallback from the
   sanitized About body. Selecting or uploading an image advances through
   WordPress's native crop screen with a required 1:1 selection; WordPress keeps
   the original and sets a new cropped attachment as the headshot. Job title,
   organisation, website, and repeatable social links are post metadata.
 - `tsol_course_collection`: course-only commercial/editorial grouping, exposed
   as a native MemberPress rule target but never as a WordPress frontend route.
+  Its native Description owns the short public introduction; term metadata owns
+  a sanitized long-form overview, optional hero artwork, and optional featured
+  assigned Course for the Library Collection landing page.
 - `tsol_topic`: reusable topic vocabulary.
 
 The three content post types and the Speaker profile type are non-public and
@@ -146,12 +149,14 @@ omitted from catalogue output until the profile itself is published;
 publication still creates no WordPress frontend route.
 
 The native Excerpt is the short member-facing introduction. The native body is
-the long-form Description for Series and Content, and the public **About this
-course** source for Courses. It synchronizes automatically; Course records
-project the same sanitized value into `overview_html` and the explicitly public
+the long-form Description for Series and Content, the public **About this
+course** source for Courses, and the public preview description for Lessons. It
+synchronizes automatically; Course and Lesson records project the same
+sanitized value into `overview_html` and the explicitly public
 `public_description_html` field, while public application queries select only
-the latter. Series and Content Description HTML remains protected member data
-and is selected only after the live WordPress/MemberPress access decision.
+the latter. Series, Episode, and standalone Recording Description HTML remains
+protected member data and is selected only after the live WordPress/MemberPress
+access decision.
 Structured Media remains the only playback source.
 
 Course, Series, and Content Excerpt editors show a live **160 recommended**
@@ -188,7 +193,7 @@ so the catalogue remains an ordered plain-text array and existing projected
 data needs no migration. Empty outcomes are ignored, duplicates are removed,
 and the public learning section is omitted until at least one outcome is saved.
 Downloads, bonus links, passwords, and member-only instructions must be added
-to a lesson’s structured Resources panel, never the Course body.
+to a lesson’s structured Resources panel, never a Course or Lesson body.
 
 Before catalogue schema `20260813.3` is synchronized in an environment that
 contains the legacy imports, run the guarded `tsol

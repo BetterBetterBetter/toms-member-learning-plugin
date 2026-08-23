@@ -538,6 +538,20 @@ class TSOL_Library_Content_Admin {
             'high'
         );
 
+        if (in_array($post_type, array(
+            TSOL_Library_Content_Model::COURSE_POST_TYPE,
+            TSOL_Library_Content_Model::SERIES_POST_TYPE,
+        ), true)) {
+            add_meta_box(
+                'tsol-library-ai-assistant',
+                __('AI assistant', 'tomschooloflife-plugin'),
+                array($this, 'render_ai_assistant_meta_box'),
+                $post_type,
+                'side',
+                'high'
+            );
+        }
+
         add_meta_box(
             'tsol-library-speakers',
             __('Speakers', 'tomschooloflife-plugin'),
@@ -1261,6 +1275,54 @@ class TSOL_Library_Content_Admin {
         <?php
     }
 
+    public function render_ai_assistant_meta_box($post) {
+        $enabled = (bool) get_post_meta(
+            $post->ID,
+            TSOL_Library_Content_Model::META_AI_ASSISTANT_ENABLED,
+            true
+        );
+        $questions = TSOL_Library_Content_Model::sanitize_ai_assistant_questions(get_post_meta(
+            $post->ID,
+            TSOL_Library_Content_Model::META_AI_ASSISTANT_QUESTIONS,
+            true
+        ));
+        ?>
+        <label>
+            <input
+                type="checkbox"
+                name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[ai_assistant_enabled]"
+                value="1"
+                <?php checked($enabled); ?>
+            />
+            <strong><?php esc_html_e('Enable AI assistant', 'tomschooloflife-plugin'); ?></strong>
+        </label>
+        <p class="description"><?php esc_html_e('Allow enrolled users to ask transcript-grounded questions across this collection.', 'tomschooloflife-plugin'); ?></p>
+        <p><strong><?php esc_html_e('Starter questions', 'tomschooloflife-plugin'); ?></strong></p>
+        <?php for ($index = 0; $index < 3; $index++) : ?>
+            <p>
+                <label class="screen-reader-text" for="tsol-ai-question-<?php echo esc_attr((string) $index); ?>">
+                    <?php echo esc_html(sprintf(__('Starter question %d', 'tomschooloflife-plugin'), $index + 1)); ?>
+                </label>
+                <input
+                    id="tsol-ai-question-<?php echo esc_attr((string) $index); ?>"
+                    class="widefat"
+                    type="text"
+                    maxlength="120"
+                    name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[ai_assistant_questions][]"
+                    value="<?php echo esc_attr($questions[$index] ?? ''); ?>"
+                    placeholder="<?php echo esc_attr(sprintf(__('Question %d', 'tomschooloflife-plugin'), $index + 1)); ?>"
+                />
+            </p>
+        <?php endfor; ?>
+        <p class="description"><?php esc_html_e('Shown when the conversation is empty. Add up to three questions, each no longer than 120 characters.', 'tomschooloflife-plugin'); ?></p>
+        <?php if ($enabled) : ?>
+            <div class="notice notice-warning inline">
+                <p><?php esc_html_e('Confirm that every playable lesson or episode has a synchronized transcript and completed search index. Missing coverage limits the answers and citations available to members.', 'tomschooloflife-plugin'); ?></p>
+            </div>
+        <?php endif; ?>
+        <?php
+    }
+
     public function render_provenance_meta_box($post) {
         $source_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true);
         $source_type = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_LEGACY_SOURCE_TYPE, true);
@@ -1397,6 +1459,23 @@ class TSOL_Library_Content_Admin {
             update_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_ITEM_LABEL_PLURAL, isset($payload['series_item_label_plural']) ? sanitize_text_field($payload['series_item_label_plural']) : 'episodes');
             update_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_SORT, $series_sort);
             update_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_ONGOING, !empty($payload['series_ongoing']));
+        }
+        if (in_array($post->post_type, array(
+            TSOL_Library_Content_Model::COURSE_POST_TYPE,
+            TSOL_Library_Content_Model::SERIES_POST_TYPE,
+        ), true)) {
+            update_post_meta(
+                $post_id,
+                TSOL_Library_Content_Model::META_AI_ASSISTANT_ENABLED,
+                !empty($payload['ai_assistant_enabled'])
+            );
+            update_post_meta(
+                $post_id,
+                TSOL_Library_Content_Model::META_AI_ASSISTANT_QUESTIONS,
+                TSOL_Library_Content_Model::sanitize_ai_assistant_questions(
+                    $payload['ai_assistant_questions'] ?? array()
+                )
+            );
         }
         if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post->post_type) {
             update_post_meta($post_id, TSOL_Library_Content_Model::META_AVAILABILITY, $availability);

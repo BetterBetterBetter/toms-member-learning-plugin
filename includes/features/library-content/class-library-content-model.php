@@ -45,6 +45,8 @@ class TSOL_Library_Content_Model {
     const META_SERIES_ITEM_LABEL_PLURAL = '_tsol_library_series_item_label_plural';
     const META_SERIES_SORT = '_tsol_library_series_sort';
     const META_SERIES_ONGOING = '_tsol_library_series_ongoing';
+    const META_AI_ASSISTANT_ENABLED = '_tsol_library_ai_assistant_enabled';
+    const META_AI_ASSISTANT_QUESTIONS = '_tsol_library_ai_assistant_questions';
     const META_SECTION_KEY = '_tsol_library_section_key';
     const META_SECTION_TITLE = '_tsol_library_section_title';
     const META_SECTION_POSITION = '_tsol_library_section_position';
@@ -53,6 +55,10 @@ class TSOL_Library_Content_Model {
     const META_SERIES_GROUPS = '_tsol_library_series_groups';
     const META_SPEAKER_IDS = '_tsol_library_speaker_id';
     const META_SPEAKER_MODE = '_tsol_library_speaker_mode';
+
+    const COLLECTION_META_OVERVIEW = '_tsol_library_collection_overview';
+    const COLLECTION_META_HERO_IMAGE_ID = '_tsol_library_collection_hero_image_id';
+    const COLLECTION_META_FEATURED_COURSE_ID = '_tsol_library_collection_featured_course_id';
 
     const AVAILABILITY_AVAILABLE = 'available';
     const AVAILABILITY_COMING_SOON = 'coming_soon';
@@ -105,6 +111,8 @@ class TSOL_Library_Content_Model {
             self::META_SERIES_ITEM_LABEL_PLURAL,
             self::META_SERIES_SORT,
             self::META_SERIES_ONGOING,
+            self::META_AI_ASSISTANT_ENABLED,
+            self::META_AI_ASSISTANT_QUESTIONS,
             self::META_SECTION_KEY,
             self::META_SECTION_TITLE,
             self::META_SECTION_POSITION,
@@ -128,12 +136,18 @@ class TSOL_Library_Content_Model {
             self::META_SERIES_GROUPS,
             self::META_AVAILABILITY,
             self::META_RELEASE_AT_GMT,
+            self::META_AI_ASSISTANT_ENABLED,
+            self::META_AI_ASSISTANT_QUESTIONS,
         )));
         if (self::COURSE_POST_TYPE === $post_type) {
             $keys[] = self::META_COURSE_SECTIONS;
             $keys[] = self::META_COURSE_LEARNING_OUTCOMES;
+            $keys[] = self::META_AI_ASSISTANT_ENABLED;
+            $keys[] = self::META_AI_ASSISTANT_QUESTIONS;
         } elseif (self::SERIES_POST_TYPE === $post_type) {
             $keys[] = self::META_SERIES_GROUPS;
+            $keys[] = self::META_AI_ASSISTANT_ENABLED;
+            $keys[] = self::META_AI_ASSISTANT_QUESTIONS;
         } elseif (self::ITEM_POST_TYPE === $post_type) {
             $keys[] = self::META_AVAILABILITY;
             $keys[] = self::META_RELEASE_AT_GMT;
@@ -497,6 +511,28 @@ class TSOL_Library_Content_Model {
         return $outcomes;
     }
 
+    public static function sanitize_ai_assistant_questions($value) {
+        if (!is_array($value)) {
+            return array();
+        }
+
+        $questions = array();
+        $seen = array();
+        foreach (array_slice(array_values($value), 0, 3) as $value) {
+            $question = trim(sanitize_text_field((string) $value));
+            if (strlen($question) < 3 || strlen($question) > 120) {
+                continue;
+            }
+            $identity = function_exists('mb_strtolower') ? mb_strtolower($question) : strtolower($question);
+            if (isset($seen[$identity])) {
+                continue;
+            }
+            $seen[$identity] = true;
+            $questions[] = $question;
+        }
+        return $questions;
+    }
+
     /**
      * Make the private TSOL content types available as native MemberPress Rule
      * targets without making them publicly queryable in WordPress.
@@ -716,7 +752,11 @@ class TSOL_Library_Content_Model {
 
         self::register_meta(self::COURSE_POST_TYPE, self::META_COURSE_SECTIONS, 'array', array(__CLASS__, 'sanitize_structure_registry'));
         self::register_meta(self::COURSE_POST_TYPE, self::META_COURSE_LEARNING_OUTCOMES, 'array', array(__CLASS__, 'sanitize_course_learning_outcomes'));
+        self::register_meta(self::COURSE_POST_TYPE, self::META_AI_ASSISTANT_ENABLED, 'boolean', 'rest_sanitize_boolean');
+        self::register_meta(self::COURSE_POST_TYPE, self::META_AI_ASSISTANT_QUESTIONS, 'array', array(__CLASS__, 'sanitize_ai_assistant_questions'));
         self::register_meta(self::SERIES_POST_TYPE, self::META_SERIES_GROUPS, 'array', array(__CLASS__, 'sanitize_structure_registry'));
+        self::register_meta(self::SERIES_POST_TYPE, self::META_AI_ASSISTANT_ENABLED, 'boolean', 'rest_sanitize_boolean');
+        self::register_meta(self::SERIES_POST_TYPE, self::META_AI_ASSISTANT_QUESTIONS, 'array', array(__CLASS__, 'sanitize_ai_assistant_questions'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_AVAILABILITY, 'string', array(__CLASS__, 'sanitize_availability'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_RELEASE_AT_GMT, 'string', array(__CLASS__, 'sanitize_release_at_gmt'));
 
@@ -725,6 +765,27 @@ class TSOL_Library_Content_Model {
         self::register_meta(self::SPEAKER_POST_TYPE, self::SPEAKER_META_ORGANIZATION, 'string', 'sanitize_text_field');
         self::register_meta(self::SPEAKER_POST_TYPE, self::SPEAKER_META_WEBSITE_URL, 'string', array(__CLASS__, 'sanitize_speaker_url'));
         self::register_meta(self::SPEAKER_POST_TYPE, self::SPEAKER_META_SOCIAL_LINKS, 'array', array(__CLASS__, 'sanitize_speaker_social_links'));
+
+        register_term_meta(self::COURSE_COLLECTION_TAXONOMY, self::COLLECTION_META_OVERVIEW, array(
+            'type' => 'string',
+            'single' => true,
+            'show_in_rest' => false,
+            'sanitize_callback' => array('TSOL_Library_Content_HTML_Sanitizer', 'sanitize'),
+            'auth_callback' => static function () {
+                return current_user_can('manage_categories');
+            },
+        ));
+        foreach (array(self::COLLECTION_META_HERO_IMAGE_ID, self::COLLECTION_META_FEATURED_COURSE_ID) as $meta_key) {
+            register_term_meta(self::COURSE_COLLECTION_TAXONOMY, $meta_key, array(
+                'type' => 'integer',
+                'single' => true,
+                'show_in_rest' => false,
+                'sanitize_callback' => 'absint',
+                'auth_callback' => static function () {
+                    return current_user_can('manage_categories');
+                },
+            ));
+        }
     }
 
     private static function register_meta($post_type, $key, $type, $sanitize_callback) {

@@ -481,6 +481,7 @@ try {
     $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-course-page-content'), 'Library Course landing-page fields were not registered.');
     $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-curriculum'), 'Library Course curriculum box was not registered.');
     $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-protection'), 'Library Course access box was not registered.');
+    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Course AI assistant box was not registered.');
     $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-speakers'), 'Library Course Speakers box was not registered.');
     $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Course editor.');
     $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-media'), 'Library Course duplicated lesson media controls.');
@@ -491,6 +492,7 @@ try {
     $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-details'), 'Library Series retained the generic details box.');
     $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-episodes'), 'Library Series episodes box was not registered.');
     $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-protection'), 'Library Series access box was not registered.');
+    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Series AI assistant box was not registered.');
     $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-speakers'), 'Library Series Speakers box was not registered.');
     $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Series editor.');
     $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-media'), 'Library Series duplicated episode media controls.');
@@ -502,6 +504,7 @@ try {
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-curriculum'), 'TSOL curriculum leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-course-page-content'), 'TSOL Course landing-page fields leaked onto a native MemberPress Course.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-protection'), 'TSOL access UI leaked onto the native MemberPress Course editor.');
+    $assert(!$has_meta_box('mpcs-course', 'tsol-library-ai-assistant'), 'TSOL AI assistant UI leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-speakers'), 'TSOL Speaker relationships leaked onto the native MemberPress Course editor.');
 
     ob_start();
