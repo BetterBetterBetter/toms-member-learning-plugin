@@ -11,6 +11,32 @@
         return config().strings || {};
     }
 
+    function providerConfig(provider) {
+        return (config().mediaProviders || {})[provider] || {};
+    }
+
+    function closeMediaPreview($row) {
+        $row.find('[data-media-test-player]').prop('hidden', true).empty();
+        $row.find('[data-media-test]').text(strings().testPlayback || 'Test playback').attr('aria-expanded', 'false');
+    }
+
+    function updateMediaProviderUi($row) {
+        var provider = String($row.find('[data-media-provider]').val() || 'vimeo');
+        var providerUi = providerConfig(provider);
+
+        $row.find('[data-media-provider-help]').text(providerUi.help || '');
+        $row.find('[data-media-url-label]').text(providerUi.urlLabel || 'Media URL');
+        $row.find('[data-media-url]').attr('placeholder', providerUi.placeholder || 'https://…');
+        $row.find('[data-media-url-help]').text(providerUi.urlHelp || '');
+        $row.find('[data-media-library]').prop('hidden', provider !== 'wordpress');
+    }
+
+    function updateMediaReplacementWarning($row) {
+        var originalUrl = $.trim(String($row.attr('data-original-url') || ''));
+        var currentUrl = $.trim(String($row.find('[data-media-url]').val() || ''));
+        $row.find('[data-media-replacement-warning]').prop('hidden', !originalUrl || originalUrl === currentUrl);
+    }
+
     function replaceIndex(value, index) {
         return String(value || '').replace(/__index__/g, String(index));
     }
@@ -67,17 +93,23 @@
 
     function renderMediaEmpty($row) {
         $row.removeClass('is-normalized has-media-error is-checking');
+        $row.removeData('normalizedMedia');
         $row.find('[data-media-url]').removeAttr('aria-invalid');
+        $row.find('[data-media-test]').prop('disabled', true);
+        closeMediaPreview($row);
         $row.find('[data-media-result]')
-            .removeClass('is-error')
+            .removeClass('is-error is-success')
             .html('<span>' + $('<div>').text(strings().empty || 'Paste a media URL.').html() + '</span>');
     }
 
     function renderMediaError($row, message) {
         $row.removeClass('is-normalized is-checking').addClass('has-media-error');
+        $row.removeData('normalizedMedia');
         $row.find('[data-media-url]').attr('aria-invalid', 'true');
+        $row.find('[data-media-test]').prop('disabled', true);
+        closeMediaPreview($row);
         $row.find('[data-media-result]')
-            .addClass('is-error')
+            .removeClass('is-success').addClass('is-error')
             .html('<span class="dashicons dashicons-warning" aria-hidden="true"></span><span>' + $('<div>').text(message || strings().error || 'Invalid media URL.').html() + '</span>');
     }
 
@@ -96,8 +128,11 @@
         }
 
         $row.removeClass('has-media-error is-checking').addClass('is-normalized');
+        $row.data('normalizedMedia', media);
         $row.find('[data-media-url]').removeAttr('aria-invalid');
-        $row.find('[data-media-result]').removeClass('is-error').html(html);
+        $row.find('[data-media-test]').prop('disabled', !media.preview_url);
+        $row.find('[data-media-result]').removeClass('is-error').addClass('is-success').html(html);
+        $row.find('[data-media-summary]').text(media.provider_label || media.provider || 'Untitled media');
     }
 
     function normalizeMediaRow($row) {
@@ -137,6 +172,15 @@
                 return;
             }
 
+            var selectedProvider = String($row.find('[data-media-provider]').val() || '');
+            if (selectedProvider && selectedProvider !== response.data.provider) {
+                var actualLabel = response.data.provider_label || response.data.provider;
+                var expectedLabel = providerConfig(selectedProvider).label || selectedProvider;
+                var mismatch = strings().providerMismatch || 'This URL resolves to %1$s. Choose that source type or enter a %2$s URL.';
+                renderMediaError($row, mismatch.replace('%1$s', actualLabel).replace('%2$s', expectedLabel));
+                return;
+            }
+
             renderMediaSuccess($row, response.data);
         }).fail(function(xhr) {
             var response = xhr && xhr.responseJSON;
@@ -156,12 +200,16 @@
 
         function reindex() {
             reindexRows($rows, '[data-media-row]', 'media_assets');
-            $rows.children('[data-media-row]').each(function() {
+            $rows.children('[data-media-row]').each(function(index) {
                 var $row = $(this);
-                var label = $.trim($row.find('[data-media-label]').val());
                 var provider = $.trim($row.find('.tsol-library-provider-badge').text());
 
-                $row.find('[data-media-summary]').text(label || provider || 'Untitled media');
+                if (provider) {
+                    $row.find('[data-media-summary]').text(provider);
+                }
+                $row.find('[data-media-role]')
+                    .toggleClass('is-primary', index === 0)
+                    .text(index === 0 ? (strings().primaryMedia || 'Primary playback source') : (strings().secondaryMedia || 'Additional playback source'));
             });
         }
 
@@ -170,6 +218,7 @@
 
             nextIndex += 1;
             $rows.append($row);
+            updateMediaProviderUi($row);
             reindex();
             $row.find('[data-media-url]').trigger('focus');
         });
@@ -178,9 +227,10 @@
             var $row = $(this).closest('[data-media-row]');
 
             if ($rows.children('[data-media-row]').length === 1) {
-                $row.find('input[type="text"], input[type="url"], input[type="number"]').val('');
+                $row.find('input[type="text"], input[type="url"], input[type="number"], input[type="hidden"]').val('');
                 $row.find('input[type="checkbox"]').prop('checked', false);
                 renderMediaEmpty($row);
+                updateMediaReplacementWarning($row);
             } else {
                 $row.remove();
             }
@@ -196,6 +246,10 @@
         $editor.on('input', '[data-media-url]', function() {
             var $row = $(this).closest('[data-media-row]');
 
+            $row.removeData('normalizedMedia');
+            $row.find('[data-media-test]').prop('disabled', true);
+            closeMediaPreview($row);
+            updateMediaReplacementWarning($row);
             window.clearTimeout($row.data('mediaTimer'));
             $row.data('mediaTimer', window.setTimeout(function() {
                 normalizeMediaRow($row);
@@ -204,7 +258,12 @@
         $editor.on('blur', '[data-media-url]', function() {
             normalizeMediaRow($(this).closest('[data-media-row]'));
         });
-        $editor.on('input', '[data-media-label]', reindex);
+        $editor.on('change', '[data-media-provider]', function() {
+            var $row = $(this).closest('[data-media-row]');
+            updateMediaProviderUi($row);
+            closeMediaPreview($row);
+            normalizeMediaRow($row);
+        });
 
         $editor.on('click', '[data-media-library]', function() {
             var $row = $(this).closest('[data-media-row]');
@@ -219,14 +278,52 @@
             }
             frame.on('select', function() {
                 var attachment = frame.state().get('selection').first().toJSON();
+                $row.find('[data-media-provider]').val('wordpress');
+                updateMediaProviderUi($row);
                 $row.find('[data-media-url]').val(attachment.url || '').trigger('input');
-                if (!$.trim($row.find('[data-media-label]').val())) {
-                    $row.find('[data-media-label]').val(attachment.title || '').trigger('input');
-                }
             });
             frame.open();
         });
 
+        $editor.on('click', '[data-media-test]', function() {
+            var $button = $(this);
+            var $row = $button.closest('[data-media-row]');
+            var $player = $row.find('[data-media-test-player]');
+            var media = $row.data('normalizedMedia');
+
+            if (!$player.prop('hidden')) {
+                closeMediaPreview($row);
+                return;
+            }
+            if (!media || !media.preview_url) {
+                return;
+            }
+
+            var $output;
+            if (media.preview_type === 'iframe') {
+                $output = $('<iframe>', {
+                    src: media.preview_url,
+                    title: strings().previewTitle || 'Media playback test',
+                    allow: 'autoplay; encrypted-media; fullscreen; picture-in-picture',
+                    allowfullscreen: 'allowfullscreen',
+                });
+            } else if (media.preview_type === 'audio') {
+                $output = $('<audio>', { src: media.preview_url, controls: 'controls', preload: 'metadata' });
+            } else {
+                $output = $('<video>', { src: media.preview_url, controls: 'controls', preload: 'metadata', playsinline: 'playsinline' });
+            }
+            $player.empty().append($output).prop('hidden', false);
+            $button.text(strings().hidePlayback || 'Hide test player').attr('aria-expanded', 'true');
+        });
+
+        $rows.children('[data-media-row]').each(function() {
+            var $row = $(this);
+            updateMediaProviderUi($row);
+            updateMediaReplacementWarning($row);
+            if ($.trim($row.find('[data-media-url]').val())) {
+                normalizeMediaRow($row);
+            }
+        });
         reindex();
     }
 

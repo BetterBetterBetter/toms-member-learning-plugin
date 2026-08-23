@@ -655,14 +655,21 @@ class TSOL_Library_Content_Admin {
             'postId' => $post_id,
             'postType' => (string) $screen->post_type,
             'requiresMedia' => TSOL_Library_Content_Model::ITEM_POST_TYPE === $screen->post_type,
+            'mediaProviders' => $this->media_provider_ui(),
             'strings' => array(
                 'checking' => __('Checking URL…', 'tomschooloflife-plugin'),
-                'empty' => __('Paste a Vimeo or YouTube URL, or choose WordPress media.', 'tomschooloflife-plugin'),
+                'empty' => __('Choose a source and enter its media URL.', 'tomschooloflife-plugin'),
                 'error' => __('That media URL could not be recognised.', 'tomschooloflife-plugin'),
                 'remove' => __('Remove media', 'tomschooloflife-plugin'),
                 'providerId' => __('ID', 'tomschooloflife-plugin'),
                 'privateVimeo' => __('Private Vimeo reference detected', 'tomschooloflife-plugin'),
                 'wordpressAttachment' => __('WordPress attachment', 'tomschooloflife-plugin'),
+                'primaryMedia' => __('Primary playback source', 'tomschooloflife-plugin'),
+                'secondaryMedia' => __('Additional playback source', 'tomschooloflife-plugin'),
+                'testPlayback' => __('Test playback', 'tomschooloflife-plugin'),
+                'hidePlayback' => __('Hide test player', 'tomschooloflife-plugin'),
+                'previewTitle' => __('Media playback test', 'tomschooloflife-plugin'),
+                'providerMismatch' => __('This URL resolves to %1$s. Choose that source type or enter a %2$s URL.', 'tomschooloflife-plugin'),
                 'speakerAdded' => __('Speaker added.', 'tomschooloflife-plugin'),
                 'speakerRemoved' => __('Speaker removed.', 'tomschooloflife-plugin'),
                 'speakerMoved' => __('Speaker order updated.', 'tomschooloflife-plugin'),
@@ -1186,8 +1193,8 @@ class TSOL_Library_Content_Admin {
             </div>
             <div class="tsol-library-section-intro">
                 <div>
-                    <p><?php esc_html_e('Paste one stable media URL. WordPress will infer the provider, video ID, private Vimeo reference, or attachment automatically.', 'tomschooloflife-plugin'); ?></p>
-                    <p class="description"><?php esc_html_e('Multiple assets are supported and play in the order shown. Do not paste temporary signed playback URLs.', 'tomschooloflife-plugin'); ?></p>
+                    <p><?php esc_html_e('Choose where the media lives, then add its stable URL. The first row is the primary playback source used by the Library.', 'tomschooloflife-plugin'); ?></p>
+                    <p class="description"><?php esc_html_e('Additional rows play in the order shown. Do not paste temporary signed playback URLs.', 'tomschooloflife-plugin'); ?></p>
                 </div>
                 <button type="button" class="button button-secondary" data-media-add><?php esc_html_e('Add media', 'tomschooloflife-plugin'); ?></button>
             </div>
@@ -1673,6 +1680,8 @@ class TSOL_Library_Content_Admin {
             'provider_id' => $asset['provider_id'],
             'has_privacy_hash' => '' !== $asset['privacy_hash'],
             'attachment_id' => (int) $asset['attachment_id'],
+            'preview_type' => in_array($asset['provider'], array('vimeo', 'youtube'), true) ? 'iframe' : $asset['kind'],
+            'preview_url' => $this->media_preview_url($asset),
         ));
     }
 
@@ -1840,11 +1849,15 @@ class TSOL_Library_Content_Admin {
         $provider_id = isset($asset['provider_id']) ? (string) $asset['provider_id'] : '';
         $privacy_hash = isset($asset['privacy_hash']) ? (string) $asset['privacy_hash'] : '';
         $attachment_id = isset($asset['attachment_id']) ? absint($asset['attachment_id']) : 0;
+        $provider_ui = $this->media_provider_ui();
+        $selected_provider = isset($provider_ui[$provider]) ? $provider : 'vimeo';
+        $field_id = 'tsol-library-media-' . sanitize_html_class((string) $index);
         ?>
-        <div class="tsol-library-row tsol-library-media-row <?php echo '' !== $provider ? 'is-normalized' : ''; ?>" data-media-row>
+        <div class="tsol-library-row tsol-library-media-row <?php echo '' !== $provider ? 'is-normalized' : ''; ?>" data-media-row data-original-url="<?php echo esc_attr($url); ?>">
             <div class="tsol-library-row__toolbar">
                 <span class="tsol-library-row__handle dashicons dashicons-menu" aria-hidden="true"></span>
                 <strong data-media-summary><?php echo esc_html($label ?: __('Untitled media', 'tomschooloflife-plugin')); ?></strong>
+                <span class="tsol-library-media-role" data-media-role></span>
                 <div class="tsol-library-row__actions">
                     <button type="button" class="button-link" data-row-up aria-label="<?php esc_attr_e('Move media up', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
                     <button type="button" class="button-link" data-row-down aria-label="<?php esc_attr_e('Move media down', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
@@ -1853,15 +1866,33 @@ class TSOL_Library_Content_Admin {
             </div>
 
             <div class="tsol-library-row__body">
-                <div class="tsol-library-field tsol-library-field--wide">
-                    <label><?php esc_html_e('Media URL', 'tomschooloflife-plugin'); ?></label>
-                    <div class="tsol-library-url-control">
-                        <input type="url" name="<?php echo esc_attr($name); ?>[source_url]" value="<?php echo esc_attr($url); ?>" placeholder="https://vimeo.com/…" data-media-url />
-                        <button type="button" class="button" data-media-library><?php esc_html_e('Choose media', 'tomschooloflife-plugin'); ?></button>
-                    </div>
+                <div class="tsol-library-field tsol-library-media-source">
+                    <label for="<?php echo esc_attr($field_id); ?>-provider"><?php esc_html_e('Video source', 'tomschooloflife-plugin'); ?></label>
+                    <select id="<?php echo esc_attr($field_id); ?>-provider" data-media-provider>
+                        <?php foreach ($provider_ui as $provider_key => $provider_config) : ?>
+                            <option value="<?php echo esc_attr($provider_key); ?>" <?php selected($selected_provider, $provider_key); ?>><?php echo esc_html($provider_config['label']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description" data-media-provider-help><?php echo esc_html($provider_ui[$selected_provider]['help']); ?></p>
                 </div>
 
-                <div class="tsol-library-media-result" data-media-result aria-live="polite">
+                <div class="tsol-library-field tsol-library-field--wide">
+                    <label for="<?php echo esc_attr($field_id); ?>-url" data-media-url-label><?php echo esc_html($provider_ui[$selected_provider]['urlLabel']); ?></label>
+                    <div class="tsol-library-url-control">
+                        <input type="url" id="<?php echo esc_attr($field_id); ?>-url" name="<?php echo esc_attr($name); ?>[source_url]" value="<?php echo esc_attr($url); ?>" placeholder="<?php echo esc_attr($provider_ui[$selected_provider]['placeholder']); ?>" inputmode="url" data-media-url />
+                        <button type="button" class="button" data-media-library <?php echo 'wordpress' === $selected_provider ? '' : 'hidden'; ?>><?php esc_html_e('Choose from Media Library', 'tomschooloflife-plugin'); ?></button>
+                    </div>
+                    <p class="description" data-media-url-help><?php echo esc_html($provider_ui[$selected_provider]['urlHelp']); ?></p>
+                </div>
+                <input type="hidden" name="<?php echo esc_attr($name); ?>[label]" value="<?php echo esc_attr($label); ?>" />
+                <input type="hidden" name="<?php echo esc_attr($name); ?>[duration_seconds]" value="<?php echo esc_attr($duration); ?>" />
+                <input type="hidden" name="<?php echo esc_attr($name); ?>[preview]" value="<?php echo $preview ? '1' : '0'; ?>" />
+
+                <div class="notice notice-warning inline tsol-library-media-replacement" data-media-replacement-warning hidden>
+                    <p><strong><?php esc_html_e('This replaces the current media identity.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('Existing progress and notes remain attached to the previous source and will not carry over.', 'tomschooloflife-plugin'); ?></p>
+                </div>
+
+                <div class="tsol-library-media-result" data-media-result role="status" aria-live="polite">
                     <?php if ('' !== $provider) : ?>
                         <span class="tsol-library-provider-badge"><?php echo esc_html($this->provider_label($provider)); ?></span>
                         <?php if ('' !== $provider_id) : ?><span><?php esc_html_e('ID', 'tomschooloflife-plugin'); ?> <code><?php echo esc_html($provider_id); ?></code></span><?php endif; ?>
@@ -1872,19 +1903,12 @@ class TSOL_Library_Content_Admin {
                     <?php endif; ?>
                 </div>
 
-                <div class="tsol-library-field-grid tsol-library-field-grid--media">
-                    <div class="tsol-library-field">
-                        <label><?php esc_html_e('Label', 'tomschooloflife-plugin'); ?></label>
-                        <input type="text" name="<?php echo esc_attr($name); ?>[label]" value="<?php echo esc_attr($label); ?>" placeholder="<?php esc_attr_e('Optional, e.g. Part 1', 'tomschooloflife-plugin'); ?>" data-media-label />
-                    </div>
-                    <div class="tsol-library-field">
-                        <label><?php esc_html_e('Duration in seconds', 'tomschooloflife-plugin'); ?></label>
-                        <input type="number" min="0" step="1" name="<?php echo esc_attr($name); ?>[duration_seconds]" value="<?php echo esc_attr($duration); ?>" />
-                    </div>
-                    <div class="tsol-library-field tsol-library-field--checkbox">
-                        <label><input type="checkbox" name="<?php echo esc_attr($name); ?>[preview]" value="1" <?php checked($preview); ?> /> <?php esc_html_e('Preview media', 'tomschooloflife-plugin'); ?></label>
-                    </div>
+                <div class="tsol-library-media-test-actions">
+                    <button type="button" class="button button-secondary" data-media-test aria-controls="<?php echo esc_attr($field_id); ?>-test-player" aria-expanded="false" disabled><?php esc_html_e('Test playback', 'tomschooloflife-plugin'); ?></button>
+                    <span class="description"><?php esc_html_e('Loads the selected source only when you request it.', 'tomschooloflife-plugin'); ?></span>
                 </div>
+                <div class="tsol-library-media-test" id="<?php echo esc_attr($field_id); ?>-test-player" data-media-test-player hidden></div>
+
             </div>
         </div>
         <?php
@@ -2160,6 +2184,53 @@ class TSOL_Library_Content_Admin {
             'external' => __('External media', 'tomschooloflife-plugin'),
         );
         return isset($labels[$provider]) ? $labels[$provider] : ucfirst((string) $provider);
+    }
+
+    private function media_provider_ui() {
+        return array(
+            'vimeo' => array(
+                'label' => __('Vimeo', 'tomschooloflife-plugin'),
+                'urlLabel' => __('Vimeo video URL', 'tomschooloflife-plugin'),
+                'placeholder' => 'https://vimeo.com/123456789/abcdef12',
+                'help' => __('Use the public or private Vimeo page URL, including its privacy reference when present.', 'tomschooloflife-plugin'),
+                'urlHelp' => __('Vimeo page and player URLs are supported.', 'tomschooloflife-plugin'),
+            ),
+            'youtube' => array(
+                'label' => __('YouTube', 'tomschooloflife-plugin'),
+                'urlLabel' => __('YouTube video URL', 'tomschooloflife-plugin'),
+                'placeholder' => 'https://www.youtube.com/watch?v=…',
+                'help' => __('Use a standard YouTube, youtu.be, Shorts, or embed URL.', 'tomschooloflife-plugin'),
+                'urlHelp' => __('Playback uses YouTube privacy-enhanced mode in the Library.', 'tomschooloflife-plugin'),
+            ),
+            'wordpress' => array(
+                'label' => __('WordPress Media Library', 'tomschooloflife-plugin'),
+                'urlLabel' => __('WordPress video or audio URL', 'tomschooloflife-plugin'),
+                'placeholder' => __('Choose an uploaded video or audio file', 'tomschooloflife-plugin'),
+                'help' => __('Choose a permanent video or audio attachment from this site’s Media Library.', 'tomschooloflife-plugin'),
+                'urlHelp' => __('The attachment must remain available at this URL.', 'tomschooloflife-plugin'),
+            ),
+            'external' => array(
+                'label' => __('Direct video or audio URL', 'tomschooloflife-plugin'),
+                'urlLabel' => __('Direct media URL', 'tomschooloflife-plugin'),
+                'placeholder' => 'https://media.example.com/video.mp4',
+                'help' => __('Use a permanent HTTPS URL ending in a supported video or audio file extension.', 'tomschooloflife-plugin'),
+                'urlHelp' => __('Do not use expiring, signed, download-page, or document URLs.', 'tomschooloflife-plugin'),
+            ),
+        );
+    }
+
+    private function media_preview_url($asset) {
+        $provider = isset($asset['provider']) ? sanitize_key($asset['provider']) : '';
+        $provider_id = isset($asset['provider_id']) ? sanitize_text_field($asset['provider_id']) : '';
+        if ('vimeo' === $provider && preg_match('/^\d+$/', $provider_id)) {
+            $url = 'https://player.vimeo.com/video/' . rawurlencode($provider_id);
+            $privacy_hash = isset($asset['privacy_hash']) ? sanitize_text_field($asset['privacy_hash']) : '';
+            return '' !== $privacy_hash ? add_query_arg('h', $privacy_hash, $url) : $url;
+        }
+        if ('youtube' === $provider && preg_match('/^[A-Za-z0-9_-]{6,20}$/', $provider_id)) {
+            return 'https://www.youtube-nocookie.com/embed/' . rawurlencode($provider_id);
+        }
+        return isset($asset['source_url']) ? esc_url_raw($asset['source_url']) : '';
     }
 
     private function is_absolute_http_url($url) {

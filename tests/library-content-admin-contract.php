@@ -594,6 +594,13 @@ try {
     $assert(false !== strpos($media_html, 'Vimeo'), 'Saved provider confirmation is missing from the media editor.');
     $assert(false !== strpos($media_html, 'Private Vimeo reference detected'), 'Private Vimeo confirmation is missing from the media editor.');
     $assert(false !== strpos($media_html, 'data-media-template'), 'Repeatable media template is missing.');
+    $assert(false !== strpos($media_html, 'data-media-provider'), 'The media source selector is missing.');
+    $assert(false !== strpos($media_html, 'WordPress Media Library'), 'The WordPress source option is missing.');
+    $assert(false !== strpos($media_html, 'Direct video or audio URL'), 'The direct media source option is missing.');
+    $assert(false !== strpos($media_html, 'data-media-test'), 'The on-demand playback test is missing.');
+    $assert(false !== strpos($media_html, 'This replaces the current media identity.'), 'The replacement warning is missing.');
+    $assert(false === strpos($media_html, 'Duration in seconds'), 'The retired manual media duration control is still visible.');
+    $assert(false === strpos($media_html, 'Allow as preview media'), 'The retired per-asset preview control is still visible.');
     $assert(false !== strpos($media_html, 'id="tsol-library-availability"'), 'The media editor omitted its availability control.');
     $assert(false !== strpos($media_html, 'type="date"'), 'The media editor omitted its optional date-only release control.');
     $assert(false === strpos($media_html, 'type="datetime-local"'), 'The media editor still asks administrators for a release time.');
