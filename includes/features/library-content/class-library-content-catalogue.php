@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260821.4';
+    const SCHEMA_VERSION = '20260823.1';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -607,7 +607,7 @@ class TSOL_Library_Content_Catalogue {
         $assets = array_values(array_filter($assets, 'is_array'));
         return array_values(array_map(static function ($asset) {
             $attachment_id = absint($asset['attachment_id'] ?? 0);
-            $url = esc_url_raw((string) ($asset['url'] ?? ''));
+            $url = esc_url_raw((string) ($asset['url'] ?? ($asset['source_url'] ?? '')));
             $mime_type = sanitize_mime_type((string) ($asset['mime_type'] ?? ''));
             if ($attachment_id > 0) {
                 if ($url === '') {

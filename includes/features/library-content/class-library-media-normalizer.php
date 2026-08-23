@@ -55,7 +55,9 @@ class TSOL_Library_Media_Normalizer {
         return array(
             'kind' => self::infer_kind($url),
             'provider' => 'external',
-            'provider_id' => '',
+            // Direct files have no provider-owned identifier. A stable URL
+            // fingerprint keeps learning state bound to the selected asset.
+            'provider_id' => hash('sha256', $url),
             'privacy_hash' => '',
             'attachment_id' => 0,
             'source_url' => $url,

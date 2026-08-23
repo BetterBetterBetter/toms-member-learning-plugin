@@ -114,6 +114,8 @@ $assert(!is_wp_error($youtube) && 'AbCdEf123_-' === $youtube['provider_id'], 'Yo
 
 $direct = TSOL_Library_Media_Normalizer::from_url('https://media.example.test/video.mp4');
 $assert(!is_wp_error($direct) && 'external' === $direct['provider'], 'Direct video URL was not inferred.');
+$assert(!is_wp_error($direct) && hash('sha256', 'https://media.example.test/video.mp4') === $direct['provider_id'], 'Direct video URL did not receive a stable provider ID.');
+$assert(!is_wp_error($direct) && 'https://media.example.test/video.mp4' === $direct['source_url'], 'Direct video source URL was not retained.');
 
 $deduplicated = TSOL_Library_Media_Normalizer::extract_from_content(
     '<iframe src="https://player.vimeo.com/video/123456789?h=abcdef12"></iframe>'
