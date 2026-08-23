@@ -11,6 +11,17 @@ It creates:
 - one published MemberPress `single_tsol_library_course` rule;
 - an authorization pointer from the Course and all lessons to that Course.
 
+A separate guarded forward editorial migration replaces the legacy or
+transcript-derived lesson labels with the reviewed canonical 52-title list,
+regenerates every lesson slug from its canonical title, attaches a
+SHA-256-pinned 16:9 video thumbnail derived from the School's original 2023
+portrait artwork without the surrounding product-device mockup, and
+creates and assigns a complete Charles Terrence Harper speaker profile. That
+profile includes a SHA-256-pinned opaque headshot derived only from the verified
+first-party publisher portrait, professional biography, credentials, website,
+and verified LinkedIn profile. Redirects are
+intentionally omitted because the School application is not live.
+
 The native rule copies all 28 `membership is` conditions from legacy rule
 `100171`. The source page, source rule, lesson count, Vimeo identities, and
 access conditions are protected by fingerprints that match both the local site
@@ -40,6 +51,13 @@ and local position:
 
 ```sh
 php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop restructure --confirm=split-new-marketer-workshop-into-seven-sections --skip-themes
+```
+
+Apply the reviewed canonical titles, slugs, flat artwork, and speaker profile
+after restructuring:
+
+```sh
+php -d memory_limit=512M $(command -v wp) tsol library-new-marketer-workshop editorialize --confirm=apply-canonical-new-marketer-workshop-titles-slugs-and-thumbnail --skip-themes
 ```
 
 Rollback is available only while all importer-owned targets remain byte-for-byte

@@ -22,6 +22,9 @@ $assert(7 === (int) $preview['course']['sections'], 'The workshop preview does n
 $assert(28 === (int) $preview['native_memberpress_rule']['condition_count'], 'The locked legacy rule does not contain 28 conditions.');
 $assert(0 === (int) $preview['native_memberpress_rule']['permission_changes'], 'The preview reports a permission change.');
 $assert('applied' === (string) $verification['phase'], 'The workshop import is not applied.');
+$assert(TSOL_Library_New_Marketer_Workshop_Import::EDITORIAL_VERSION === (string) $verification['editorial_version'], 'The canonical workshop editorial migration is not applied.');
+$assert(TSOL_Library_New_Marketer_Workshop_Import::ARTWORK_VERSION === (string) $verification['artwork_version'], 'The canonical flat workshop artwork migration is not applied.');
+$assert(TSOL_Library_New_Marketer_Workshop_Import::SPEAKER_VERSION === (string) $verification['speaker_version'], 'The canonical workshop speaker migration is not applied.');
 $assert(array('courses' => 1, 'lessons' => 52, 'total' => 53) === $verification['normalized'], 'The workshop target inventory changed.');
 $assert(1 === (int) $verification['native_rule_count'], 'The workshop does not own exactly one MemberPress rule.');
 $assert(28 === (int) $verification['native_rule_condition_count'], 'The native workshop rule does not have exactly 28 conditions.');
@@ -37,7 +40,21 @@ $course_id = (int) $verification['authorization_post_id'];
 $course = get_post($course_id);
 $assert($course instanceof WP_Post && 'publish' === $course->post_status, 'The workshop Course is not published.');
 $assert('The New Marketer Workshop' === (string) get_the_title($course_id), 'The workshop Course title changed.');
+$course_thumbnail_id = (int) get_post_thumbnail_id($course_id);
+$assert($course_thumbnail_id > 0, 'The workshop Course has no canonical thumbnail.');
+$course_thumbnail_file = $course_thumbnail_id > 0 ? get_attached_file($course_thumbnail_id) : '';
+$assert(is_string($course_thumbnail_file) && is_file($course_thumbnail_file) && TSOL_Library_New_Marketer_Workshop_Import::THUMBNAIL_SOURCE_SHA256 === hash_file('sha256', $course_thumbnail_file), 'The workshop Course does not use the pinned 16:9 video thumbnail.');
 $assert(empty(wp_get_object_terms($course_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, array('fields' => 'ids'))), 'The workshop was incorrectly classified as a Masterclass or another Collection.');
+
+$speaker_id = (int) ($verification['speaker_id'] ?? 0);
+$speaker = get_post($speaker_id);
+$assert($speaker instanceof WP_Post && 'Charles Terrence Harper' === $speaker->post_title, 'The workshop Charles Terrence Harper speaker profile is missing.');
+$assert(array($speaker_id) === TSOL_Library_Content_Model::direct_speaker_ids($course_id), 'The workshop Course is not assigned only to Charles Terrence Harper.');
+$assert('Creator and Technical Trainer' === (string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, true), 'The workshop speaker job title changed.');
+$assert('The PLR Show / GainMindshare' === (string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION, true), 'The workshop speaker organisation changed.');
+$speaker_headshot_id = (int) get_post_thumbnail_id($speaker_id);
+$speaker_headshot_file = $speaker_headshot_id > 0 ? get_attached_file($speaker_headshot_id) : '';
+$assert(is_string($speaker_headshot_file) && is_file($speaker_headshot_file) && TSOL_Library_New_Marketer_Workshop_Import::SPEAKER_HEADSHOT_SOURCE_SHA256 === hash_file('sha256', $speaker_headshot_file), 'The workshop speaker does not use the pinned first-party Charles Harper headshot.');
 
 $expected_sections = array(
     'Goals, Offers & Your Market' => 4,
@@ -68,11 +85,15 @@ $lesson_ids = get_posts(array(
     ),
 ));
 $assert(52 === count($lesson_ids), 'The published workshop curriculum does not contain 52 lessons.');
+$lesson_slugs = array();
 $actual_sections = array_fill_keys(array_keys($expected_sections), array());
 foreach (array_map('intval', $lesson_ids) as $lesson_id) {
     $assert($course_id === (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true), 'A workshop lesson does not delegate to the Course rule.');
     $assets = get_post_meta($lesson_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
     $assert(is_array($assets) && 1 === count($assets), 'A workshop lesson does not have exactly one media asset.');
+    $lesson = get_post($lesson_id);
+    $assert($lesson instanceof WP_Post && sanitize_title($lesson->post_title) === (string) $lesson->post_name, 'A workshop lesson slug does not match its canonical title.');
+    $lesson_slugs[] = (string) $lesson->post_name;
     $section_title = (string) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_SECTION_TITLE, true);
     if (!array_key_exists($section_title, $actual_sections)) {
         $failures[] = 'A workshop lesson belongs to an unexpected section.';
@@ -80,6 +101,7 @@ foreach (array_map('intval', $lesson_ids) as $lesson_id) {
         $actual_sections[$section_title][] = (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_POSITION, true);
     }
 }
+$assert(52 === count(array_unique($lesson_slugs)), 'The workshop canonical lesson slugs are not unique.');
 foreach ($expected_sections as $section_title => $expected_count) {
     $positions = $actual_sections[$section_title];
     sort($positions, SORT_NUMERIC);

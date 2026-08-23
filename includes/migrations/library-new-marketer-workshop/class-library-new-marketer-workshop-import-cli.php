@@ -50,6 +50,20 @@ class TSOL_Library_New_Marketer_Workshop_Import_CLI {
     }
 
     /**
+     * Apply canonical titles/slugs, flat artwork, and the verified speaker.
+     *
+     * ## OPTIONS
+     *
+     * --confirm=<confirmation>
+     * : Must be apply-canonical-new-marketer-workshop-titles-slugs-and-thumbnail.
+     */
+    public function editorialize($args, $assoc_args) {
+        unset($args);
+        $this->confirm($assoc_args, TSOL_Library_New_Marketer_Workshop_Import::EDITORIAL_CONFIRMATION);
+        $this->run('editorialize');
+    }
+
+    /**
      * Delete only unchanged importer-owned targets and the importer-owned rule.
      *
      * ## OPTIONS

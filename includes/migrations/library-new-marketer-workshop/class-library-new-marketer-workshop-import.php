@@ -24,11 +24,23 @@ class TSOL_Library_New_Marketer_Workshop_Import {
     const EXPECTED_CONDITIONS = 28;
     const STRUCTURE_VERSION = '20260813.1';
     const LEGACY_STRUCTURE_VERSION = '20260812.1-flat';
+    const EDITORIAL_VERSION = '20260820.1';
+    const ARTWORK_VERSION = '20260820.3';
+    const LEGACY_ARTWORK_VERSION = '20260820.2';
+    const SPEAKER_VERSION = '20260820.2';
+    const LEGACY_SPEAKER_VERSION = '20260820.1';
+    const THUMBNAIL_ASSET = 'assets/images/library/the-new-marketer-workshop-cover.png';
+    const THUMBNAIL_REFERENCE_URL = 'https://tomschooloflife.com/wp-content/uploads/2023/01/ziX6cQWE.png';
+    const THUMBNAIL_SOURCE_SHA256 = 'def3ed87612bff6bec7923a91cdbba8333904eb84611d75cdee384f4081aad31';
+    const SPEAKER_HEADSHOT_ASSET = 'assets/images/library/charles-terrence-harper.png';
+    const SPEAKER_HEADSHOT_REFERENCE_URL = 'https://theplrshow.com/wp-content/uploads/2024/05/Charles.png';
+    const SPEAKER_HEADSHOT_SOURCE_SHA256 = '7294429055f0fb8061868f74927c92fa9a3ffcdf5085b56032194d4f2dfdcd0c';
 
     const STATE_OPTION = 'tsol_library_new_marketer_workshop_import_state';
     const LOCK_OPTION = 'tsol_library_new_marketer_workshop_import_lock';
     const APPLY_CONFIRMATION = 'import-new-marketer-workshop-with-exact-legacy-access';
     const RESTRUCTURE_CONFIRMATION = 'split-new-marketer-workshop-into-seven-sections';
+    const EDITORIAL_CONFIRMATION = 'apply-canonical-new-marketer-workshop-titles-slugs-and-thumbnail';
     const ROLLBACK_CONFIRMATION = 'remove-unchanged-new-marketer-workshop-import';
 
     const META_IMPORT_VERSION = '_tsol_library_new_marketer_import_version';
@@ -77,6 +89,9 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'created_posts' => count((array) ($state['created_post_ids'] ?? array())),
             'created_rules' => empty($state['created_rule_id']) ? 0 : 1,
             'structure_version' => (string) ($state['structure_version'] ?? self::LEGACY_STRUCTURE_VERSION),
+            'editorial_version' => (string) ($state['editorial_version'] ?? ''),
+            'artwork_version' => (string) ($state['artwork_version'] ?? ''),
+            'speaker_version' => (string) ($state['speaker_version'] ?? ''),
             'targets' => $this->target_counts(),
         );
     }
@@ -164,7 +179,25 @@ class TSOL_Library_New_Marketer_Workshop_Import {
 
         $course_id = (int) ($state['course_id'] ?? 0);
         $rule_id = (int) ($state['created_rule_id'] ?? 0);
-        $this->assert_targets($source, $course_id, 'publish');
+        $editorial_version = (string) ($state['editorial_version'] ?? '');
+        $artwork_version = (string) ($state['artwork_version'] ?? '');
+        $speaker_version = (string) ($state['speaker_version'] ?? '');
+        if (!in_array($editorial_version, array('', self::EDITORIAL_VERSION), true)) {
+            throw new RuntimeException('The stored workshop editorial state belongs to an unknown version.');
+        }
+        if (!in_array($artwork_version, array('', self::LEGACY_ARTWORK_VERSION, self::ARTWORK_VERSION), true)) {
+            throw new RuntimeException('The stored workshop artwork state belongs to an unknown version.');
+        }
+        if (!in_array($speaker_version, array('', self::LEGACY_SPEAKER_VERSION, self::SPEAKER_VERSION), true)) {
+            throw new RuntimeException('The stored workshop speaker state belongs to an unknown version.');
+        }
+        $this->assert_targets($source, $course_id, 'publish', null, '' === $editorial_version ? 'ignore' : 'canonical');
+        if (self::ARTWORK_VERSION === $artwork_version) {
+            $this->assert_canonical_thumbnail($course_id);
+        }
+        if (self::SPEAKER_VERSION === $speaker_version) {
+            $this->assert_canonical_speaker($course_id, (int) ($state['created_speaker_id'] ?? 0));
+        }
         $this->assert_native_rule($source_rule, $course_id, $rule_id, 'publish');
 
         $target_ids = $this->target_ids();
@@ -183,6 +216,10 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'schema_version' => self::VERSION,
             'phase' => 'applied',
             'structure_version' => self::STRUCTURE_VERSION,
+            'editorial_version' => $editorial_version,
+            'artwork_version' => $artwork_version,
+            'speaker_version' => $speaker_version,
+            'speaker_id' => (int) ($state['created_speaker_id'] ?? 0),
             'source_fingerprint' => $source['fingerprint'],
             'source_rule_fingerprint' => $source_rule['fingerprint'],
             'normalized' => $this->target_counts(),
@@ -195,6 +232,177 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             'permission_changes' => 0,
             'identities_emitted' => 0,
         );
+    }
+
+    public function editorialize() {
+        $this->assert_environment();
+        return $this->with_lock(function () {
+            $source = $this->source_spec();
+            $source_rule = $this->source_rule_spec();
+            $state = $this->state();
+            $this->assert_state_compatible($state);
+            if ('applied' !== (string) ($state['phase'] ?? '')) {
+                throw new RuntimeException('The New Marketer Workshop import is not applied.');
+            }
+            if (self::STRUCTURE_VERSION !== (string) ($state['structure_version'] ?? self::LEGACY_STRUCTURE_VERSION)) {
+                throw new RuntimeException('The New Marketer Workshop needs the guarded seven-section structure migration first.');
+            }
+
+            $editorial_version = (string) ($state['editorial_version'] ?? '');
+            $artwork_version = (string) ($state['artwork_version'] ?? '');
+            $speaker_version = (string) ($state['speaker_version'] ?? '');
+            if (self::EDITORIAL_VERSION === $editorial_version
+                && self::ARTWORK_VERSION === $artwork_version
+                && self::SPEAKER_VERSION === $speaker_version
+            ) {
+                return $this->verify();
+            }
+            if ('' !== $editorial_version) {
+                if (self::EDITORIAL_VERSION !== $editorial_version) {
+                    throw new RuntimeException('The stored workshop editorial state belongs to an unknown version.');
+                }
+            }
+            if (!in_array($artwork_version, array('', self::LEGACY_ARTWORK_VERSION, self::ARTWORK_VERSION), true)) {
+                throw new RuntimeException('The stored workshop artwork state belongs to an unknown version.');
+            }
+            if (!in_array($speaker_version, array('', self::LEGACY_SPEAKER_VERSION, self::SPEAKER_VERSION), true)) {
+                throw new RuntimeException('The stored workshop speaker state belongs to an unknown version.');
+            }
+
+            $course_id = (int) ($state['course_id'] ?? 0);
+            $rule_id = (int) ($state['created_rule_id'] ?? 0);
+            // Titles and slugs are the explicit scope of this forward editorial
+            // migration. Guard every structural, media, provenance, and access
+            // invariant before superseding any earlier title-only edits.
+            $this->assert_targets(
+                $source,
+                $course_id,
+                'publish',
+                null,
+                '' === $editorial_version ? 'ignore' : 'canonical'
+            );
+            $this->assert_native_rule($source_rule, $course_id, $rule_id, 'publish');
+
+            $lesson_ids = $this->lesson_ids($course_id);
+            $snapshots = array();
+            $thumbnail_id = 0;
+            $previous_thumbnail_id = (int) get_post_thumbnail_id($course_id);
+            $speaker_id = 0;
+            $speaker_headshot_id = 0;
+            $previous_speaker_headshot_id = 0;
+            $previous_speaker_profile_version = $speaker_version;
+            $speaker_created = false;
+            $previous_speaker_ids = TSOL_Library_Content_Model::direct_speaker_ids($course_id);
+            $needs_artwork = in_array($artwork_version, array('', self::LEGACY_ARTWORK_VERSION), true);
+            $needs_speaker = in_array($speaker_version, array('', self::LEGACY_SPEAKER_VERSION), true);
+            try {
+                if ('' === $editorial_version) {
+                    foreach ($lesson_ids as $index => $lesson_id) {
+                        $lesson = get_post($lesson_id);
+                        $snapshots[$lesson_id] = array(
+                            'post_title' => (string) $lesson->post_title,
+                            'post_name' => (string) $lesson->post_name,
+                        );
+                        $title = self::canonical_titles()[$index];
+                        $updated = wp_update_post(array(
+                            'ID' => $lesson_id,
+                            'post_title' => $title,
+                            'post_name' => sanitize_title($title),
+                        ), true);
+                        if (is_wp_error($updated)) {
+                            throw new RuntimeException($updated->get_error_message());
+                        }
+                    }
+                }
+
+                if ($needs_artwork) {
+                    $thumbnail_id = $this->create_canonical_thumbnail($course_id);
+                }
+                if ($needs_speaker) {
+                    if ('' === $speaker_version) {
+                        $speaker = $this->create_canonical_speaker($course_id);
+                        $speaker_created = true;
+                    } else {
+                        $speaker = $this->refresh_canonical_speaker_headshot(
+                            $course_id,
+                            (int) ($state['created_speaker_id'] ?? 0)
+                        );
+                        $previous_speaker_headshot_id = (int) $speaker['previous_headshot_id'];
+                    }
+                    $speaker_id = (int) $speaker['speaker_id'];
+                    $speaker_headshot_id = (int) $speaker['headshot_id'];
+                }
+                $state['editorial_version'] = self::EDITORIAL_VERSION;
+                $state['artwork_version'] = self::ARTWORK_VERSION;
+                $state['speaker_version'] = self::SPEAKER_VERSION;
+                if ($thumbnail_id > 0) {
+                    $state['created_thumbnail_id'] = $thumbnail_id;
+                }
+                if ($speaker_id > 0) {
+                    $state['created_speaker_id'] = $speaker_id;
+                    $state['created_speaker_headshot_id'] = $speaker_headshot_id;
+                }
+                $state['target_fingerprint'] = $this->target_fingerprint($state['created_post_ids']);
+                $state['editorialized_at'] = gmdate('c');
+                $state['updated_at'] = gmdate('c');
+                $this->save_state($state);
+                if ($thumbnail_id > 0
+                    && $previous_thumbnail_id > 0
+                    && $previous_thumbnail_id !== $thumbnail_id
+                    && get_post($previous_thumbnail_id) instanceof WP_Post
+                ) {
+                    wp_delete_attachment($previous_thumbnail_id, true);
+                }
+                if ($speaker_headshot_id > 0
+                    && $previous_speaker_headshot_id > 0
+                    && $previous_speaker_headshot_id !== $speaker_headshot_id
+                    && get_post($previous_speaker_headshot_id) instanceof WP_Post
+                ) {
+                    wp_delete_attachment($previous_speaker_headshot_id, true);
+                }
+            } catch (Throwable $exception) {
+                foreach ($snapshots as $lesson_id => $snapshot) {
+                    wp_update_post(array(
+                        'ID' => (int) $lesson_id,
+                        'post_title' => (string) $snapshot['post_title'],
+                        'post_name' => (string) $snapshot['post_name'],
+                    ));
+                }
+                if ($thumbnail_id > 0) {
+                    if ($previous_thumbnail_id > 0) {
+                        set_post_thumbnail($course_id, $previous_thumbnail_id);
+                    } else {
+                        delete_post_thumbnail($course_id);
+                    }
+                    wp_delete_attachment($thumbnail_id, true);
+                }
+                if ($speaker_id > 0) {
+                    if ($speaker_created) {
+                        delete_post_meta($course_id, TSOL_Library_Content_Model::META_SPEAKER_IDS);
+                        foreach ($previous_speaker_ids as $previous_speaker_id) {
+                            add_post_meta($course_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, (int) $previous_speaker_id, false);
+                        }
+                        if ($speaker_headshot_id > 0 && get_post($speaker_headshot_id) instanceof WP_Post) {
+                            wp_delete_attachment($speaker_headshot_id, true);
+                        }
+                        if (get_post($speaker_id) instanceof WP_Post) {
+                            wp_delete_post($speaker_id, true);
+                        }
+                    } else {
+                        if ($previous_speaker_headshot_id > 0) {
+                            set_post_thumbnail($speaker_id, $previous_speaker_headshot_id);
+                        }
+                        update_post_meta($speaker_id, '_tsol_library_new_marketer_speaker_version', $previous_speaker_profile_version);
+                        if ($speaker_headshot_id > 0 && get_post($speaker_headshot_id) instanceof WP_Post) {
+                            wp_delete_attachment($speaker_headshot_id, true);
+                        }
+                    }
+                }
+                throw $exception;
+            }
+
+            return $this->verify();
+        });
     }
 
     public function restructure() {
@@ -307,6 +515,21 @@ class TSOL_Library_New_Marketer_Workshop_Import {
                     throw new RuntimeException(sprintf('Could not delete importer-owned post %d.', $post_id));
                 }
             }
+            $thumbnail_id = (int) ($state['created_thumbnail_id'] ?? 0);
+            if ($thumbnail_id > 0 && get_post($thumbnail_id) instanceof WP_Post && !wp_delete_attachment($thumbnail_id, true)) {
+                throw new RuntimeException('Could not delete the importer-owned workshop thumbnail.');
+            }
+            $speaker_headshot_id = (int) ($state['created_speaker_headshot_id'] ?? 0);
+            if ($speaker_headshot_id > 0
+                && get_post($speaker_headshot_id) instanceof WP_Post
+                && !wp_delete_attachment($speaker_headshot_id, true)
+            ) {
+                throw new RuntimeException('Could not delete the importer-owned workshop speaker headshot.');
+            }
+            $speaker_id = (int) ($state['created_speaker_id'] ?? 0);
+            if ($speaker_id > 0 && get_post($speaker_id) instanceof WP_Post && !wp_delete_post($speaker_id, true)) {
+                throw new RuntimeException('Could not delete the importer-owned workshop speaker profile.');
+            }
             $this->clear_memberpress_rule_cache();
 
             // Re-read both fingerprints after deletion to prove rollback did
@@ -320,6 +543,9 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             $state['phase'] = 'rolled_back';
             $state['created_post_ids'] = array();
             $state['created_rule_id'] = 0;
+            $state['created_thumbnail_id'] = 0;
+            $state['created_speaker_id'] = 0;
+            $state['created_speaker_headshot_id'] = 0;
             $state['course_id'] = 0;
             $state['rolled_back_at'] = gmdate('c');
             $state['updated_at'] = gmdate('c');
@@ -688,7 +914,7 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         return $rule_id;
     }
 
-    private function assert_targets($source, $course_id, $expected_status, $sections = null) {
+    private function assert_targets($source, $course_id, $expected_status, $sections = null, $title_mode = 'source') {
         $sections = is_array($sections) ? $sections : self::sections();
         $course = get_post($course_id);
         if (!$course instanceof WP_Post
@@ -723,10 +949,17 @@ class TSOL_Library_New_Marketer_Workshop_Import {
             $position = $index + 1;
             $section = self::section_for_lesson($position, $sections);
             $key = sprintf('new-marketer-workshop-lesson-%02d-%s', $position, $expected['provider_id']);
+            $expected_title = 'canonical' === $title_mode
+                ? self::canonical_titles()[$index]
+                : (string) $expected['display_title'];
+            $expected_slug = 'canonical' === $title_mode
+                ? sanitize_title($expected_title)
+                : sprintf('lesson-%02d-%s', $position, sanitize_title($expected_title));
             if (!$lesson instanceof WP_Post
                 || TSOL_Library_Content_Model::ITEM_POST_TYPE !== $lesson->post_type
                 || $expected_status !== $lesson->post_status
-                || (string) $expected['display_title'] !== (string) $lesson->post_title
+                || ('ignore' !== $title_mode && $expected_title !== (string) $lesson->post_title)
+                || ('ignore' !== $title_mode && $expected_slug !== (string) $lesson->post_name)
                 || null === $section
                 || $position - (int) $section['start'] + 1 !== (int) get_post_meta($lesson_id, TSOL_Library_Content_Model::META_POSITION, true)
             ) {
@@ -756,6 +989,232 @@ class TSOL_Library_New_Marketer_Workshop_Import {
         }
         if (self::EXPECTED_LESSONS !== count(array_unique($provider_ids))) {
             throw new RuntimeException('The imported workshop contains a duplicate Vimeo source.');
+        }
+    }
+
+    private static function canonical_titles() {
+        return array(
+            'Quantifying Your Information Marketing Goals',
+            'What Constitutes a Good Offer',
+            'How to Solve Your Most Pressing Marketing Problems',
+            'Decide on a Niche Market',
+            'Build a Massive Network',
+            'Become a Media Mogul',
+            'Get Into Production Mode',
+            'Build a Learning Center',
+            'Build a Community Around Your Ideas',
+            'Build an Affiliate Army',
+            'Position Yourself as an Educator in Your Niche',
+            'Start a Weekly Workshop',
+            'Developing USPs — Marketing Frameworks',
+            'Creating an Offer Series — Product Snowball Week',
+            'Plant Your Flag — Content Factory Week',
+            'Chaos Theory — Building a Massive Network',
+            'Audio Mastery',
+            'Prioritize Minimum Monetization',
+            'Structure Your Learning Center Offer',
+            'Online Community Deep Dive — Build a Community Around Your Ideas',
+            'Raise and Build an Affiliate Army',
+            'Define and Promote Your Core Ideas',
+            'Position Yourself as an Educator — What to Do About Competition',
+            'Do a Weekly Workshop — Start With the Offer',
+            'Build a Product Snowball',
+            'Marketing Framework — How to Solve Any Marketing Problem',
+            'Unique Information Products — Weekly Training — Content Factory',
+            'Thinking Inside the Box — Build a Massive Network',
+            'Keep Your Prospects Close and Your Customers Closer — Become a Media Mogul',
+            'Creating a Personal USP — Build a Learning Center',
+            'Intentional Buyer Focus — Get Into Production Mode',
+            'Paid Community Masterclass — Build a Community Around Your Ideas',
+            'Free Offers and Viral Applications — Build an Affiliate Army',
+            'Core Ideas Summit — Define and Promote Your Core Ideas',
+            'Interview List Holders — Position Yourself as an Educator',
+            'Repurposing the Workshop for Traffic — Do a Weekly Workshop',
+            'Investing in R and D — Build a Product Snowball',
+            'Brand Level Strategy — Develop a Strategic Framework',
+            'Journey and Teach — Create a Content Factory',
+            'Do Affiliate Promotions — Build a Massive Network',
+            'Choose the Right Social Network for Traffic — Become a Media Mogul',
+            'The Truth About Information Marketing',
+            'The Learning Center Platform — Build a Learning Center',
+            'LinkedIn Groups — Build a Community Around Your Ideas',
+            'Rules for Your Affiliate Program',
+            'Create a Video Diary — Define and Promote Your Core Ideas',
+            'Wrap-Up: First Steps — Position Yourself as an Educator',
+            'Wrap-Up: Traffic for Your Workshop — Do a Weekly Workshop',
+            'The Developmental Funnel — Build a Product Snowball',
+            'Automate Marketing Fundamentals — Strategic Marketing',
+            'Weave in Your Personal Story and Personality',
+            'Network from a Position of Strength — Build a Massive Network',
+        );
+    }
+
+    private function create_canonical_thumbnail($course_id) {
+        $attachment_id = $this->sideload_bundled_asset(
+            self::THUMBNAIL_ASSET,
+            self::THUMBNAIL_SOURCE_SHA256,
+            'the-new-marketer-workshop.png',
+            $course_id,
+            'The New Marketer Workshop'
+        );
+        update_post_meta($attachment_id, '_wp_attachment_image_alt', 'The New Marketer Workshop course artwork');
+        update_post_meta($attachment_id, '_tsol_library_canonical_reference_url', self::THUMBNAIL_REFERENCE_URL);
+        update_post_meta($attachment_id, '_tsol_library_canonical_asset_sha256', self::THUMBNAIL_SOURCE_SHA256);
+        if (!set_post_thumbnail($course_id, $attachment_id)) {
+            wp_delete_attachment($attachment_id, true);
+            throw new RuntimeException('Could not attach the canonical workshop artwork to the Course.');
+        }
+        return (int) $attachment_id;
+    }
+
+    private function create_canonical_speaker($course_id) {
+        if (!empty(TSOL_Library_Content_Model::direct_speaker_ids($course_id))) {
+            throw new RuntimeException('The workshop Course already has a direct speaker; speaker migration stopped for review.');
+        }
+        if (get_page_by_path('charles-terrence-harper', OBJECT, TSOL_Library_Content_Model::SPEAKER_POST_TYPE) instanceof WP_Post) {
+            throw new RuntimeException('A Charles Terrence Harper speaker slug already exists outside this migration.');
+        }
+
+        $speaker_id = wp_insert_post(wp_slash(array(
+            'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+            'post_status' => 'publish',
+            'post_title' => 'Charles Terrence Harper',
+            'post_name' => 'charles-terrence-harper',
+            'post_excerpt' => 'Charles Terrence Harper is a digital-marketing trainer and instructional content creator with more than a decade of experience creating practical, step-by-step video training.',
+            'post_content' => '<p>Charles Terrence Harper is a creator and technical trainer at The PLR Show and GainMindshare. Since 2011, he has created instructional video content for marketers and entrepreneurs, including work produced behind the scenes for other publishers. The PLR Show credits him with developing more than 300 instructional training courses.</p><p>His published credentials include a BS in Economics from the Wharton School of the University of Pennsylvania, an MBA from Syracuse University, and postgraduate study in Instructional Technology at Duquesne University. His publisher biography also lists doctoral study in Organizational Leadership at Eastern University.</p><p>Charles has taught marketing to small businesses and business-opportunity audiences. He has also served as an adjunct instructor at Eastern University and taught online for colleges and universities.</p>',
+        )), true);
+        if (is_wp_error($speaker_id)) {
+            throw new RuntimeException($speaker_id->get_error_message());
+        }
+        $speaker_id = (int) $speaker_id;
+        update_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_UUID, $this->deterministic_uuid('speaker-charles-terrence-harper'));
+        update_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, 'Creator and Technical Trainer');
+        update_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION, 'The PLR Show / GainMindshare');
+        update_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_WEBSITE_URL, 'https://theplrshow.com/');
+        update_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_SOCIAL_LINKS, array(
+            array('platform' => 'linkedin', 'url' => 'https://www.linkedin.com/in/gainmindshare'),
+        ));
+        update_post_meta($speaker_id, '_tsol_library_new_marketer_speaker_version', self::SPEAKER_VERSION);
+
+        try {
+            $headshot_id = $this->sideload_bundled_asset(
+                self::SPEAKER_HEADSHOT_ASSET,
+                self::SPEAKER_HEADSHOT_SOURCE_SHA256,
+                'charles-terrence-harper.png',
+                $speaker_id,
+                'Charles Terrence Harper'
+            );
+            update_post_meta($headshot_id, '_wp_attachment_image_alt', 'Charles Terrence Harper');
+            update_post_meta($headshot_id, '_tsol_library_canonical_reference_url', self::SPEAKER_HEADSHOT_REFERENCE_URL);
+            update_post_meta($headshot_id, '_tsol_library_canonical_asset_sha256', self::SPEAKER_HEADSHOT_SOURCE_SHA256);
+            if (!TSOL_Library_Content_Model::ensure_speaker_image_size($headshot_id)) {
+                throw new RuntimeException('Could not prepare the square Charles Terrence Harper headshot.');
+            }
+            if (!set_post_thumbnail($speaker_id, $headshot_id)) {
+                throw new RuntimeException('Could not attach the Charles Terrence Harper headshot.');
+            }
+            add_post_meta($course_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, $speaker_id, false);
+        } catch (Throwable $exception) {
+            if (!empty($headshot_id) && get_post($headshot_id) instanceof WP_Post) {
+                wp_delete_attachment($headshot_id, true);
+            }
+            wp_delete_post($speaker_id, true);
+            throw $exception;
+        }
+
+        return array('speaker_id' => $speaker_id, 'headshot_id' => (int) $headshot_id);
+    }
+
+    private function refresh_canonical_speaker_headshot($course_id, $speaker_id) {
+        $speaker = get_post($speaker_id);
+        if (!$speaker instanceof WP_Post
+            || TSOL_Library_Content_Model::SPEAKER_POST_TYPE !== $speaker->post_type
+            || array($speaker_id) !== TSOL_Library_Content_Model::direct_speaker_ids($course_id)
+            || self::LEGACY_SPEAKER_VERSION !== (string) get_post_meta($speaker_id, '_tsol_library_new_marketer_speaker_version', true)
+        ) {
+            throw new RuntimeException('The existing workshop speaker profile cannot be safely refreshed.');
+        }
+
+        $previous_headshot_id = (int) get_post_thumbnail_id($speaker_id);
+        $headshot_id = $this->sideload_bundled_asset(
+            self::SPEAKER_HEADSHOT_ASSET,
+            self::SPEAKER_HEADSHOT_SOURCE_SHA256,
+            'charles-terrence-harper.png',
+            $speaker_id,
+            'Charles Terrence Harper'
+        );
+        update_post_meta($headshot_id, '_wp_attachment_image_alt', 'Charles Terrence Harper');
+        update_post_meta($headshot_id, '_tsol_library_canonical_reference_url', self::SPEAKER_HEADSHOT_REFERENCE_URL);
+        update_post_meta($headshot_id, '_tsol_library_canonical_asset_sha256', self::SPEAKER_HEADSHOT_SOURCE_SHA256);
+        if (!TSOL_Library_Content_Model::ensure_speaker_image_size($headshot_id)
+            || !set_post_thumbnail($speaker_id, $headshot_id)
+        ) {
+            wp_delete_attachment($headshot_id, true);
+            throw new RuntimeException('Could not attach the opaque Charles Terrence Harper headshot.');
+        }
+        update_post_meta($speaker_id, '_tsol_library_new_marketer_speaker_version', self::SPEAKER_VERSION);
+
+        return array(
+            'speaker_id' => $speaker_id,
+            'headshot_id' => (int) $headshot_id,
+            'previous_headshot_id' => $previous_headshot_id,
+        );
+    }
+
+    private function sideload_bundled_asset($relative_path, $expected_sha256, $filename, $parent_id, $description) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $source = trailingslashit(dirname(__DIR__, 3)) . ltrim((string) $relative_path, '/');
+        if (!is_file($source) || !hash_equals((string) $expected_sha256, (string) hash_file('sha256', $source))) {
+            throw new RuntimeException(sprintf('Bundled migration asset %s is missing or changed.', basename($source)));
+        }
+        $temporary = wp_tempnam((string) $filename);
+        if (!is_string($temporary) || '' === $temporary || !copy($source, $temporary)) {
+            throw new RuntimeException(sprintf('Could not prepare bundled migration asset %s.', basename($source)));
+        }
+        $attachment_id = media_handle_sideload(array(
+            'name' => (string) $filename,
+            'tmp_name' => $temporary,
+        ), (int) $parent_id, (string) $description);
+        if (is_wp_error($attachment_id)) {
+            @unlink($temporary);
+            throw new RuntimeException($attachment_id->get_error_message());
+        }
+        return (int) $attachment_id;
+    }
+
+    private function assert_canonical_thumbnail($course_id) {
+        $thumbnail_id = (int) get_post_thumbnail_id($course_id);
+        if ($thumbnail_id <= 0
+            || 'image/png' !== (string) get_post_mime_type($thumbnail_id)
+            || self::THUMBNAIL_REFERENCE_URL !== (string) get_post_meta($thumbnail_id, '_tsol_library_canonical_reference_url', true)
+            || self::THUMBNAIL_SOURCE_SHA256 !== (string) get_post_meta($thumbnail_id, '_tsol_library_canonical_asset_sha256', true)
+        ) {
+            throw new RuntimeException('The workshop Course canonical thumbnail is missing or changed.');
+        }
+    }
+
+    private function assert_canonical_speaker($course_id, $speaker_id) {
+        $speaker = get_post($speaker_id);
+        $speaker_ids = TSOL_Library_Content_Model::direct_speaker_ids($course_id);
+        $headshot_id = $speaker instanceof WP_Post ? (int) get_post_thumbnail_id($speaker_id) : 0;
+        if (!$speaker instanceof WP_Post
+            || TSOL_Library_Content_Model::SPEAKER_POST_TYPE !== $speaker->post_type
+            || 'publish' !== $speaker->post_status
+            || 'Charles Terrence Harper' !== $speaker->post_title
+            || 'charles-terrence-harper' !== $speaker->post_name
+            || array($speaker_id) !== $speaker_ids
+            || 'Creator and Technical Trainer' !== (string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, true)
+            || 'The PLR Show / GainMindshare' !== (string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION, true)
+            || 'https://theplrshow.com/' !== (string) get_post_meta($speaker_id, TSOL_Library_Content_Model::SPEAKER_META_WEBSITE_URL, true)
+            || self::SPEAKER_VERSION !== (string) get_post_meta($speaker_id, '_tsol_library_new_marketer_speaker_version', true)
+            || $headshot_id <= 0
+            || self::SPEAKER_HEADSHOT_REFERENCE_URL !== (string) get_post_meta($headshot_id, '_tsol_library_canonical_reference_url', true)
+            || self::SPEAKER_HEADSHOT_SOURCE_SHA256 !== (string) get_post_meta($headshot_id, '_tsol_library_canonical_asset_sha256', true)
+        ) {
+            throw new RuntimeException('The workshop canonical Charles Terrence Harper speaker profile is missing or changed.');
         }
     }
 
