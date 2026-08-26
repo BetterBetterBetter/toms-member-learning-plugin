@@ -14,6 +14,17 @@ It is deliberately separate from the legacy MemberPress Courses system.
 - The 124 published legacy `mpcs-course` posts and 23 source Pages remain
   unchanged and continue serving the existing WordPress frontend.
 
+## Environment migration
+
+**TSOL Library → Migration** exports and imports only this WordPress-owned
+Library model and its portable Access Groups configuration. Relationships use
+content UUIDs, membership assignments use MemberPress product slugs, and media
+uses upload-path references; binary files are not bundled. The standalone app
+database and member-created app data are outside the package boundary. Imports
+are previewed, conflict-blocking, exact-confirmation protected, rollbackable,
+and leave Access Groups unpublished until their production access matrix is
+separately verified.
+
 ## Catalogue change delivery
 
 Every exportable editorial save is committed to the plugin-owned monotonic

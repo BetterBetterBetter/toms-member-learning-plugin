@@ -119,6 +119,31 @@ checked or published. A guarded reconciliation can absorb separately shipped
 TSOL-owned Library rules without changing live access; arbitrary MemberPress
 rules are never changed automatically.
 
+## Test-to-production Library migration
+
+Administrators can move the WordPress-owned Library setup under **TSOL Library
+→ Migration**. Export on the test site, upload the JSON file on production,
+review the read-only conflict report, and type the displayed confirmation
+phrase to import. The importer maps Library records by immutable UUID,
+MemberPress memberships by stable slug, and existing uploads by their relative
+WordPress upload path. Older independently imported records may be adopted in
+place only when post type and slug match and either the title or legacy
+authorization source also agrees. Missing upload matches are warnings rather
+than silent binary copies; the original URL is retained for review.
+
+The package contains courses, series, content, Speaker profiles, Library terms,
+homepage curation, attachment references, Access Groups, and membership-to-group
+assignments. It never contains the standalone Library application database,
+application accounts, sessions, progress, notes, bookmarks, WordPress users,
+MemberPress subscriptions or transactions, credentials, logs, generated
+MemberPress rules, or temporary operational state.
+
+Import creates a rollback snapshot and leaves Access Groups as a draft. The
+current production MemberPress rules remain live until an administrator stages
+the imported groups, reviews the full current-user/content decision matrix, and
+explicitly publishes them. An access stage must be rolled back before the
+environment import itself can be rolled back.
+
 The MemberPress Account page includes a **Security** tab for signing the member
 out of the standalone Library on every device. The authenticated action uses a
 POST request, WordPress nonce, and explicit confirmation before placing the

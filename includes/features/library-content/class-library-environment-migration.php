@@ -1,0 +1,856 @@
+<?php
+/**
+ * Portable WordPress-only Library migration packages.
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class TSOL_Library_Environment_Migration {
+
+    const SCHEMA_VERSION = 1;
+    const ROLLBACK_OPTION = 'tsol_library_environment_migration_rollback';
+    const LOCK_OPTION = 'tsol_library_environment_migration_lock';
+    const OWNER_META = '_tsol_library_environment_migration';
+    const ROLLBACK_CONFIRMATION = 'rollback-library-migration';
+
+    public function build_package() {
+        TSOL_Library_Homepage_Curation::reset_cache();
+        $data = array(
+            'posts' => $this->export_posts(),
+            'terms' => $this->export_terms(),
+            'homepage' => $this->export_homepage(),
+            'access_groups' => $this->export_access_groups(),
+        );
+        $manifest = array(
+            'schema_version' => self::SCHEMA_VERSION,
+            'plugin_version' => TSOL_SITE_PLUGIN_VERSION,
+            'source_url' => home_url('/'),
+            'created_at' => gmdate('c'),
+            'scope' => 'wordpress-library-only',
+            'counts' => array(
+                'posts' => count($data['posts']),
+                'terms' => count($data['terms']),
+                'groups' => count((array) ($data['access_groups']['groups'] ?? array())),
+                'membership_assignments' => count((array) ($data['access_groups']['assignments'] ?? array())),
+            ),
+        );
+        $manifest['data_sha256'] = $this->data_hash($data);
+        return array('manifest' => $manifest, 'data' => $data);
+    }
+
+    public function encode($package) {
+        return wp_json_encode($package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    public function decode($json) {
+        $package = json_decode((string) $json, true);
+        if (!is_array($package)) {
+            throw new RuntimeException('The migration file is not valid JSON.');
+        }
+        $this->validate($package);
+        return $package;
+    }
+
+    public function validate($package) {
+        if (!is_array($package)
+            || self::SCHEMA_VERSION !== (int) ($package['manifest']['schema_version'] ?? 0)
+            || 'wordpress-library-only' !== (string) ($package['manifest']['scope'] ?? '')
+            || !is_array($package['data'] ?? null)
+        ) {
+            throw new RuntimeException('This is not a supported TSOL WordPress Library migration package.');
+        }
+        if (!hash_equals((string) ($package['manifest']['data_sha256'] ?? ''), $this->data_hash($package['data']))) {
+            throw new RuntimeException('The migration package checksum is invalid.');
+        }
+        foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+            if (!$this->valid_uuid((string) ($record['uuid'] ?? ''))
+                || !in_array((string) ($record['post_type'] ?? ''), $this->post_types(), true)
+            ) {
+                throw new RuntimeException('The migration package contains an invalid Library record identity.');
+            }
+            if (!in_array((string) ($record['post_status'] ?? ''), array_values(get_post_stati()), true)
+                || !empty(array_diff(array_keys((array) ($record['meta'] ?? array())), $this->portable_meta_keys((string) $record['post_type'])))
+                || !empty(array_diff(array_keys((array) ($record['taxonomies'] ?? array())), $this->taxonomies()))
+            ) {
+                throw new RuntimeException('The migration package contains fields outside the WordPress Library allowlist.');
+            }
+        }
+        foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
+            if (!in_array((string) ($term['taxonomy'] ?? ''), $this->taxonomies(), true)) {
+                throw new RuntimeException('The migration package contains a taxonomy outside the WordPress Library allowlist.');
+            }
+        }
+        return true;
+    }
+
+    public function preview($package) {
+        $this->validate($package);
+        $report = array(
+            'creates' => 0,
+            'updates' => 0,
+            'adoptions' => 0,
+            'unchanged' => 0,
+            'terms' => count((array) ($package['data']['terms'] ?? array())),
+            'groups' => count((array) ($package['data']['access_groups']['groups'] ?? array())),
+            'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
+            'missing_attachments' => array(),
+            'errors' => array(),
+            'warnings' => array(),
+        );
+        $seen = array();
+        $current_fingerprints = array();
+        foreach ($this->export_posts() as $current_record) {
+            $current_fingerprints[(string) $current_record['uuid']] = (string) $current_record['fingerprint'];
+        }
+        foreach ((array) $package['data']['posts'] as $record) {
+            $uuid = (string) $record['uuid'];
+            if (isset($seen[$uuid])) {
+                $report['errors'][] = sprintf('Duplicate Library UUID %s.', $uuid);
+                continue;
+            }
+            $seen[$uuid] = true;
+            $existing = $this->find_post_by_uuid($uuid, (string) $record['post_type']);
+            $slug_owner = $this->find_slug_owner((string) $record['post_name'], (string) $record['post_type']);
+            if ($slug_owner instanceof WP_Post && (!$existing || (int) $slug_owner->ID !== (int) $existing->ID)) {
+                if (!$existing && $this->can_adopt_slug_owner($slug_owner, $record)) {
+                    $existing = $slug_owner;
+                    $report['adoptions']++;
+                } else {
+                    $report['errors'][] = sprintf('The slug “%s” is already owned by another %s record.', $record['post_name'], $record['post_type']);
+                    continue;
+                }
+            }
+            if ($existing) {
+                $report[(string) ($current_fingerprints[$uuid] ?? '') === (string) ($record['fingerprint'] ?? '') ? 'unchanged' : 'updates']++;
+            } else {
+                $report['creates']++;
+            }
+            foreach ($this->record_attachment_refs($record) as $attachment) {
+                if (!$this->resolve_attachment($attachment)) {
+                    $key = (string) ($attachment['relative_file'] ?? $attachment['source_url'] ?? 'unknown');
+                    $report['missing_attachments'][$key] = $key;
+                }
+            }
+            if (!empty($record['legacy_authorization']) && !$this->resolve_external_post($record['legacy_authorization'])) {
+                $report['errors'][] = sprintf('Legacy authorization source for “%s” is missing in production.', $record['post_title']);
+            }
+        }
+        foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
+            $attachment = (array) ($term['meta']['hero_attachment'] ?? array());
+            if (!empty($attachment) && !$this->resolve_attachment($attachment)) {
+                $key = (string) ($attachment['relative_file'] ?? $attachment['source_url'] ?? 'unknown');
+                $report['missing_attachments'][$key] = $key;
+            }
+        }
+        $memberships = $this->membership_index();
+        foreach ((array) ($package['data']['access_groups']['assignments'] ?? array()) as $slug => $groups) {
+            if (!isset($memberships[sanitize_title((string) $slug)])) {
+                $report['errors'][] = sprintf('MemberPress membership “%s” is missing in production.', $slug);
+            }
+        }
+        if (!empty($report['missing_attachments'])) {
+            $report['warnings'][] = sprintf(
+                '%d attachment reference could not be matched by its WordPress upload path. External URLs are preserved, but those files should be checked after import.',
+                count($report['missing_attachments'])
+            );
+        }
+        $report['missing_attachments'] = array_values($report['missing_attachments']);
+        $report['package_hash'] = (string) $package['manifest']['data_sha256'];
+        return $report;
+    }
+
+    public function apply($package, $expected_hash) {
+        $report = $this->preview($package);
+        if (!hash_equals((string) $report['package_hash'], (string) $expected_hash)) {
+            throw new RuntimeException('The migration preview changed. Upload the package again before importing.');
+        }
+        if (!empty($report['errors'])) {
+            throw new RuntimeException('The migration has blocking conflicts and was not applied.');
+        }
+        if (!empty(get_option(TSOL_Library_Access_Groups::STAGE_OPTION, array()))) {
+            throw new RuntimeException('Roll back or finish the current Access Groups stage before importing.');
+        }
+
+        return $this->with_lock(function () use ($package, $report) {
+            $before = $this->build_package();
+            $raw_before = array(
+                'access_groups' => get_option(TSOL_Library_Access_Groups::OPTION_NAME, null),
+                'homepage' => get_option(TSOL_Library_Homepage_Curation::OPTION_NAME, null),
+                'authorization' => $this->authorization_snapshot(),
+            );
+            $created = array('posts' => array(), 'terms' => array());
+            try {
+                $this->apply_data($package, (string) $report['package_hash'], $created);
+            } catch (Throwable $exception) {
+                $recovery_created = array('posts' => array(), 'terms' => array());
+                $this->apply_data($before, 'automatic-recovery', $recovery_created);
+                foreach (array_reverse($created['posts']) as $post_id) {
+                    wp_delete_post((int) $post_id, true);
+                }
+                foreach (array_reverse($created['terms']) as $term) {
+                    wp_delete_term((int) $term['term_id'], (string) $term['taxonomy']);
+                }
+                $this->restore_raw_options($raw_before);
+                throw $exception;
+            }
+            update_option(self::ROLLBACK_OPTION, array(
+                'schema_version' => self::SCHEMA_VERSION,
+                'package' => base64_encode(gzencode($this->encode($before), 6)),
+                'raw_options' => $raw_before,
+                'created' => $created,
+                'import_hash' => (string) $report['package_hash'],
+                'created_at' => gmdate('c'),
+            ), false);
+            return array_merge($report, array('created_ids' => $created, 'applied_at' => gmdate('c')));
+        });
+    }
+
+    public function rollback($confirmation) {
+        if (self::ROLLBACK_CONFIRMATION !== (string) $confirmation) {
+            throw new RuntimeException('Enter the exact Library migration rollback confirmation.');
+        }
+        if (!empty(get_option(TSOL_Library_Access_Groups::STAGE_OPTION, array()))) {
+            throw new RuntimeException('Roll back the Access Groups stage before rolling back the Library migration.');
+        }
+        return $this->with_lock(function () {
+            $state = get_option(self::ROLLBACK_OPTION, array());
+            $encoded = (string) ($state['package'] ?? '');
+            $json = $encoded === '' ? false : gzdecode((string) base64_decode($encoded, true));
+            if (false === $json) {
+                throw new RuntimeException('No valid Library migration rollback snapshot is available.');
+            }
+            $package = $this->decode($json);
+            $rollback_created = array('posts' => array(), 'terms' => array());
+            $this->apply_data($package, 'rollback', $rollback_created);
+            foreach (array_reverse((array) ($state['created']['posts'] ?? array())) as $post_id) {
+                if ((string) get_post_meta((int) $post_id, self::OWNER_META, true) === (string) ($state['import_hash'] ?? '')) {
+                    wp_delete_post((int) $post_id, true);
+                }
+            }
+            foreach (array_reverse((array) ($state['created']['terms'] ?? array())) as $term) {
+                wp_delete_term((int) ($term['term_id'] ?? 0), (string) ($term['taxonomy'] ?? ''));
+            }
+            $this->restore_raw_options((array) ($state['raw_options'] ?? array()));
+            delete_option(self::ROLLBACK_OPTION);
+            return array('phase' => 'rolled_back', 'rolled_back_at' => gmdate('c'));
+        });
+    }
+
+    public function rollback_state() {
+        $state = get_option(self::ROLLBACK_OPTION, array());
+        return is_array($state) ? $state : array();
+    }
+
+    private function apply_data($package, $owner_hash, &$created) {
+        $this->validate($package);
+        $term_ids = $this->upsert_terms((array) $package['data']['terms'], $created);
+        $post_ids = array();
+        foreach ((array) $package['data']['posts'] as $record) {
+            $existing = $this->find_post_by_uuid((string) $record['uuid'], (string) $record['post_type']);
+            if (!$existing) {
+                $candidate = $this->find_slug_owner((string) $record['post_name'], (string) $record['post_type']);
+                if ($candidate instanceof WP_Post && $this->can_adopt_slug_owner($candidate, $record)) {
+                    $existing = $candidate;
+                }
+            }
+            $payload = array(
+                'post_type' => (string) $record['post_type'],
+                'post_status' => (string) $record['post_status'],
+                'post_name' => (string) $record['post_name'],
+                'post_title' => (string) $record['post_title'],
+                'post_content' => (string) $record['post_content'],
+                'post_excerpt' => (string) $record['post_excerpt'],
+                'menu_order' => (int) $record['menu_order'],
+                'post_parent' => 0,
+            );
+            if ($existing) {
+                $payload['ID'] = (int) $existing->ID;
+                $post_id = wp_update_post(wp_slash($payload), true);
+            } else {
+                $post_id = wp_insert_post(wp_slash($payload), true);
+                if (!is_wp_error($post_id)) {
+                    $created['posts'][] = (int) $post_id;
+                }
+            }
+            if (is_wp_error($post_id) || (int) $post_id <= 0) {
+                throw new RuntimeException(sprintf('Could not import Library record “%s”.', $record['post_title']));
+            }
+            $post_ids[(string) $record['uuid']] = (int) $post_id;
+            update_post_meta((int) $post_id, $this->uuid_key((string) $record['post_type']), (string) $record['uuid']);
+            if (in_array((int) $post_id, $created['posts'], true)) {
+                update_post_meta((int) $post_id, self::OWNER_META, $owner_hash);
+            }
+        }
+
+        $transition = array();
+        foreach ((array) $package['data']['posts'] as $record) {
+            $post_id = (int) $post_ids[(string) $record['uuid']];
+            if (!empty($record['parent_uuid']) && isset($post_ids[$record['parent_uuid']])) {
+                wp_update_post(array('ID' => $post_id, 'post_parent' => (int) $post_ids[$record['parent_uuid']]));
+            }
+            $this->import_post_meta($post_id, $record, $post_ids);
+            foreach ((array) ($record['taxonomies'] ?? array()) as $taxonomy => $slugs) {
+                $ids = array();
+                foreach ((array) $slugs as $slug) {
+                    if (isset($term_ids[$taxonomy][$slug])) {
+                        $ids[] = (int) $term_ids[$taxonomy][$slug];
+                    }
+                }
+                wp_set_object_terms($post_id, $ids, (string) $taxonomy, false);
+            }
+            $attachment_id = $this->resolve_attachment((array) ($record['featured_attachment'] ?? array()));
+            if ($attachment_id) {
+                set_post_thumbnail($post_id, $attachment_id);
+            } else {
+                delete_post_thumbnail($post_id);
+            }
+            if (!empty($record['legacy_authorization'])) {
+                $authorization_id = $this->resolve_external_post($record['legacy_authorization']);
+                if (!$authorization_id) {
+                    throw new RuntimeException(sprintf('Legacy authorization source for “%s” disappeared during import.', $record['post_title']));
+                }
+                update_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $authorization_id);
+                $transition[$post_id] = $authorization_id;
+            }
+        }
+
+        $this->import_term_meta((array) $package['data']['terms'], $term_ids, $post_ids);
+
+        $this->import_homepage((array) ($package['data']['homepage'] ?? array()), $post_ids);
+        $access = (array) ($package['data']['access_groups'] ?? array());
+        if (!empty($access['groups'])) {
+            (new TSOL_Library_Access_Groups())->import_portable_configuration(
+                (array) $access['groups'],
+                (array) $access['assignments'],
+                (array) $access['exceptions'],
+                $transition
+            );
+        } else {
+            delete_option(TSOL_Library_Access_Groups::OPTION_NAME);
+        }
+        TSOL_Library_Homepage_Curation::reset_cache();
+        return $created;
+    }
+
+    private function export_posts() {
+        $records = array();
+        $posts = get_posts(array(
+            'post_type' => $this->post_types(),
+            'post_status' => array_values(get_post_stati()),
+            'posts_per_page' => -1,
+            'orderby' => array('post_type' => 'ASC', 'ID' => 'ASC'),
+            'suppress_filters' => true,
+        ));
+        foreach ($posts as $post) {
+            $uuid = (string) get_post_meta($post->ID, $this->uuid_key($post->post_type), true);
+            if (!$this->valid_uuid($uuid)) {
+                throw new RuntimeException(sprintf('Library record #%d is missing its immutable UUID.', $post->ID));
+            }
+            $parent_uuid = $post->post_parent ? $this->post_uuid((int) $post->post_parent) : '';
+            $record = array(
+                'uuid' => $uuid,
+                'post_type' => (string) $post->post_type,
+                'post_status' => (string) $post->post_status,
+                'post_name' => (string) $post->post_name,
+                'post_title' => (string) $post->post_title,
+                'post_content' => (string) $post->post_content,
+                'post_excerpt' => (string) $post->post_excerpt,
+                'menu_order' => (int) $post->menu_order,
+                'parent_uuid' => $parent_uuid,
+                'meta' => $this->export_post_meta((int) $post->ID, (string) $post->post_type),
+                'taxonomies' => $this->export_post_terms((int) $post->ID),
+                'speaker_uuids' => array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', get_post_meta($post->ID, TSOL_Library_Content_Model::META_SPEAKER_IDS, false))))),
+                'featured_attachment' => $this->attachment_ref((int) get_post_thumbnail_id($post->ID)),
+                'legacy_authorization' => $this->legacy_authorization_ref((int) $post->ID),
+            );
+            $record['fingerprint'] = $this->record_fingerprint($record);
+            $records[] = $record;
+        }
+        return $records;
+    }
+
+    private function export_post_meta($post_id, $post_type) {
+        $excluded = array(
+            $this->uuid_key($post_type),
+            TSOL_Library_Content_Model::META_COURSE_ID,
+            TSOL_Library_Content_Model::META_SERIES_ID,
+            TSOL_Library_Content_Model::META_SPEAKER_IDS,
+            TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
+            TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID,
+        );
+        $keys = $this->portable_meta_keys($post_type);
+        $meta = array();
+        foreach (array_diff($keys, $excluded) as $key) {
+            if (metadata_exists('post', $post_id, $key)) {
+                $value = get_post_meta($post_id, $key, true);
+                $meta[$key] = $this->portable_attachment_values($value);
+            }
+        }
+        $course_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
+        $series_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        if ($course_id) {
+            $meta[TSOL_Library_Content_Model::META_COURSE_ID] = array('__post_uuid' => $this->post_uuid($course_id));
+        }
+        if ($series_id) {
+            $meta[TSOL_Library_Content_Model::META_SERIES_ID] = array('__post_uuid' => $this->post_uuid($series_id));
+        }
+        ksort($meta, SORT_STRING);
+        return $meta;
+    }
+
+    private function import_post_meta($post_id, $record, $post_ids) {
+        foreach ($this->portable_meta_keys((string) $record['post_type']) as $key) {
+            if (!array_key_exists($key, (array) ($record['meta'] ?? array()))) {
+                delete_post_meta($post_id, $key);
+            }
+        }
+        foreach ((array) ($record['meta'] ?? array()) as $key => $value) {
+            if (is_array($value) && isset($value['__post_uuid'])) {
+                $value = (int) ($post_ids[(string) $value['__post_uuid']] ?? 0);
+            } else {
+                $value = $this->restore_attachment_values($value);
+            }
+            update_post_meta($post_id, (string) $key, $value);
+        }
+        delete_post_meta($post_id, TSOL_Library_Content_Model::META_SPEAKER_IDS);
+        foreach ((array) ($record['speaker_uuids'] ?? array()) as $speaker_uuid) {
+            if (isset($post_ids[$speaker_uuid])) {
+                add_post_meta($post_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, (int) $post_ids[$speaker_uuid], false);
+            }
+        }
+    }
+
+    private function export_terms() {
+        $records = array();
+        foreach ($this->taxonomies() as $taxonomy) {
+            $terms = get_terms(array('taxonomy' => $taxonomy, 'hide_empty' => false));
+            if (is_wp_error($terms)) {
+                throw new RuntimeException($terms->get_error_message());
+            }
+            foreach ($terms as $term) {
+                $parent = $term->parent ? get_term((int) $term->parent, $taxonomy) : null;
+                $record = array(
+                    'taxonomy' => $taxonomy,
+                    'slug' => (string) $term->slug,
+                    'name' => (string) $term->name,
+                    'description' => (string) $term->description,
+                    'parent_slug' => $parent instanceof WP_Term ? (string) $parent->slug : '',
+                    'meta' => array(),
+                );
+                if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
+                    $record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] = (string) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, true);
+                    $record['meta']['hero_attachment'] = $this->attachment_ref((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, true));
+                    $record['meta']['featured_course_uuid'] = $this->post_uuid((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, true));
+                }
+                $records[] = $record;
+            }
+        }
+        return $records;
+    }
+
+    private function upsert_terms($records, &$created) {
+        $ids = array();
+        foreach ($records as $record) {
+            $taxonomy = (string) $record['taxonomy'];
+            $slug = sanitize_title((string) $record['slug']);
+            $existing = get_term_by('slug', $slug, $taxonomy);
+            if ($existing instanceof WP_Term) {
+                $term_id = (int) $existing->term_id;
+                wp_update_term($term_id, $taxonomy, array('name' => (string) $record['name'], 'description' => (string) $record['description']));
+            } else {
+                $result = wp_insert_term((string) $record['name'], $taxonomy, array('slug' => $slug, 'description' => (string) $record['description']));
+                if (is_wp_error($result)) {
+                    throw new RuntimeException($result->get_error_message());
+                }
+                $term_id = (int) $result['term_id'];
+                $created['terms'][] = array('term_id' => $term_id, 'taxonomy' => $taxonomy);
+            }
+            $ids[$taxonomy][$slug] = $term_id;
+        }
+        foreach ($records as $record) {
+            $taxonomy = (string) $record['taxonomy'];
+            $slug = sanitize_title((string) $record['slug']);
+            $term_id = (int) $ids[$taxonomy][$slug];
+            $parent_id = !empty($record['parent_slug']) ? (int) ($ids[$taxonomy][$record['parent_slug']] ?? 0) : 0;
+            wp_update_term($term_id, $taxonomy, array('parent' => $parent_id));
+            if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
+                update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, (string) ($record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] ?? ''));
+                $hero_id = $this->resolve_attachment((array) ($record['meta']['hero_attachment'] ?? array()));
+                update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_id);
+            }
+        }
+        return $ids;
+    }
+
+    private function import_term_meta($records, $term_ids, $post_ids) {
+        foreach ($records as $record) {
+            if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY !== (string) $record['taxonomy']) {
+                continue;
+            }
+            $term_id = (int) ($term_ids[$record['taxonomy']][$record['slug']] ?? 0);
+            if (!$term_id) {
+                continue;
+            }
+            $featured_uuid = (string) ($record['meta']['featured_course_uuid'] ?? '');
+            update_term_meta(
+                $term_id,
+                TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID,
+                (int) ($post_ids[$featured_uuid] ?? 0)
+            );
+        }
+    }
+
+    private function export_homepage() {
+        $layout = TSOL_Library_Homepage_Curation::layout();
+        $rails = array();
+        foreach ((array) ($layout['rails'] ?? array()) as $rail => $post_ids) {
+            $rails[$rail] = array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', (array) $post_ids))));
+        }
+        return array('version' => 1, 'rails' => $rails);
+    }
+
+    private function import_homepage($portable, $post_ids) {
+        $rails = array();
+        foreach (array_keys(TSOL_Library_Homepage_Curation::rails()) as $rail) {
+            $rails[$rail] = array();
+            foreach ((array) ($portable['rails'][$rail] ?? array()) as $uuid) {
+                if (isset($post_ids[$uuid])) {
+                    $rails[$rail][] = (int) $post_ids[$uuid];
+                }
+            }
+        }
+        update_option(TSOL_Library_Homepage_Curation::OPTION_NAME, array('version' => 1, 'rails' => $rails, 'updated_at' => gmdate('Y-m-d H:i:s')), false);
+    }
+
+    private function export_access_groups() {
+        $configuration = get_option(TSOL_Library_Access_Groups::OPTION_NAME, array());
+        if (!is_array($configuration) || empty($configuration['groups'])) {
+            return array('groups' => array(), 'assignments' => array(), 'exceptions' => array());
+        }
+        $assignments = array();
+        foreach ((array) $configuration['assignments'] as $membership_id => $group_ids) {
+            $membership = get_post((int) $membership_id);
+            if (!$membership instanceof WP_Post || 'memberpressproduct' !== $membership->post_type || '' === $membership->post_name) {
+                throw new RuntimeException(sprintf('Access Groups references missing MemberPress membership #%d.', $membership_id));
+            }
+            $assignments[(string) $membership->post_name] = array_values(array_map('strval', (array) $group_ids));
+        }
+        ksort($assignments, SORT_STRING);
+        $exceptions = array();
+        foreach ((array) ($configuration['exceptions'] ?? array()) as $scope_key => $conditions) {
+            foreach ((array) $conditions as $condition) {
+                if ('membership' === (string) ($condition['access_type'] ?? '')) {
+                    $membership = get_post(absint($condition['access_condition'] ?? 0));
+                    if (!$membership instanceof WP_Post || 'memberpressproduct' !== $membership->post_type || '' === $membership->post_name) {
+                        throw new RuntimeException('An Access Group exception references a missing MemberPress membership.');
+                    }
+                    $condition['access_type'] = 'membership_slug';
+                    $condition['access_condition'] = (string) $membership->post_name;
+                }
+                $exceptions[(string) $scope_key][] = $condition;
+            }
+        }
+        ksort($exceptions, SORT_STRING);
+        return array(
+            'groups' => array_values((array) $configuration['groups']),
+            'assignments' => $assignments,
+            'exceptions' => $exceptions,
+        );
+    }
+
+    private function export_post_terms($post_id) {
+        $result = array();
+        foreach ($this->taxonomies() as $taxonomy) {
+            $slugs = wp_get_object_terms($post_id, $taxonomy, array('fields' => 'slugs'));
+            $result[$taxonomy] = is_wp_error($slugs) ? array() : array_values($slugs);
+        }
+        return $result;
+    }
+
+    private function legacy_authorization_ref($post_id) {
+        $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+        if ($authorization_id === $post_id || !$authorization_id) {
+            $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true);
+        }
+        return $this->external_post_ref($authorization_id);
+    }
+
+    private function external_post_ref($post_id) {
+        $post = get_post((int) $post_id);
+        if (!$post instanceof WP_Post || in_array($post->post_type, $this->post_types(), true)) {
+            return array();
+        }
+        return array(
+            'post_type' => (string) $post->post_type,
+            'slug' => (string) $post->post_name,
+            'path' => (string) get_page_uri($post),
+            'title' => (string) $post->post_title,
+        );
+    }
+
+    private function resolve_external_post($ref) {
+        if (!is_array($ref) || empty($ref['post_type']) || empty($ref['slug'])) {
+            return 0;
+        }
+        if (!empty($ref['path'])) {
+            $post = get_page_by_path((string) $ref['path'], OBJECT, (string) $ref['post_type']);
+            if ($post instanceof WP_Post) {
+                return (int) $post->ID;
+            }
+        }
+        $posts = get_posts(array(
+            'post_type' => (string) $ref['post_type'],
+            'post_status' => array_values(get_post_stati()),
+            'posts_per_page' => 2,
+            'name' => sanitize_title((string) $ref['slug']),
+            'suppress_filters' => true,
+        ));
+        return 1 === count($posts) ? (int) $posts[0]->ID : 0;
+    }
+
+    private function attachment_ref($attachment_id) {
+        $attachment_id = absint($attachment_id);
+        if (!$attachment_id || 'attachment' !== get_post_type($attachment_id)) {
+            return array();
+        }
+        return array(
+            'relative_file' => (string) get_post_meta($attachment_id, '_wp_attached_file', true),
+            'source_url' => (string) wp_get_attachment_url($attachment_id),
+            'mime_type' => (string) get_post_mime_type($attachment_id),
+        );
+    }
+
+    private function resolve_attachment($ref) {
+        global $wpdb;
+        if (!is_array($ref) || empty($ref)) {
+            return 0;
+        }
+        $relative = sanitize_text_field((string) ($ref['relative_file'] ?? ''));
+        if ('' !== $relative) {
+            $id = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_wp_attached_file' AND meta_value = %s ORDER BY post_id ASC LIMIT 1",
+                $relative
+            ));
+            if ($id > 0 && 'attachment' === get_post_type($id)) {
+                return $id;
+            }
+        }
+        $url = esc_url_raw((string) ($ref['source_url'] ?? ''));
+        return $url === '' ? 0 : absint(attachment_url_to_postid($url));
+    }
+
+    private function portable_attachment_values($value) {
+        if (!is_array($value)) {
+            return $value;
+        }
+        $portable = array();
+        foreach ($value as $key => $child) {
+            if ('attachment_id' === (string) $key && absint($child) > 0) {
+                $portable['attachment_ref'] = $this->attachment_ref(absint($child));
+                $portable[$key] = 0;
+            } else {
+                $portable[$key] = $this->portable_attachment_values($child);
+            }
+        }
+        return $portable;
+    }
+
+    private function restore_attachment_values($value) {
+        if (!is_array($value)) {
+            return $value;
+        }
+        $restored = array();
+        foreach ($value as $key => $child) {
+            if ('attachment_ref' === (string) $key) {
+                continue;
+            }
+            $restored[$key] = $this->restore_attachment_values($child);
+        }
+        if (isset($value['attachment_ref'])) {
+            $restored['attachment_id'] = $this->resolve_attachment((array) $value['attachment_ref']);
+            if ('wordpress' === (string) ($restored['provider'] ?? '')) {
+                $restored['provider_id'] = (string) $restored['attachment_id'];
+            }
+        }
+        return $restored;
+    }
+
+    private function record_attachment_refs($record) {
+        $refs = array();
+        if (!empty($record['featured_attachment'])) {
+            $refs[] = $record['featured_attachment'];
+        }
+        $walk = function ($value) use (&$walk, &$refs) {
+            if (!is_array($value)) {
+                return;
+            }
+            if (isset($value['attachment_ref']) && is_array($value['attachment_ref'])) {
+                $refs[] = $value['attachment_ref'];
+            }
+            foreach ($value as $child) {
+                $walk($child);
+            }
+        };
+        $walk((array) ($record['meta'] ?? array()));
+        return $refs;
+    }
+
+    private function post_uuid($post_id) {
+        $post = get_post((int) $post_id);
+        return $post instanceof WP_Post ? (string) get_post_meta($post->ID, $this->uuid_key($post->post_type), true) : '';
+    }
+
+    private function uuid_key($post_type) {
+        return TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post_type
+            ? TSOL_Library_Content_Model::SPEAKER_META_UUID
+            : TSOL_Library_Content_Model::META_UUID;
+    }
+
+    private function find_post_by_uuid($uuid, $post_type) {
+        $posts = get_posts(array(
+            'post_type' => $post_type,
+            'post_status' => array_values(get_post_stati()),
+            'posts_per_page' => 2,
+            'meta_key' => $this->uuid_key($post_type),
+            'meta_value' => $uuid,
+            'suppress_filters' => true,
+        ));
+        if (count($posts) > 1) {
+            throw new RuntimeException(sprintf('Library UUID %s exists more than once in this environment.', $uuid));
+        }
+        return empty($posts) ? null : $posts[0];
+    }
+
+    private function record_fingerprint($record) {
+        unset($record['fingerprint']);
+        return hash('sha256', serialize($record));
+    }
+
+    private function membership_index() {
+        $memberships = array();
+        foreach (get_posts(array('post_type' => 'memberpressproduct', 'post_status' => array_values(get_post_stati(array('internal' => false))), 'posts_per_page' => -1)) as $post) {
+            $memberships[(string) $post->post_name] = (int) $post->ID;
+        }
+        return $memberships;
+    }
+
+    private function find_slug_owner($slug, $post_type) {
+        $posts = get_posts(array(
+            'post_type' => $post_type,
+            'post_status' => array_values(get_post_stati()),
+            'posts_per_page' => 1,
+            'name' => sanitize_title($slug),
+            'suppress_filters' => true,
+        ));
+        return empty($posts) ? null : $posts[0];
+    }
+
+    /**
+     * Older Library imports generated UUIDs independently in each environment.
+     * Permit a one-time identity adoption only when the stable WordPress slug
+     * and either the title or the legacy authorization source also agree.
+     */
+    private function can_adopt_slug_owner($candidate, $record) {
+        if (!$candidate instanceof WP_Post
+            || (string) $candidate->post_type !== (string) ($record['post_type'] ?? '')
+            || (string) $candidate->post_name !== (string) ($record['post_name'] ?? '')
+        ) {
+            return false;
+        }
+        if (trim((string) $candidate->post_title) === trim((string) ($record['post_title'] ?? ''))) {
+            return true;
+        }
+        $incoming = (array) ($record['legacy_authorization'] ?? array());
+        $current = $this->legacy_authorization_ref((int) $candidate->ID);
+        return !empty($incoming['post_type'])
+            && (string) $incoming['post_type'] === (string) ($current['post_type'] ?? '')
+            && (string) ($incoming['path'] ?? '') === (string) ($current['path'] ?? '');
+    }
+
+    private function restore_raw_options($options) {
+        foreach (array('access_groups' => TSOL_Library_Access_Groups::OPTION_NAME, 'homepage' => TSOL_Library_Homepage_Curation::OPTION_NAME) as $key => $option) {
+            if (!array_key_exists($key, $options) || null === $options[$key]) {
+                delete_option($option);
+            } else {
+                update_option($option, $options[$key], false);
+            }
+        }
+        foreach ((array) ($options['authorization'] ?? array()) as $post_id => $value) {
+            if (!get_post((int) $post_id)) {
+                continue;
+            }
+            if (null === $value) {
+                delete_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID);
+            } else {
+                update_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, (int) $value);
+            }
+        }
+        TSOL_Library_Homepage_Curation::reset_cache();
+    }
+
+    private function authorization_snapshot() {
+        $snapshot = array();
+        $post_ids = get_posts(array(
+            'post_type' => TSOL_Library_Content_Model::post_types(),
+            'post_status' => array_values(get_post_stati()),
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+            'suppress_filters' => true,
+        ));
+        foreach ($post_ids as $post_id) {
+            $snapshot[(int) $post_id] = metadata_exists('post', (int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID)
+                ? (int) get_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true)
+                : null;
+        }
+        return $snapshot;
+    }
+
+    private function data_hash($data) {
+        return hash('sha256', wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    private function valid_uuid($uuid) {
+        return (bool) preg_match('/^[a-f0-9-]{20,64}$/i', (string) $uuid);
+    }
+
+    private function post_types() {
+        return array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE));
+    }
+
+    private function taxonomies() {
+        return array(TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, TSOL_Library_Content_Model::TOPIC_TAXONOMY);
+    }
+
+    private function portable_meta_keys($post_type) {
+        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post_type) {
+            return array(
+                TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE,
+                TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION,
+                TSOL_Library_Content_Model::SPEAKER_META_WEBSITE_URL,
+                TSOL_Library_Content_Model::SPEAKER_META_SOCIAL_LINKS,
+            );
+        }
+        return array_values(array_diff(
+            TSOL_Library_Content_Model::metadata_keys_for_post_type($post_type),
+            array(
+                $this->uuid_key($post_type),
+                TSOL_Library_Content_Model::META_SPEAKER_IDS,
+                TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
+                TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID,
+            )
+        ));
+    }
+
+    private function with_lock($callback) {
+        if (!add_option(self::LOCK_OPTION, time(), '', 'no')) {
+            throw new RuntimeException('Another Library migration operation is running.');
+        }
+        try {
+            return call_user_func($callback);
+        } finally {
+            delete_option(self::LOCK_OPTION);
+        }
+    }
+}

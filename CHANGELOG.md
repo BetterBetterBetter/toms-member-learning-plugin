@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-08-26
+
+- Added **TSOL Library → Migration** for checksum-verified, preview-first movement of WordPress-owned Library records, taxonomy, homepage curation, attachment references, Access Groups, and membership assignments between test and production.
+- Explicitly excluded the standalone app database, app accounts, sessions, progress, notes, bookmarks, WordPress users, MemberPress transactions, secrets, logs, generated rules, and temporary state from migration packages.
+- Added stable UUID and membership-slug mapping, guarded adoption of matching records created by older independent imports, blocking identity and authorization conflicts, missing-attachment warnings, exact confirmation phrases, operation locking, and one-step rollback.
+- Imported Access Groups as an unpublished draft and retained the existing MemberPress rules as the live comparison baseline; publication remains blocked whenever the full current-user/content matrix would remove access.
+
 ## 0.3.1 - 2026-08-26
 
 - Allowed production sites without source or host configuration access to save the Library bridge client secret through the existing write-only WordPress setting, while continuing to prefer and protect a server-managed `TSOL_LIBRARY_CLIENT_SECRET` constant when available.

@@ -163,6 +163,113 @@ class TSOL_Library_Access_Groups {
     }
 
     /**
+     * Import a portable, draft-only Access Groups configuration.
+     *
+     * Memberships are addressed by slug and Library scopes already use the
+     * immutable content UUIDs. Generated MemberPress rules, stage state, and
+     * source-site IDs are deliberately never accepted here.
+     */
+    public function import_portable_configuration($raw_groups, $assignments_by_slug, $raw_exceptions, $transition_authorization_ids = array()) {
+        $this->assert_memberpress();
+        if (!empty($this->stage_state())) {
+            throw new RuntimeException('Roll back or finish the current Access Groups stage before importing a migration package.');
+        }
+
+        $groups = $this->sanitize_groups(array_values((array) $raw_groups));
+        $membership_ids = array();
+        foreach ($this->memberships() as $membership) {
+            $slug = sanitize_title((string) $membership->post_name);
+            if ('' === $slug || isset($membership_ids[$slug])) {
+                throw new RuntimeException('MemberPress membership slugs must be unique before importing Access Groups.');
+            }
+            $membership_ids[$slug] = (int) $membership->ID;
+        }
+
+        $assignments = array();
+        foreach ((array) $assignments_by_slug as $membership_slug => $group_ids) {
+            $membership_slug = sanitize_title((string) $membership_slug);
+            if (!isset($membership_ids[$membership_slug])) {
+                throw new RuntimeException(sprintf('The MemberPress membership “%s” is missing in this environment.', $membership_slug));
+            }
+            $valid_group_ids = array();
+            foreach ((array) $group_ids as $group_id) {
+                $group_id = sanitize_key((string) $group_id);
+                if (!isset($groups[$group_id])) {
+                    throw new RuntimeException(sprintf('Membership “%s” references an unknown Access Group.', $membership_slug));
+                }
+                $valid_group_ids[$group_id] = true;
+            }
+            if (!empty($valid_group_ids)) {
+                $assignments[$membership_ids[$membership_slug]] = array_keys($valid_group_ids);
+                sort($assignments[$membership_ids[$membership_slug]], SORT_STRING);
+            }
+        }
+        ksort($assignments, SORT_NUMERIC);
+
+        $definitions = $this->definitions();
+        $exceptions = array();
+        foreach ((array) $raw_exceptions as $scope_key => $conditions) {
+            $scope_key = sanitize_text_field((string) $scope_key);
+            if (!isset($definitions[$scope_key])) {
+                throw new RuntimeException(sprintf('Access exceptions reference an unknown Library scope “%s”.', $scope_key));
+            }
+            foreach ((array) $conditions as $condition) {
+                if ('membership_slug' === (string) ($condition['access_type'] ?? '')) {
+                    $membership_slug = sanitize_title((string) ($condition['access_condition'] ?? ''));
+                    if (!isset($membership_ids[$membership_slug])) {
+                        throw new RuntimeException(sprintf('Access exceptions reference missing MemberPress membership “%s”.', $membership_slug));
+                    }
+                    $condition['access_type'] = 'membership';
+                    $condition['access_condition'] = (string) $membership_ids[$membership_slug];
+                }
+                $condition = $this->normalize_condition($condition);
+                $exceptions[$scope_key][$this->condition_key($condition)] = $condition;
+            }
+            if (isset($exceptions[$scope_key])) {
+                ksort($exceptions[$scope_key], SORT_STRING);
+                $exceptions[$scope_key] = array_values($exceptions[$scope_key]);
+            }
+        }
+        ksort($exceptions, SORT_STRING);
+
+        $transition = array();
+        foreach ((array) $transition_authorization_ids as $target_id => $authorization_id) {
+            $target_id = absint($target_id);
+            $authorization_id = absint($authorization_id);
+            if (!in_array(get_post_type($target_id), TSOL_Library_Content_Model::post_types(), true)
+                || !$authorization_id || !get_post($authorization_id)
+            ) {
+                throw new RuntimeException('The legacy authorization transition contains a missing source or Library target.');
+            }
+            $transition[$target_id] = $authorization_id;
+        }
+        ksort($transition, SORT_NUMERIC);
+
+        $now = gmdate('Y-m-d H:i:s');
+        // Production may already have the plugin-owned native Library rules
+        // created by an earlier catalogue migration. They are the live
+        // baseline that this imported draft will compare against and replace.
+        $source_rules = $this->source_rules();
+        $configuration = array(
+            'schema_version' => self::SCHEMA_VERSION,
+            'revision' => wp_generate_uuid4(),
+            'status' => 'draft',
+            'groups' => $groups,
+            'assignments' => $assignments,
+            'exceptions' => $exceptions,
+            'source_rules' => $source_rules,
+            'source_rule_ids' => array_values(array_map('intval', $source_rules)),
+            'source_fingerprint' => $this->rules_fingerprint($source_rules),
+            'transition_authorization_ids' => $transition,
+            'environment_migration' => true,
+            'imported_at' => $now,
+            'updated_at' => $now,
+        );
+        update_option(self::OPTION_NAME, $configuration, false);
+        return $this->summary($configuration);
+    }
+
+    /**
      * Bring separately shipped, plugin-owned Library rules into the draft.
      *
      * This is deliberately narrower than importing arbitrary MemberPress
@@ -245,6 +352,7 @@ class TSOL_Library_Access_Groups {
             $configuration['source_rules'] = (array) ($stage['rule_ids_by_policy'] ?? array());
             $configuration['source_rule_ids'] = array_values(array_map('intval', (array) ($stage['created_rule_ids'] ?? array())));
             $configuration['source_fingerprint'] = $this->rules_fingerprint($configuration['source_rules']);
+            unset($configuration['transition_authorization_ids'], $configuration['environment_migration']);
             delete_option(self::STAGE_OPTION);
         }
         return $configuration;
@@ -367,7 +475,7 @@ class TSOL_Library_Access_Groups {
                 throw new RuntimeException('Bootstrap Access Groups before staging rules.');
             }
             $unmanaged = $this->unmanaged_effective_rules($configuration);
-            if (!empty($unmanaged)) {
+            if (!empty($unmanaged) && empty($configuration['environment_migration'])) {
                 throw new RuntimeException(sprintf(
                     _n('%d published MemberPress rule affecting the Library is outside Access Groups. Reconcile it before checking changes.', '%d published MemberPress rules affecting the Library are outside Access Groups. Reconcile them before checking changes.', count($unmanaged), 'tomschooloflife-plugin'),
                     count($unmanaged)
@@ -457,6 +565,12 @@ class TSOL_Library_Access_Groups {
                 throw new RuntimeException('Activation is blocked because the staged groups would remove access from a current user.');
             }
             $state = $this->stage_state();
+            $configuration = $this->configuration();
+            foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
+                if ((int) $authorization_id !== (int) get_post_meta((int) $target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true)) {
+                    throw new RuntimeException('A legacy authorization reference changed after the access comparison. Activation stopped.');
+                }
+            }
             foreach ((array) $state['source_rule_ids'] as $rule_id) {
                 if ('publish' === get_post_status((int) $rule_id)) {
                     wp_update_post(array('ID' => (int) $rule_id, 'post_status' => 'draft'));
@@ -465,10 +579,13 @@ class TSOL_Library_Access_Groups {
             foreach ((array) $state['created_rule_ids'] as $rule_id) {
                 wp_update_post(array('ID' => (int) $rule_id, 'post_status' => 'publish'));
             }
+            foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
+                $target_id = (int) $target_id;
+                update_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $target_id);
+            }
             $state['phase'] = 'active';
             $state['activated_at'] = gmdate('Y-m-d H:i:s');
             update_option(self::STAGE_OPTION, $state, false);
-            $configuration = $this->configuration();
             $configuration['status'] = 'active';
             $configuration['activated_at'] = $state['activated_at'];
             update_option(self::OPTION_NAME, $configuration, false);
@@ -487,6 +604,12 @@ class TSOL_Library_Access_Groups {
                 foreach ((array) $state['source_rule_ids'] as $rule_id) {
                     if (get_post((int) $rule_id) instanceof WP_Post) {
                         wp_update_post(array('ID' => (int) $rule_id, 'post_status' => 'publish'));
+                    }
+                }
+                $configuration = $this->configuration();
+                foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
+                    if (get_post((int) $target_id) instanceof WP_Post && get_post((int) $authorization_id) instanceof WP_Post) {
+                        update_post_meta((int) $target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, (int) $authorization_id);
                     }
                 }
             }
@@ -672,6 +795,8 @@ class TSOL_Library_Access_Groups {
         foreach ($this->library_targets() as $target_id) {
             $authorization_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_id = $authorization_id > 0 ? $authorization_id : $target_id;
+            $is_transition_source = isset($configuration['transition_authorization_ids'][$target_id])
+                && (int) $configuration['transition_authorization_ids'][$target_id] === $authorization_id;
             $post = get_post($authorization_id);
             if (!$post instanceof WP_Post) {
                 continue;
@@ -681,6 +806,7 @@ class TSOL_Library_Access_Groups {
                 if ('publish' === get_post_status($rule_id)
                     && !isset($managed_ids[$rule_id])
                     && self::OWNER_VALUE !== (string) get_post_meta($rule_id, self::META_OWNER, true)
+                    && !$is_transition_source
                 ) {
                     $rules[$rule_id] = (string) get_the_title($rule_id);
                 }
@@ -831,10 +957,6 @@ class TSOL_Library_Access_Groups {
                 $rules[(string) $policy_key] = $rule_id;
             }
         }
-        if (!empty($rules)) {
-            ksort($rules, SORT_STRING);
-            return $rules;
-        }
         $rule_ids = get_posts(array(
             'post_type' => MeprRule::$cpt,
             'post_status' => 'publish',
@@ -845,7 +967,7 @@ class TSOL_Library_Access_Groups {
         ));
         foreach ($rule_ids as $rule_id) {
             $policy_key = (string) get_post_meta((int) $rule_id, '_tsol_library_access_policy_key', true);
-            if ('' !== $policy_key) {
+            if ('' !== $policy_key && !isset($rules[$policy_key])) {
                 $rules[$policy_key] = (int) $rule_id;
             }
         }
@@ -1043,6 +1165,8 @@ class TSOL_Library_Access_Groups {
         foreach ($this->library_targets() as $target_id) {
             $authorization_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_id = $authorization_id > 0 ? $authorization_id : $target_id;
+            $is_transition_source = isset($configuration['transition_authorization_ids'][$target_id])
+                && (int) $configuration['transition_authorization_ids'][$target_id] === $authorization_id;
             $old = array();
             $new = array();
             foreach ((array) MeprRule::get_rules(get_post($authorization_id)) as $rule) {
@@ -1054,7 +1178,7 @@ class TSOL_Library_Access_Groups {
                     // Access Groups replace only the imported TSOL-native rule
                     // set. Independently managed MemberPress rules continue to
                     // apply and must be part of the proposed policy too.
-                    if (!isset($replaced_rule_ids[(int) $rule->ID])) {
+                    if (!$is_transition_source && !isset($replaced_rule_ids[(int) $rule->ID])) {
                         $new[$key] = $condition;
                     }
                 }
