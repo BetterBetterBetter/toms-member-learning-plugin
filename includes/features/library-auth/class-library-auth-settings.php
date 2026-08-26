@@ -60,6 +60,10 @@ class TSOL_Library_Auth_Settings {
     }
 
     public function sanitize_secret($value) {
+        if (defined('TSOL_LIBRARY_CLIENT_SECRET')) {
+            return (string) get_option(self::CLIENT_SECRET_OPTION, '');
+        }
+
         $value = trim((string) wp_unslash($value));
         if ($value === '') {
             return (string) get_option(self::CLIENT_SECRET_OPTION, '');
@@ -77,7 +81,6 @@ class TSOL_Library_Auth_Settings {
         }
 
         $secret_from_constant = defined('TSOL_LIBRARY_CLIENT_SECRET');
-        $secret_requires_constant = self::requires_host_managed_secret();
         $secret_is_present = self::client_secret() !== '';
         $secret_is_valid = strlen(self::client_secret()) >= 32;
         $reason = self::readiness_error();
@@ -98,6 +101,9 @@ class TSOL_Library_Auth_Settings {
             <?php endif; ?>
             <?php if ($reason === '' && !$memberpress_ready) : ?>
                 <div class="notice notice-warning inline"><p><?php esc_html_e('WordPress sign-in is ready, but MemberPress is unavailable. Users can authenticate, while protected content will remain unavailable until MemberPress returns.', 'tomschooloflife-plugin'); ?></p></div>
+            <?php endif; ?>
+            <?php if (!$secret_from_constant) : ?>
+                <div class="notice notice-info inline"><p><?php esc_html_e('This site stores the Library client secret as a write-only WordPress setting because no server-managed TSOL_LIBRARY_CLIENT_SECRET constant is available. The value is never displayed after saving. A server-managed constant remains the preferred option when hosting access becomes available.', 'tomschooloflife-plugin'); ?></p></div>
             <?php endif; ?>
             <form method="post" action="options.php">
                 <?php settings_fields('tsol_library_auth'); ?>
@@ -138,8 +144,8 @@ class TSOL_Library_Auth_Settings {
                                     <?php echo esc_html($secret_from_constant ? __('Provided by the server environment', 'tomschooloflife-plugin') : ($secret_is_present ? __('Saved in WordPress; the value is never displayed', 'tomschooloflife-plugin') : __('No secret has been provided yet', 'tomschooloflife-plugin'))); ?>
                                 </span>
                             </p>
-                            <input id="tsol-library-client-secret" class="regular-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr(self::CLIENT_SECRET_OPTION); ?>" value="" <?php disabled($secret_from_constant || $secret_requires_constant); ?> placeholder="<?php echo esc_attr($secret_is_present ? __('Enter a new secret to replace the current one', 'tomschooloflife-plugin') : __('At least 32 characters', 'tomschooloflife-plugin')); ?>">
-                            <p class="description"><?php echo esc_html($secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'tomschooloflife-plugin') : ($secret_requires_constant ? __('Production requires TSOL_LIBRARY_CLIENT_SECRET from the host environment; an editable WordPress option is not accepted.', 'tomschooloflife-plugin') : __('Leave this field blank to keep the current secret. Entering a value replaces it after you save.', 'tomschooloflife-plugin'))); ?></p>
+                            <input id="tsol-library-client-secret" class="regular-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr(self::CLIENT_SECRET_OPTION); ?>" value="" <?php disabled($secret_from_constant); ?> placeholder="<?php echo esc_attr($secret_is_present ? __('Enter a new secret to replace the current one', 'tomschooloflife-plugin') : __('At least 32 characters', 'tomschooloflife-plugin')); ?>">
+                            <p class="description"><?php echo esc_html($secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'tomschooloflife-plugin') : __('Leave this field blank to keep the current secret. Entering a value replaces it after you save; the saved value is never displayed.', 'tomschooloflife-plugin')); ?></p>
                         </td>
                     </tr>
                 </table>
@@ -172,14 +178,7 @@ class TSOL_Library_Auth_Settings {
         if (defined('TSOL_LIBRARY_CLIENT_SECRET')) {
             return trim((string) TSOL_LIBRARY_CLIENT_SECRET);
         }
-        if (self::requires_host_managed_secret()) {
-            return '';
-        }
         return trim((string) get_option(self::CLIENT_SECRET_OPTION, ''));
-    }
-
-    public static function requires_host_managed_secret() {
-        return function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production';
     }
 
     public static function configured() {
@@ -195,9 +194,6 @@ class TSOL_Library_Auth_Settings {
         }
         if (!preg_match('/^[A-Za-z0-9._-]{3,128}$/', self::client_id())) {
             return __('A valid environment-specific client ID is required.', 'tomschooloflife-plugin');
-        }
-        if (self::requires_host_managed_secret() && !defined('TSOL_LIBRARY_CLIENT_SECRET')) {
-            return __('Production requires a host-managed TSOL_LIBRARY_CLIENT_SECRET constant.', 'tomschooloflife-plugin');
         }
         if (strlen(self::client_secret()) < 32) {
             return __('A client secret of at least 32 characters is required.', 'tomschooloflife-plugin');

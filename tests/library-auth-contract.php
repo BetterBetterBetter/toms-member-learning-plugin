@@ -23,6 +23,45 @@ $assert(has_action('admin_post_tsol_library_authorize') !== false, 'Authorizatio
 $assert(has_action('admin_post_tsol_library_logout') !== false, 'Signed logout action is not registered.');
 $assert(wp_next_scheduled('tsol_library_auth_cleanup') !== false, 'Authorization-code cleanup is not scheduled.');
 
+if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
+    $previous_client_secret = get_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, null);
+    $database_client_secret = 'library-auth-contract-database-secret-value';
+    update_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, $database_client_secret, false);
+    $assert(
+        TSOL_Library_Auth_Settings::client_secret() === $database_client_secret,
+        'The write-only WordPress client-secret fallback is unavailable.'
+    );
+    $administrator_ids = get_users(array(
+        'role' => 'administrator',
+        'fields' => 'ID',
+        'number' => 1,
+    ));
+    $assert(!empty($administrator_ids), 'An administrator is required to verify the Library authentication settings UI.');
+    if (!empty($administrator_ids)) {
+        $previous_user_id = get_current_user_id();
+        wp_set_current_user((int) $administrator_ids[0]);
+        ob_start();
+        (new TSOL_Library_Auth_Settings())->render();
+        $settings_html = (string) ob_get_clean();
+        $assert(strpos($settings_html, $database_client_secret) === false, 'The saved client secret was rendered into the settings page.');
+        $secret_input = array();
+        $assert(
+            preg_match('/<input id="tsol-library-client-secret"[^>]*>/', $settings_html, $secret_input) === 1,
+            'The Library client-secret input is missing.'
+        );
+        $assert(
+            empty($secret_input) || strpos($secret_input[0], 'disabled') === false,
+            'The write-only Library client-secret input is disabled without a host-managed constant.'
+        );
+        wp_set_current_user($previous_user_id);
+    }
+    if (null === $previous_client_secret) {
+        delete_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION);
+    } else {
+        update_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, $previous_client_secret, false);
+    }
+}
+
 $cache_exclusions = apply_filters('rocket_cache_reject_uri', array(), true);
 $assert(in_array('/wp-admin/admin-post\\.php', $cache_exclusions, true), 'Library browser authentication is not excluded from WP Rocket.');
 $library_rest_exclusion = '/(index\\.php/)?' . preg_quote(rest_get_url_prefix(), '/') . '/tsol-library/v1(/.*|$)';

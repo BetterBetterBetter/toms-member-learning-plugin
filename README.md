@@ -128,10 +128,11 @@ or upstream Access login may remain active. A narrow MemberPress view filter
 keeps the Security link available when an older child-theme account override
 omits the standard custom-navigation hook.
 
-The URL and client ID can be managed in the plugin UI. Development and staging
-may use the write-only client-secret option, which never renders the stored
-value. Production requires the host-managed `TSOL_LIBRARY_CLIENT_SECRET`
-constant and ignores the editable option. `TSOL_LIBRARY_APP_URL` and
+The URL and client ID can be managed in the plugin UI. The write-only
+client-secret option never renders the stored value and is available when host
+configuration access is unavailable, including in production. A host-managed
+`TSOL_LIBRARY_CLIENT_SECRET` constant remains preferred and disables the
+editable field when present. `TSOL_LIBRARY_APP_URL` and
 `TSOL_LIBRARY_CLIENT_ID` remain optional host overrides. Use separate clients
 and secrets for development, staging, and production.
 

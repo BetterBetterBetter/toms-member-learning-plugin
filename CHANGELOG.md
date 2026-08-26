@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.3.1 - 2026-08-26
+
+- Allowed production sites without source or host configuration access to save the Library bridge client secret through the existing write-only WordPress setting, while continuing to prefer and protect a server-managed `TSOL_LIBRARY_CLIENT_SECRET` constant when available.
+
 ## 0.3.0 - 2026-08-26
 
 - Added **TSOL Library → Access Groups**, where administrators create named reusable Library access packages and define the Courses, Series, collections, or broad Library areas each package unlocks.
