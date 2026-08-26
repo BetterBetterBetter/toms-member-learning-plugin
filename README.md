@@ -124,16 +124,19 @@ rules are never changed automatically.
 Administrators can move the WordPress-owned Library setup under **TSOL Library
 → Migration**. Export on the test site, upload the JSON file on production,
 review the read-only conflict report, and type the displayed confirmation
-phrase to import. The importer maps Library records by immutable UUID,
+phrase to import. The self-contained ZIP uploads in 512 KB browser chunks, so it
+is not constrained by the server's normal single-request upload limit. The
+importer verifies every declared file's size and SHA-256 checksum, maps Library records by immutable UUID,
 MemberPress memberships by stable slug, and existing uploads by their relative
 WordPress upload path. Older independently imported records may be adopted in
 place only when post type and slug match and either the title or legacy
-authorization source also agrees. Missing upload matches are warnings rather
-than silent binary copies; the original URL is retained for review.
+authorization source also agrees. Referenced uploads are registered in the
+production Media Library; a production file at the same path with different
+bytes is a blocking conflict rather than a silent overwrite.
 
 The package contains courses, series, content, Speaker profiles, Library terms,
 homepage curation, attachment references, Access Groups, and membership-to-group
-assignments. It never contains the standalone Library application database,
+assignments, plus the referenced WordPress upload binaries. It never contains the standalone Library application database,
 application accounts, sessions, progress, notes, bookmarks, WordPress users,
 MemberPress subscriptions or transactions, credentials, logs, generated
 MemberPress rules, or temporary operational state.

@@ -11,8 +11,10 @@ class TSOL_Library_Environment_Migration_Admin {
 
     const PAGE_SLUG = 'tsol-library-migration';
     const PENDING_OPTION = 'tsol_library_environment_migration_pending';
+    const UPLOAD_OPTION_PREFIX = 'tsol_library_environment_migration_upload_';
     const IMPORT_CONFIRMATION = 'import-wordpress-library';
     const NONCE_ACTION = 'tsol_library_environment_migration';
+    const CHUNK_BYTES = 524288;
 
     public function init() {
         add_action('admin_menu', array($this, 'add_page'), 21);
@@ -20,6 +22,7 @@ class TSOL_Library_Environment_Migration_Admin {
         add_action('admin_post_tsol_library_migration_preview', array($this, 'preview'));
         add_action('admin_post_tsol_library_migration_apply', array($this, 'apply'));
         add_action('admin_post_tsol_library_migration_rollback', array($this, 'rollback'));
+        add_action('wp_ajax_tsol_library_migration_upload_chunk', array($this, 'upload_chunk'));
     }
 
     public function add_page() {
@@ -36,51 +39,157 @@ class TSOL_Library_Environment_Migration_Admin {
     public function export() {
         $this->authorize();
         $migration = new TSOL_Library_Environment_Migration();
+        $zip_path = wp_tempnam('tsol-wordpress-library.zip');
+        if (!$zip_path) {
+            $this->fail(__('WordPress could not allocate temporary space for the Library ZIP.', 'tomschooloflife-plugin'));
+        }
         try {
-            $json = $migration->encode($migration->build_package());
+            @set_time_limit(0);
+            $migration->build_bundle($zip_path);
         } catch (Throwable $exception) {
+            if (is_file($zip_path)) {
+                unlink($zip_path);
+            }
             $this->fail($exception->getMessage());
         }
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ignore_user_abort(true);
         nocache_headers();
-        header('Content-Type: application/json; charset=utf-8');
-        header('Content-Disposition: attachment; filename="tsol-wordpress-library-' . gmdate('Ymd-His') . '.json"');
+        header('Content-Type: application/zip');
+        header('Content-Length: ' . filesize($zip_path));
+        header('Content-Disposition: attachment; filename="tsol-wordpress-library-' . gmdate('Ymd-His') . '.zip"');
         header('X-Content-Type-Options: nosniff');
-        echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON download.
+        $stream = fopen($zip_path, 'rb');
+        if (is_resource($stream)) {
+            fpassthru($stream); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Binary ZIP download.
+            fclose($stream);
+        }
+        unlink($zip_path);
         exit;
     }
 
     public function preview() {
         $this->authorize();
-        $file = isset($_FILES['tsol_library_migration_file']) ? $_FILES['tsol_library_migration_file'] : array();
-        if (!is_array($file) || UPLOAD_ERR_OK !== (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE)) {
-            $this->fail(__('Choose a valid TSOL Library JSON package.', 'tomschooloflife-plugin'));
+        $upload_token = sanitize_text_field(wp_unslash((string) ($_POST['upload_token'] ?? '')));
+        $upload = get_option($this->upload_option_name(), array());
+        if (!is_array($upload)
+            || empty($upload['complete'])
+            || !hash_equals((string) ($upload['token'] ?? ''), $upload_token)
+            || time() - (int) ($upload['created_at'] ?? 0) > HOUR_IN_SECONDS
+            || !is_file((string) ($upload['path'] ?? ''))
+        ) {
+            $this->fail(__('The ZIP upload expired or is incomplete. Upload it again.', 'tomschooloflife-plugin'));
         }
-        $name = sanitize_file_name((string) ($file['name'] ?? ''));
-        $size = (int) ($file['size'] ?? 0);
-        if ('json' !== strtolower((string) pathinfo($name, PATHINFO_EXTENSION)) || $size <= 0 || $size > min(wp_max_upload_size(), 25 * MB_IN_BYTES)) {
-            $this->fail(__('The migration file must be JSON and no larger than 25 MB.', 'tomschooloflife-plugin'));
-        }
-        $json = file_get_contents((string) $file['tmp_name']);
-        if (false === $json) {
-            $this->fail(__('WordPress could not read the migration upload.', 'tomschooloflife-plugin'));
-        }
+        $zip_path = (string) $upload['path'];
         $migration = new TSOL_Library_Environment_Migration();
         try {
-            $package = $migration->decode($json);
-            $report = $migration->preview($package);
+            @set_time_limit(0);
+            $package = $migration->decode_bundle($zip_path);
+            $report = $migration->preview($package, true);
         } catch (Throwable $exception) {
             $this->fail($exception->getMessage());
         }
         $token = wp_generate_uuid4();
+        $previous_pending = get_option(self::PENDING_OPTION, array());
+        if (is_array($previous_pending) && !empty($previous_pending['bundle_path']) && $previous_pending['bundle_path'] !== $zip_path) {
+            $this->delete_private_bundle((string) $previous_pending['bundle_path']);
+        }
         update_option(self::PENDING_OPTION, array(
             'token' => $token,
             'user_id' => get_current_user_id(),
             'created_at' => time(),
-            'package' => base64_encode(gzencode($json, 6)),
+            'bundle_path' => $zip_path,
             'report' => $report,
         ), false);
+        delete_option($this->upload_option_name());
         wp_safe_redirect(add_query_arg(array('page' => self::PAGE_SLUG, 'preview' => 'ready'), admin_url('admin.php')));
         exit;
+    }
+
+    public function upload_chunk() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('You are not allowed to migrate the Library.', 'tomschooloflife-plugin')), 403);
+        }
+        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+        $file = isset($_FILES['chunk']) ? $_FILES['chunk'] : array();
+        $index = absint($_POST['index'] ?? -1);
+        $total_chunks = absint($_POST['total_chunks'] ?? 0);
+        $total_bytes = (int) ($_POST['total_bytes'] ?? 0);
+        $name = sanitize_file_name((string) ($_POST['filename'] ?? ''));
+        $token = sanitize_text_field((string) ($_POST['upload_token'] ?? ''));
+        if ('zip' !== strtolower((string) pathinfo($name, PATHINFO_EXTENSION))
+            || $total_chunks < 1 || $total_chunks > 4096
+            || $total_bytes < 1 || $total_bytes > TSOL_Library_Environment_Migration::MAX_BUNDLE_BYTES
+            || !is_array($file) || UPLOAD_ERR_OK !== (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE)
+            || (int) ($file['size'] ?? 0) < 1 || (int) ($file['size'] ?? 0) > self::CHUNK_BYTES
+        ) {
+            wp_send_json_error(array('message' => __('The ZIP upload chunk is invalid.', 'tomschooloflife-plugin')), 400);
+        }
+        $option_name = $this->upload_option_name();
+        $state = get_option($option_name, array());
+        if (0 === $index) {
+            $this->discard_upload_state($state);
+            $token = wp_generate_uuid4();
+            $path = trailingslashit(get_temp_dir()) . 'tsol-library-' . $token . '.zip';
+            $state = array(
+                'token' => $token,
+                'path' => $path,
+                'filename' => $name,
+                'total_chunks' => $total_chunks,
+                'total_bytes' => $total_bytes,
+                'next_index' => 0,
+                'received_bytes' => 0,
+                'created_at' => time(),
+                'complete' => false,
+            );
+        }
+        if (!is_array($state)
+            || !hash_equals((string) ($state['token'] ?? ''), $token)
+            || $index !== (int) ($state['next_index'] ?? -1)
+            || $total_chunks !== (int) ($state['total_chunks'] ?? 0)
+            || $total_bytes !== (int) ($state['total_bytes'] ?? 0)
+            || time() - (int) ($state['created_at'] ?? 0) > HOUR_IN_SECONDS
+        ) {
+            wp_send_json_error(array('message' => __('The ZIP upload sequence expired or changed.', 'tomschooloflife-plugin')), 409);
+        }
+        $output = fopen((string) $state['path'], 0 === $index ? 'xb' : 'ab');
+        $input = fopen((string) $file['tmp_name'], 'rb');
+        if (!is_resource($output) || !is_resource($input) || !flock($output, LOCK_EX)) {
+            if (is_resource($output)) {
+                fclose($output);
+            }
+            if (is_resource($input)) {
+                fclose($input);
+            }
+            wp_send_json_error(array('message' => __('WordPress could not store the ZIP upload.', 'tomschooloflife-plugin')), 500);
+        }
+        $written = stream_copy_to_stream($input, $output);
+        fflush($output);
+        flock($output, LOCK_UN);
+        fclose($input);
+        fclose($output);
+        if (false === $written || (int) $written !== (int) $file['size']) {
+            $this->discard_upload_state($state);
+            wp_send_json_error(array('message' => __('WordPress could not store the complete ZIP chunk.', 'tomschooloflife-plugin')), 500);
+        }
+        if (0 === $index) {
+            chmod((string) $state['path'], 0600);
+        }
+        $state['next_index']++;
+        $state['received_bytes'] += (int) $written;
+        $state['complete'] = $state['next_index'] === $state['total_chunks'];
+        if ($state['complete'] && ((int) $state['received_bytes'] !== $state['total_bytes'] || filesize($state['path']) !== $state['total_bytes'])) {
+            $this->discard_upload_state($state);
+            wp_send_json_error(array('message' => __('The completed ZIP size does not match the selected file.', 'tomschooloflife-plugin')), 400);
+        }
+        update_option($option_name, $state, false);
+        wp_send_json_success(array(
+            'upload_token' => $token,
+            'next_index' => (int) $state['next_index'],
+            'complete' => (bool) $state['complete'],
+        ));
     }
 
     public function apply() {
@@ -95,10 +204,12 @@ class TSOL_Library_Environment_Migration_Admin {
             $this->fail(__('Enter the exact migration confirmation before importing.', 'tomschooloflife-plugin'));
         }
         try {
-            $json = gzdecode((string) base64_decode((string) $pending['package'], true));
             $migration = new TSOL_Library_Environment_Migration();
-            $package = $migration->decode($json);
-            $migration->apply($package, (string) ($pending['report']['package_hash'] ?? ''));
+            $bundle_path = (string) ($pending['bundle_path'] ?? '');
+            @set_time_limit(0);
+            $package = $migration->decode_bundle($bundle_path);
+            $migration->apply($package, (string) ($pending['report']['package_hash'] ?? ''), $bundle_path);
+            $this->delete_private_bundle($bundle_path);
             delete_option(self::PENDING_OPTION);
         } catch (Throwable $exception) {
             $this->fail($exception->getMessage());
@@ -145,21 +256,25 @@ class TSOL_Library_Environment_Migration_Admin {
             <div class="tsol-library-admin-grid">
                 <section class="card">
                     <h2><?php esc_html_e('1. Export from test', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Download courses, series, content, speakers, terms, homepage curation, attachment references, and portable Access Groups.', 'tomschooloflife-plugin'); ?></p>
+                    <p><?php esc_html_e('Download one verified ZIP containing courses, series, content, speakers, terms, homepage curation, portable Access Groups, and every referenced WordPress upload.', 'tomschooloflife-plugin'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_migration_export">
                         <?php wp_nonce_field(self::NONCE_ACTION); ?>
-                        <?php submit_button(__('Download WordPress Library package', 'tomschooloflife-plugin'), 'secondary', 'submit', false); ?>
+                        <?php submit_button(__('Download complete Library ZIP', 'tomschooloflife-plugin'), 'secondary', 'submit', false); ?>
                     </form>
                 </section>
                 <section class="card">
                     <h2><?php esc_html_e('2. Preview on production', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Upload the package. Preview is read-only and blocks missing memberships, duplicate UUIDs, slug conflicts, or missing legacy authorization sources.', 'tomschooloflife-plugin'); ?></p>
-                    <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <p><?php esc_html_e('Large ZIPs upload securely in small chunks, so normal PHP upload limits do not truncate the catalogue or its files. Preview verifies every checksum before making changes.', 'tomschooloflife-plugin'); ?></p>
+                    <form id="tsol-library-migration-upload" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_migration_preview">
+                        <input type="hidden" name="upload_token" value="">
                         <?php wp_nonce_field(self::NONCE_ACTION); ?>
-                        <input type="file" name="tsol_library_migration_file" accept="application/json,.json" required>
-                        <?php submit_button(__('Preview package', 'tomschooloflife-plugin'), 'secondary', 'submit', false); ?>
+                        <input id="tsol-library-migration-file" type="file" accept="application/zip,.zip" required>
+                        <button id="tsol-library-migration-upload-button" type="button" class="button button-secondary"><?php esc_html_e('Upload and verify ZIP', 'tomschooloflife-plugin'); ?></button>
+                        <progress id="tsol-library-migration-progress" max="100" value="0" hidden></progress>
+                        <p id="tsol-library-migration-upload-status" class="description" aria-live="polite"></p>
+                        <noscript><p class="notice notice-error inline"><?php esc_html_e('JavaScript is required for reliable large-file uploads.', 'tomschooloflife-plugin'); ?></p></noscript>
                     </form>
                 </section>
             </div>
@@ -175,6 +290,8 @@ class TSOL_Library_Environment_Migration_Admin {
                         <?php $this->stat(__('Terms', 'tomschooloflife-plugin'), (int) ($report['terms'] ?? 0)); ?>
                         <?php $this->stat(__('Access Groups', 'tomschooloflife-plugin'), (int) ($report['groups'] ?? 0)); ?>
                         <?php $this->stat(__('Memberships', 'tomschooloflife-plugin'), (int) ($report['membership_assignments'] ?? 0)); ?>
+                        <?php $this->stat(__('Bundled files', 'tomschooloflife-plugin'), (int) ($report['attachment_files'] ?? 0)); ?>
+                        <?php $this->stat(__('Upload size', 'tomschooloflife-plugin'), size_format((int) ($report['attachment_bytes'] ?? 0), 1)); ?>
                     </div>
                     <?php foreach ((array) ($report['errors'] ?? array()) as $error) : ?>
                         <div class="notice notice-error inline"><p><?php echo esc_html($error); ?></p></div>
@@ -182,6 +299,11 @@ class TSOL_Library_Environment_Migration_Admin {
                     <?php foreach ((array) ($report['warnings'] ?? array()) as $warning) : ?>
                         <div class="notice notice-warning inline"><p><?php echo esc_html($warning); ?></p></div>
                     <?php endforeach; ?>
+                    <?php if (!empty($report['missing_attachments'])) : ?>
+                        <details><summary><?php echo esc_html(sprintf(__('%d files are genuinely missing', 'tomschooloflife-plugin'), count($report['missing_attachments']))); ?></summary><ul>
+                            <?php foreach ($report['missing_attachments'] as $missing) : ?><li><code><?php echo esc_html($missing); ?></code></li><?php endforeach; ?>
+                        </ul></details>
+                    <?php endif; ?>
                     <?php if (empty($report['errors'])) : ?>
                         <p><?php esc_html_e('Importing creates a rollback snapshot and leaves Access Groups unpublished. Existing legacy MemberPress authorization remains active until the separate access comparison is checked and explicitly published.', 'tomschooloflife-plugin'); ?></p>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -210,6 +332,55 @@ class TSOL_Library_Environment_Migration_Admin {
                 </section>
             <?php endif; ?>
         </div>
+        <script>
+        (() => {
+            const form = document.getElementById('tsol-library-migration-upload');
+            const fileInput = document.getElementById('tsol-library-migration-file');
+            const button = document.getElementById('tsol-library-migration-upload-button');
+            const progress = document.getElementById('tsol-library-migration-progress');
+            const status = document.getElementById('tsol-library-migration-upload-status');
+            if (!form || !fileInput || !button || !progress || !status) return;
+            button.addEventListener('click', async () => {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file || !file.name.toLowerCase().endsWith('.zip')) {
+                    status.textContent = <?php echo wp_json_encode(__('Choose the complete TSOL Library ZIP first.', 'tomschooloflife-plugin')); ?>;
+                    return;
+                }
+                const chunkBytes = <?php echo (int) self::CHUNK_BYTES; ?>;
+                const totalChunks = Math.ceil(file.size / chunkBytes);
+                let uploadToken = '';
+                button.disabled = true;
+                fileInput.disabled = true;
+                progress.hidden = false;
+                try {
+                    for (let index = 0; index < totalChunks; index++) {
+                        const body = new FormData();
+                        body.append('action', 'tsol_library_migration_upload_chunk');
+                        body.append('nonce', <?php echo wp_json_encode(wp_create_nonce(self::NONCE_ACTION)); ?>);
+                        body.append('index', String(index));
+                        body.append('total_chunks', String(totalChunks));
+                        body.append('total_bytes', String(file.size));
+                        body.append('filename', file.name);
+                        body.append('upload_token', uploadToken);
+                        body.append('chunk', file.slice(index * chunkBytes, Math.min(file.size, (index + 1) * chunkBytes)), file.name + '.part');
+                        status.textContent = <?php echo wp_json_encode(__('Uploading Library ZIP…', 'tomschooloflife-plugin')); ?> + ' ' + Math.round(index / totalChunks * 100) + '%';
+                        const response = await fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, { method: 'POST', credentials: 'same-origin', body });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) throw new Error(result?.data?.message || <?php echo wp_json_encode(__('The ZIP upload failed.', 'tomschooloflife-plugin')); ?>);
+                        uploadToken = result.data.upload_token;
+                        progress.value = Math.round((index + 1) / totalChunks * 100);
+                    }
+                    status.textContent = <?php echo wp_json_encode(__('Upload complete. Verifying checksums…', 'tomschooloflife-plugin')); ?>;
+                    form.querySelector('[name="upload_token"]').value = uploadToken;
+                    form.submit();
+                } catch (error) {
+                    status.textContent = error instanceof Error ? error.message : <?php echo wp_json_encode(__('The ZIP upload failed.', 'tomschooloflife-plugin')); ?>;
+                    button.disabled = false;
+                    fileInput.disabled = false;
+                }
+            });
+        })();
+        </script>
         <?php
     }
 
@@ -220,11 +391,35 @@ class TSOL_Library_Environment_Migration_Admin {
             || time() - (int) ($pending['created_at'] ?? 0) > HOUR_IN_SECONDS
         ) {
             if (!empty($pending)) {
+                $this->delete_private_bundle((string) ($pending['bundle_path'] ?? ''));
                 delete_option(self::PENDING_OPTION);
             }
             return array();
         }
         return $pending;
+    }
+
+    private function upload_option_name() {
+        return self::UPLOAD_OPTION_PREFIX . get_current_user_id();
+    }
+
+    private function discard_upload_state($state) {
+        if (is_array($state)) {
+            $this->delete_private_bundle((string) ($state['path'] ?? ''));
+        }
+        delete_option($this->upload_option_name());
+    }
+
+    private function delete_private_bundle($path) {
+        $path = (string) $path;
+        $temp = trailingslashit(wp_normalize_path(get_temp_dir()));
+        $normalized = wp_normalize_path($path);
+        if (0 === strpos($normalized, $temp)
+            && preg_match('/\/tsol-library-[a-f0-9-]+\.zip$/i', $normalized)
+            && is_file($path)
+        ) {
+            unlink($path);
+        }
     }
 
     private function authorize() {

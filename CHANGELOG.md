@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-08-26
+
+- Replaced the reference-only migration download with one self-contained ZIP containing the WordPress Library catalogue, portable Access Groups, and every referenced WordPress upload.
+- Added checksum and size verification for every bundled file, safe archive-path enforcement, exact attachment conflict reporting, Media Library registration, image metadata generation, and attachment/file rollback.
+- Added 512 KB browser chunk uploads so complete Library packages work even when production PHP and reverse-proxy upload limits are much smaller than the package.
+- Expanded the import preview to report bundled and existing files separately and list any genuinely missing paths instead of presenting an unactionable aggregate warning.
+
 ## 0.4.0 - 2026-08-26
 
 - Added **TSOL Library → Migration** for checksum-verified, preview-first movement of WordPress-owned Library records, taxonomy, homepage curation, attachment references, Access Groups, and membership assignments between test and production.

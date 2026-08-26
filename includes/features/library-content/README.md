@@ -19,7 +19,10 @@ It is deliberately separate from the legacy MemberPress Courses system.
 **TSOL Library → Migration** exports and imports only this WordPress-owned
 Library model and its portable Access Groups configuration. Relationships use
 content UUIDs, membership assignments use MemberPress product slugs, and media
-uses upload-path references; binary files are not bundled. The standalone app
+uses upload-path references backed by checksum-verified files inside the ZIP.
+The browser uploads large packages in bounded chunks, and production registers
+missing files as WordPress attachments without overwriting different bytes at
+an existing upload path. The standalone app
 database and member-created app data are outside the package boundary. Imports
 are previewed, conflict-blocking, exact-confirmation protected, rollbackable,
 and leave Access Groups unpublished until their production access matrix is

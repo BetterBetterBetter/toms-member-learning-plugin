@@ -14,6 +14,10 @@ class TSOL_Library_Environment_Migration {
     const LOCK_OPTION = 'tsol_library_environment_migration_lock';
     const OWNER_META = '_tsol_library_environment_migration';
     const ROLLBACK_CONFIRMATION = 'rollback-library-migration';
+    const BUNDLE_FORMAT = 'tsol-wordpress-library-zip-v1';
+    const PACKAGE_FILENAME = 'tsol-library-package.json';
+    const MAX_BUNDLE_BYTES = 2147483648;
+    const MAX_BUNDLE_ENTRIES = 1000;
 
     public function build_package() {
         TSOL_Library_Homepage_Curation::reset_cache();
@@ -42,6 +46,119 @@ class TSOL_Library_Environment_Migration {
 
     public function encode($package) {
         return wp_json_encode($package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    public function build_bundle($zip_path) {
+        if (!class_exists('ZipArchive')) {
+            throw new RuntimeException('The PHP Zip extension is required to export a complete Library package.');
+        }
+        $package = $this->build_package();
+        $attachments = $this->bundle_attachment_inventory($package);
+        $package['data']['attachments'] = $attachments;
+        $package['manifest']['bundle_format'] = self::BUNDLE_FORMAT;
+        $package['manifest']['counts']['attachments'] = count($attachments);
+        $package['manifest']['counts']['attachment_bytes'] = array_sum(array_map(static function ($attachment) {
+            return (int) $attachment['bytes'];
+        }, $attachments));
+        $package['manifest']['data_sha256'] = $this->data_hash($package['data']);
+
+        $zip = new ZipArchive();
+        if (true !== $zip->open((string) $zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
+            throw new RuntimeException('WordPress could not create the Library ZIP package.');
+        }
+        try {
+            if (!$zip->addFromString(self::PACKAGE_FILENAME, $this->encode($package))) {
+                throw new RuntimeException('WordPress could not add the Library manifest to the ZIP package.');
+            }
+            $uploads = wp_upload_dir(null, false);
+            foreach ($attachments as $attachment) {
+                $source = trailingslashit((string) $uploads['basedir']) . $attachment['relative_file'];
+                if (!$zip->addFile($source, $attachment['archive_path'])) {
+                    throw new RuntimeException(sprintf('WordPress could not add upload “%s” to the ZIP package.', $attachment['relative_file']));
+                }
+            }
+        } catch (Throwable $exception) {
+            $zip->close();
+            if (is_file($zip_path)) {
+                unlink($zip_path);
+            }
+            throw $exception;
+        }
+        if (!$zip->close() || !is_file($zip_path)) {
+            throw new RuntimeException('WordPress could not finalize the Library ZIP package.');
+        }
+        return $package;
+    }
+
+    public function decode_bundle($zip_path) {
+        if (!class_exists('ZipArchive')) {
+            throw new RuntimeException('The PHP Zip extension is required to inspect a Library package.');
+        }
+        if (!is_file($zip_path) || filesize($zip_path) <= 0 || filesize($zip_path) > self::MAX_BUNDLE_BYTES) {
+            throw new RuntimeException('The Library ZIP package is missing, empty, or larger than 2 GB.');
+        }
+        $zip = new ZipArchive();
+        if (true !== $zip->open((string) $zip_path, ZipArchive::RDONLY)) {
+            throw new RuntimeException('The uploaded file is not a readable ZIP package.');
+        }
+        try {
+            if ($zip->numFiles < 1 || $zip->numFiles > self::MAX_BUNDLE_ENTRIES) {
+                throw new RuntimeException('The Library ZIP package contains an unsafe number of files.');
+            }
+            $total_bytes = 0;
+            $entry_names = array();
+            for ($index = 0; $index < $zip->numFiles; $index++) {
+                $stat = $zip->statIndex($index);
+                $name = (string) ($stat['name'] ?? '');
+                if (!$this->safe_archive_path($name) || isset($entry_names[$name])) {
+                    throw new RuntimeException('The Library ZIP package contains an unsafe or duplicate path.');
+                }
+                $entry_names[$name] = true;
+                $total_bytes += (int) ($stat['size'] ?? 0);
+                if ($total_bytes > self::MAX_BUNDLE_BYTES) {
+                    throw new RuntimeException('The expanded Library ZIP package is larger than 2 GB.');
+                }
+            }
+            $package_json = $zip->getFromName(self::PACKAGE_FILENAME, 25 * MB_IN_BYTES);
+            if (false === $package_json) {
+                throw new RuntimeException('The Library ZIP package has no valid manifest.');
+            }
+            $package = $this->decode($package_json);
+            if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
+                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+            }
+            $expected_entries = array(self::PACKAGE_FILENAME => true);
+            $manifest_paths = array();
+            foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
+                $archive_path = (string) ($attachment['archive_path'] ?? '');
+                $relative_file = (string) ($attachment['relative_file'] ?? '');
+                if (!$this->safe_relative_upload_path($relative_file)
+                    || !$this->safe_archive_path($archive_path)
+                    || 'attachments/' . $relative_file !== $archive_path
+                    || isset($expected_entries[$archive_path])
+                ) {
+                    throw new RuntimeException('The Library ZIP attachment manifest contains an unsafe path.');
+                }
+                $stat = $zip->statName($archive_path);
+                if (false === $stat || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)) {
+                    throw new RuntimeException(sprintf('Bundled upload “%s” is missing or has the wrong size.', $relative_file));
+                }
+                if (!hash_equals((string) ($attachment['sha256'] ?? ''), $this->zip_entry_hash($zip, $archive_path))) {
+                    throw new RuntimeException(sprintf('Bundled upload “%s” failed its checksum.', $relative_file));
+                }
+                $expected_entries[$archive_path] = true;
+                $manifest_paths[$relative_file] = true;
+            }
+            if (!empty(array_diff_key($entry_names, $expected_entries))
+                || !empty(array_diff_key($expected_entries, $entry_names))
+                || $manifest_paths !== $this->package_reference_paths($package)
+            ) {
+                throw new RuntimeException('The Library ZIP package files do not exactly match its attachment manifest.');
+            }
+            return $package;
+        } finally {
+            $zip->close();
+        }
     }
 
     public function decode($json) {
@@ -85,7 +202,7 @@ class TSOL_Library_Environment_Migration {
         return true;
     }
 
-    public function preview($package) {
+    public function preview($package, $has_verified_bundle = false) {
         $this->validate($package);
         $report = array(
             'creates' => 0,
@@ -95,11 +212,18 @@ class TSOL_Library_Environment_Migration {
             'terms' => count((array) ($package['data']['terms'] ?? array())),
             'groups' => count((array) ($package['data']['access_groups']['groups'] ?? array())),
             'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
+            'attachment_files' => count((array) ($package['data']['attachments'] ?? array())),
+            'attachment_bytes' => array_sum(array_map(static function ($attachment) {
+                return (int) ($attachment['bytes'] ?? 0);
+            }, (array) ($package['data']['attachments'] ?? array()))),
+            'bundled_attachments' => array(),
+            'existing_attachments' => array(),
             'missing_attachments' => array(),
             'errors' => array(),
             'warnings' => array(),
         );
         $seen = array();
+        $bundle_index = $has_verified_bundle ? $this->bundle_index($package) : array();
         $current_fingerprints = array();
         foreach ($this->export_posts() as $current_record) {
             $current_fingerprints[(string) $current_record['uuid']] = (string) $current_record['fingerprint'];
@@ -128,10 +252,7 @@ class TSOL_Library_Environment_Migration {
                 $report['creates']++;
             }
             foreach ($this->record_attachment_refs($record) as $attachment) {
-                if (!$this->resolve_attachment($attachment)) {
-                    $key = (string) ($attachment['relative_file'] ?? $attachment['source_url'] ?? 'unknown');
-                    $report['missing_attachments'][$key] = $key;
-                }
+                $this->assess_attachment_ref($attachment, $bundle_index, $report);
             }
             if (!empty($record['legacy_authorization']) && !$this->resolve_external_post($record['legacy_authorization'])) {
                 $report['errors'][] = sprintf('Legacy authorization source for “%s” is missing in production.', $record['post_title']);
@@ -139,9 +260,8 @@ class TSOL_Library_Environment_Migration {
         }
         foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
             $attachment = (array) ($term['meta']['hero_attachment'] ?? array());
-            if (!empty($attachment) && !$this->resolve_attachment($attachment)) {
-                $key = (string) ($attachment['relative_file'] ?? $attachment['source_url'] ?? 'unknown');
-                $report['missing_attachments'][$key] = $key;
+            if (!empty($attachment)) {
+                $this->assess_attachment_ref($attachment, $bundle_index, $report);
             }
         }
         $memberships = $this->membership_index();
@@ -156,13 +276,22 @@ class TSOL_Library_Environment_Migration {
                 count($report['missing_attachments'])
             );
         }
+        $report['bundled_attachments'] = array_values($report['bundled_attachments']);
+        $report['existing_attachments'] = array_values($report['existing_attachments']);
         $report['missing_attachments'] = array_values($report['missing_attachments']);
         $report['package_hash'] = (string) $package['manifest']['data_sha256'];
         return $report;
     }
 
-    public function apply($package, $expected_hash) {
-        $report = $this->preview($package);
+    public function apply($package, $expected_hash, $bundle_path = '') {
+        $has_bundle = '' !== (string) $bundle_path;
+        if ($has_bundle) {
+            $verified = $this->decode_bundle($bundle_path);
+            if (!hash_equals((string) ($verified['manifest']['data_sha256'] ?? ''), (string) ($package['manifest']['data_sha256'] ?? ''))) {
+                throw new RuntimeException('The uploaded Library ZIP changed after preview.');
+            }
+        }
+        $report = $this->preview($package, $has_bundle);
         if (!hash_equals((string) $report['package_hash'], (string) $expected_hash)) {
             throw new RuntimeException('The migration preview changed. Upload the package again before importing.');
         }
@@ -173,18 +302,21 @@ class TSOL_Library_Environment_Migration {
             throw new RuntimeException('Roll back or finish the current Access Groups stage before importing.');
         }
 
-        return $this->with_lock(function () use ($package, $report) {
+        return $this->with_lock(function () use ($package, $report, $bundle_path) {
             $before = $this->build_package();
             $raw_before = array(
                 'access_groups' => get_option(TSOL_Library_Access_Groups::OPTION_NAME, null),
                 'homepage' => get_option(TSOL_Library_Homepage_Curation::OPTION_NAME, null),
                 'authorization' => $this->authorization_snapshot(),
             );
-            $created = array('posts' => array(), 'terms' => array());
+            $created = array('posts' => array(), 'terms' => array(), 'attachments' => array());
             try {
+                if ('' !== (string) $bundle_path) {
+                    $this->import_bundle_attachments($package, $bundle_path, $created);
+                }
                 $this->apply_data($package, (string) $report['package_hash'], $created);
             } catch (Throwable $exception) {
-                $recovery_created = array('posts' => array(), 'terms' => array());
+                $recovery_created = array('posts' => array(), 'terms' => array(), 'attachments' => array());
                 $this->apply_data($before, 'automatic-recovery', $recovery_created);
                 foreach (array_reverse($created['posts']) as $post_id) {
                     wp_delete_post((int) $post_id, true);
@@ -192,6 +324,7 @@ class TSOL_Library_Environment_Migration {
                 foreach (array_reverse($created['terms']) as $term) {
                     wp_delete_term((int) $term['term_id'], (string) $term['taxonomy']);
                 }
+                $this->remove_created_attachments($created['attachments']);
                 $this->restore_raw_options($raw_before);
                 throw $exception;
             }
@@ -222,7 +355,7 @@ class TSOL_Library_Environment_Migration {
                 throw new RuntimeException('No valid Library migration rollback snapshot is available.');
             }
             $package = $this->decode($json);
-            $rollback_created = array('posts' => array(), 'terms' => array());
+            $rollback_created = array('posts' => array(), 'terms' => array(), 'attachments' => array());
             $this->apply_data($package, 'rollback', $rollback_created);
             foreach (array_reverse((array) ($state['created']['posts'] ?? array())) as $post_id) {
                 if ((string) get_post_meta((int) $post_id, self::OWNER_META, true) === (string) ($state['import_hash'] ?? '')) {
@@ -232,6 +365,7 @@ class TSOL_Library_Environment_Migration {
             foreach (array_reverse((array) ($state['created']['terms'] ?? array())) as $term) {
                 wp_delete_term((int) ($term['term_id'] ?? 0), (string) ($term['taxonomy'] ?? ''));
             }
+            $this->remove_created_attachments((array) ($state['created']['attachments'] ?? array()));
             $this->restore_raw_options((array) ($state['raw_options'] ?? array()));
             delete_option(self::ROLLBACK_OPTION);
             return array('phase' => 'rolled_back', 'rolled_back_at' => gmdate('c'));
@@ -641,6 +775,186 @@ class TSOL_Library_Environment_Migration {
         return $url === '' ? 0 : absint(attachment_url_to_postid($url));
     }
 
+    private function bundle_index($package) {
+        $index = array();
+        foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
+            $relative = (string) ($attachment['relative_file'] ?? '');
+            if ($this->safe_relative_upload_path($relative)) {
+                $index[$relative] = $attachment;
+            }
+        }
+        return $index;
+    }
+
+    private function assess_attachment_ref($ref, $bundle_index, &$report) {
+        $relative = (string) ($ref['relative_file'] ?? '');
+        $key = '' !== $relative ? $relative : (string) ($ref['source_url'] ?? 'unknown');
+        $attachment_id = $this->resolve_attachment($ref);
+        $uploads = wp_upload_dir(null, false);
+        $local_file = $this->safe_relative_upload_path($relative)
+            ? trailingslashit((string) $uploads['basedir']) . $relative
+            : '';
+        if ($attachment_id > 0 && is_file($local_file)) {
+            if (isset($bundle_index[$relative])
+                && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
+            ) {
+                $report['errors'][] = sprintf('Production upload “%s” differs from the bundled test-site file.', $relative);
+                return;
+            }
+            $report['existing_attachments'][$key] = $key;
+            return;
+        }
+        if (isset($bundle_index[$relative])) {
+            if (is_file($local_file)
+                && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
+            ) {
+                $report['errors'][] = sprintf('Production file “%s” exists but differs from the bundled test-site file.', $relative);
+                return;
+            }
+            $report['bundled_attachments'][$key] = $key;
+            return;
+        }
+        $report['missing_attachments'][$key] = $key;
+    }
+
+    private function import_bundle_attachments($package, $zip_path, &$created) {
+        $zip = new ZipArchive();
+        if (true !== $zip->open((string) $zip_path, ZipArchive::RDONLY)) {
+            throw new RuntimeException('The verified Library ZIP could not be reopened for import.');
+        }
+        $uploads = wp_upload_dir(null, false);
+        $base = trailingslashit((string) $uploads['basedir']);
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        try {
+            foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
+                $relative = (string) $attachment['relative_file'];
+                $destination = $base . $relative;
+                $ref = array('relative_file' => $relative, 'source_url' => (string) ($attachment['source_url'] ?? ''));
+                $attachment_id = $this->resolve_attachment($ref);
+                $file_existed = is_file($destination);
+                if (!$file_existed) {
+                    if (!wp_mkdir_p(dirname($destination))) {
+                        throw new RuntimeException(sprintf('WordPress could not create the upload directory for “%s”.', $relative));
+                    }
+                    $stream = $zip->getStream((string) $attachment['archive_path']);
+                    $output = fopen($destination, 'xb');
+                    if (!is_resource($stream) || !is_resource($output)) {
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                        if (is_resource($output)) {
+                            fclose($output);
+                        }
+                        throw new RuntimeException(sprintf('WordPress could not extract bundled upload “%s”.', $relative));
+                    }
+                    stream_copy_to_stream($stream, $output);
+                    fclose($stream);
+                    fclose($output);
+                    $created['attachments'][] = array(
+                        'action' => 'file_only',
+                        'post_id' => 0,
+                        'relative_file' => $relative,
+                        'generated_files' => array(),
+                    );
+                }
+                if (!hash_equals((string) $attachment['sha256'], (string) hash_file('sha256', $destination))) {
+                    throw new RuntimeException(sprintf('Extracted upload “%s” failed its checksum.', $relative));
+                }
+                if ($attachment_id > 0) {
+                    if (!$file_existed) {
+                        $old_metadata = get_post_meta($attachment_id, '_wp_attachment_metadata', true);
+                        $metadata = wp_generate_attachment_metadata($attachment_id, $destination);
+                        if (!empty($metadata)) {
+                            wp_update_attachment_metadata($attachment_id, $metadata);
+                        }
+                        array_pop($created['attachments']);
+                        $created['attachments'][] = array(
+                            'action' => 'restore_existing',
+                            'post_id' => $attachment_id,
+                            'relative_file' => $relative,
+                            'old_metadata' => $old_metadata,
+                            'generated_files' => $this->metadata_files($relative, $metadata),
+                        );
+                    }
+                    continue;
+                }
+                $filetype = wp_check_filetype(basename($destination), null);
+                $mime_type = (string) ($filetype['type'] ?: ($attachment['mime_type'] ?? 'application/octet-stream'));
+                $attachment_id = wp_insert_attachment(array(
+                    'post_mime_type' => $mime_type,
+                    'post_title' => sanitize_text_field(pathinfo(basename($destination), PATHINFO_FILENAME)),
+                    'post_status' => 'inherit',
+                ), $destination, 0, true);
+                if (is_wp_error($attachment_id) || (int) $attachment_id <= 0) {
+                    throw new RuntimeException(sprintf('WordPress could not register bundled upload “%s”.', $relative));
+                }
+                $metadata = wp_generate_attachment_metadata((int) $attachment_id, $destination);
+                if (!empty($metadata)) {
+                    wp_update_attachment_metadata((int) $attachment_id, $metadata);
+                }
+                if (!$file_existed) {
+                    array_pop($created['attachments']);
+                }
+                $created['attachments'][] = array(
+                    'action' => 'created_attachment',
+                    'post_id' => (int) $attachment_id,
+                    'relative_file' => $relative,
+                    'remove_original' => !$file_existed,
+                    'generated_files' => $this->metadata_files($relative, $metadata),
+                );
+            }
+        } finally {
+            $zip->close();
+        }
+    }
+
+    private function metadata_files($relative, $metadata) {
+        $files = array();
+        $directory = dirname($relative);
+        foreach ((array) ($metadata['sizes'] ?? array()) as $size) {
+            $file = sanitize_file_name((string) ($size['file'] ?? ''));
+            if ('' !== $file) {
+                $files[] = ('.' === $directory ? '' : trailingslashit($directory)) . $file;
+            }
+        }
+        return array_values(array_unique($files));
+    }
+
+    private function remove_created_attachments($attachments) {
+        $uploads = wp_upload_dir(null, false);
+        $base = trailingslashit((string) $uploads['basedir']);
+        foreach (array_reverse((array) $attachments) as $attachment) {
+            foreach ((array) ($attachment['generated_files'] ?? array()) as $relative) {
+                if ($this->safe_relative_upload_path($relative) && is_file($base . $relative)) {
+                    unlink($base . $relative);
+                }
+            }
+            $action = (string) ($attachment['action'] ?? '');
+            $post_id = (int) ($attachment['post_id'] ?? 0);
+            $relative = (string) ($attachment['relative_file'] ?? '');
+            if ('created_attachment' === $action && $post_id > 0) {
+                if (!empty($attachment['remove_original'])) {
+                    wp_delete_attachment($post_id, true);
+                } else {
+                    wp_delete_post($post_id, true);
+                }
+            } elseif ('restore_existing' === $action && $post_id > 0) {
+                if (empty($attachment['old_metadata'])) {
+                    delete_post_meta($post_id, '_wp_attachment_metadata');
+                } else {
+                    wp_update_attachment_metadata($post_id, $attachment['old_metadata']);
+                }
+                if ($this->safe_relative_upload_path($relative) && is_file($base . $relative)) {
+                    unlink($base . $relative);
+                }
+            } elseif ('file_only' === $action && $this->safe_relative_upload_path($relative) && is_file($base . $relative)) {
+                unlink($base . $relative);
+            }
+        }
+    }
+
     private function portable_attachment_values($value) {
         if (!is_array($value)) {
             return $value;
@@ -695,6 +1009,107 @@ class TSOL_Library_Environment_Migration {
         };
         $walk((array) ($record['meta'] ?? array()));
         return $refs;
+    }
+
+    private function bundle_attachment_inventory($package) {
+        $uploads = wp_upload_dir(null, false);
+        if (!empty($uploads['error'])) {
+            throw new RuntimeException((string) $uploads['error']);
+        }
+        $refs = array();
+        foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+            foreach ($this->record_attachment_refs($record) as $ref) {
+                $relative = (string) ($ref['relative_file'] ?? '');
+                if (!$this->safe_relative_upload_path($relative)) {
+                    throw new RuntimeException('A referenced WordPress attachment has no safe upload path and cannot be bundled.');
+                }
+                $refs[$relative] = $ref;
+            }
+        }
+        foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
+            $ref = (array) ($term['meta']['hero_attachment'] ?? array());
+            if (empty($ref)) {
+                continue;
+            }
+            $relative = (string) ($ref['relative_file'] ?? '');
+            if (!$this->safe_relative_upload_path($relative)) {
+                throw new RuntimeException('A referenced WordPress term image has no safe upload path and cannot be bundled.');
+            }
+            $refs[$relative] = $ref;
+        }
+        ksort($refs, SORT_STRING);
+        $inventory = array();
+        $base = trailingslashit((string) $uploads['basedir']);
+        foreach ($refs as $relative => $ref) {
+            $source = $base . $relative;
+            if (!is_file($source) || !is_readable($source)) {
+                throw new RuntimeException(sprintf('Referenced WordPress upload “%s” is missing from the test site.', $relative));
+            }
+            $inventory[] = array(
+                'relative_file' => $relative,
+                'archive_path' => 'attachments/' . $relative,
+                'bytes' => (int) filesize($source),
+                'sha256' => (string) hash_file('sha256', $source),
+                'mime_type' => sanitize_mime_type((string) ($ref['mime_type'] ?? '')),
+                'source_url' => esc_url_raw((string) ($ref['source_url'] ?? '')),
+            );
+        }
+        return $inventory;
+    }
+
+    private function package_reference_paths($package) {
+        $paths = array();
+        foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+            foreach ($this->record_attachment_refs($record) as $ref) {
+                $relative = (string) ($ref['relative_file'] ?? '');
+                if ($this->safe_relative_upload_path($relative)) {
+                    $paths[$relative] = true;
+                }
+            }
+        }
+        foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
+            $relative = (string) ($term['meta']['hero_attachment']['relative_file'] ?? '');
+            if ($this->safe_relative_upload_path($relative)) {
+                $paths[$relative] = true;
+            }
+        }
+        ksort($paths, SORT_STRING);
+        return $paths;
+    }
+
+    private function safe_relative_upload_path($path) {
+        $path = (string) $path;
+        return '' !== $path
+            && strlen($path) <= 500
+            && '/' !== $path[0]
+            && false === strpos($path, "\0")
+            && false === strpos($path, '\\')
+            && !preg_match('#(^|/)\.\.(/|$)#', $path)
+            && !preg_match('#(^|/)(?:\.|)(/|$)#', $path);
+    }
+
+    private function safe_archive_path($path) {
+        $path = (string) $path;
+        return self::PACKAGE_FILENAME === $path
+            || (0 === strpos($path, 'attachments/') && $this->safe_relative_upload_path(substr($path, strlen('attachments/'))));
+    }
+
+    private function zip_entry_hash($zip, $archive_path) {
+        $stream = $zip->getStream($archive_path);
+        if (!is_resource($stream)) {
+            throw new RuntimeException(sprintf('Bundled file “%s” could not be read.', $archive_path));
+        }
+        $hash = hash_init('sha256');
+        while (!feof($stream)) {
+            $chunk = fread($stream, 1024 * 1024);
+            if (false === $chunk) {
+                fclose($stream);
+                throw new RuntimeException(sprintf('Bundled file “%s” could not be verified.', $archive_path));
+            }
+            hash_update($hash, $chunk);
+        }
+        fclose($stream);
+        return hash_final($hash);
     }
 
     private function post_uuid($post_id) {
