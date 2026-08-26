@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.4.3 - 2026-08-27
+
+- Fixed full catalogue snapshot pagination when legacy posts share Library post types but cannot be exported, ensuring every continuation cursor identifies the final emitted record and preventing `INVALID_SNAPSHOT_CURSOR` failures in the School worker.
+
 ## 0.4.2 - 2026-08-26
 
 - Added a write-only WordPress fallback for the dedicated catalogue synchronization secret when production hosting cannot provide `TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET`; server-managed constants still take precedence.

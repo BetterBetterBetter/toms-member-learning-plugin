@@ -44,6 +44,16 @@ do {
     if (null === $snapshot_cursor) {
         $snapshot_cursor = $page['snapshot_cursor'];
     }
+    $page_ids = array_map('intval', array_column($page['items'], 'wordpress_id'));
+    if (empty($page_ids)) {
+        $assert(null === $page['next_after_id'], 'An empty snapshot page retained an item cursor.');
+        $assert(!$page['has_more'], 'An empty snapshot page claimed that more exportable records exist.');
+    } else {
+        $assert((int) end($page_ids) === (int) $page['next_after_id'], 'Snapshot cursor did not identify the final emitted record.');
+        if ($page['has_more']) {
+            $assert(37 === count($page_ids), 'A non-final snapshot page was not full after skipping legacy records.');
+        }
+    }
     $all = array_merge($all, $page['items']);
     $after_id = $page['next_after_id'];
 } while ($page['has_more']);

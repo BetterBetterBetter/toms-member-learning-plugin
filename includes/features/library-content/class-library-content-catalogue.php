@@ -18,10 +18,10 @@ class TSOL_Library_Content_Catalogue {
         $per_page = min(self::MAX_PAGE_SIZE, max(1, (int) $per_page));
         $snapshot_cursor = TSOL_Library_Content_Changes::current_cursor();
 
-        $query = new WP_Query(array(
+        $all_ids = get_posts(array(
             'post_type' => TSOL_Library_Content_Model::post_types(),
             'post_status' => array('publish', 'draft', 'private', 'pending', 'future'),
-            'posts_per_page' => $per_page + 1,
+            'posts_per_page' => -1,
             'orderby' => 'ID',
             'order' => 'ASC',
             'fields' => 'ids',
@@ -29,44 +29,33 @@ class TSOL_Library_Content_Catalogue {
             'suppress_filters' => false,
         ));
 
-        $ids = array_values(array_filter(array_map('intval', $query->posts), static function ($post_id) use ($after_id) {
+        $ids = array_values(array_filter(array_map('intval', $all_ids), static function ($post_id) use ($after_id) {
             return $post_id > $after_id;
         }));
-
-        // WP_Query cannot express an ID cursor without a custom SQL filter.
-        // Fetching the small, normalized catalogue remains deterministic; trim
-        // after filtering and use the last returned ID as the next cursor.
-        if ($after_id > 0) {
-            $all_ids = get_posts(array(
-                'post_type' => TSOL_Library_Content_Model::post_types(),
-                'post_status' => array('publish', 'draft', 'private', 'pending', 'future'),
-                'posts_per_page' => -1,
-                'orderby' => 'ID',
-                'order' => 'ASC',
-                'fields' => 'ids',
-                'no_found_rows' => true,
-                'suppress_filters' => false,
-            ));
-            $ids = array_values(array_filter(array_map('intval', $all_ids), static function ($post_id) use ($after_id) {
-                return $post_id > $after_id;
-            }));
-        }
-
-        $has_more = count($ids) > $per_page;
-        $ids = array_slice($ids, 0, $per_page);
         $items = array();
         foreach ($ids as $post_id) {
             $record = self::record($post_id);
             if (!is_wp_error($record)) {
                 $items[] = $record;
+                if (count($items) > $per_page) {
+                    break;
+                }
             }
         }
+
+        // Legacy or otherwise non-exportable posts can share the registered
+        // post types. Paginate the records that were actually emitted so the
+        // cursor always names the final item in the response. The School
+        // importer deliberately rejects any other cursor to prevent gaps.
+        $has_more = count($items) > $per_page;
+        $items = array_slice($items, 0, $per_page);
+        $next_after_id = empty($items) ? null : (int) end($items)['wordpress_id'];
 
         return array(
             'schema_version' => self::SCHEMA_VERSION,
             'generated_at' => gmdate('c'),
             'snapshot_cursor' => (string) $snapshot_cursor,
-            'next_after_id' => empty($ids) ? null : (int) end($ids),
+            'next_after_id' => $next_after_id,
             'has_more' => $has_more,
             'items' => $items,
         );
