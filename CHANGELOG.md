@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.2.2 - 2026-08-26
+
+- Made MemberPress migration verification identify approved Course-root access corrections by stable WordPress slug instead of mutable titles.
 - Added a MemberPress Account Security tab with an explicitly confirmed, nonce-protected action that queues durable all-device Library session revocation without implying that WordPress, MemberPress, or Access sessions are also cleared.
 - Made the native Course body the single public **About this course** source, retained ordered learning outcomes as structured fields, and removed the duplicate Course WYSIWYG.
 - Added a strict semantic HTML boundary for every Library and Speaker WYSIWYG synchronized to the standalone application, stripping pasted styling, layout wrappers, embeds, scripts, and unsafe links on save and export.
