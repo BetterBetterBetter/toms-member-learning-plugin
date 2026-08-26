@@ -281,9 +281,7 @@ class TSOL_Library_Auth_Revocation {
             : '';
         $secret = trim((string) apply_filters('tsol_library_auth_revocation_secret', $secret));
         $disallowed = array(TSOL_Library_Auth_Settings::client_secret());
-        if (defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
-            $disallowed[] = trim((string) TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET);
-        }
+        $disallowed[] = TSOL_Library_Auth_Settings::catalogue_webhook_secret();
         foreach ($disallowed as $candidate) {
             if ($candidate !== '' && $secret !== '' && hash_equals($candidate, $secret)) {
                 return '';

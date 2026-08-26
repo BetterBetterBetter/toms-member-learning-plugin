@@ -62,6 +62,32 @@ if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
     }
 }
 
+if (!defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
+    $previous_catalogue_secret = get_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, null);
+    $database_catalogue_secret = 'library-catalogue-contract-database-secret-value';
+    update_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $database_catalogue_secret, false);
+    $assert(
+        TSOL_Library_Auth_Settings::catalogue_webhook_secret() === $database_catalogue_secret,
+        'The write-only WordPress catalogue-secret fallback is unavailable.'
+    );
+    $administrator_ids = get_users(array('role' => 'administrator', 'fields' => 'ID', 'number' => 1));
+    if (!empty($administrator_ids)) {
+        $previous_user_id = get_current_user_id();
+        wp_set_current_user((int) $administrator_ids[0]);
+        ob_start();
+        (new TSOL_Library_Auth_Settings())->render();
+        $settings_html = (string) ob_get_clean();
+        $assert(strpos($settings_html, $database_catalogue_secret) === false, 'The saved catalogue synchronization secret was rendered into the settings page.');
+        $assert(strpos($settings_html, 'id="tsol-library-catalogue-webhook-secret"') !== false, 'The catalogue synchronization secret input is missing.');
+        wp_set_current_user($previous_user_id);
+    }
+    if (null === $previous_catalogue_secret) {
+        delete_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION);
+    } else {
+        update_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $previous_catalogue_secret, false);
+    }
+}
+
 $cache_exclusions = apply_filters('rocket_cache_reject_uri', array(), true);
 $assert(in_array('/wp-admin/admin-post\\.php', $cache_exclusions, true), 'Library browser authentication is not excluded from WP Rocket.');
 $library_rest_exclusion = '/(index\\.php/)?' . preg_quote(rest_get_url_prefix(), '/') . '/tsol-library/v1(/.*|$)';

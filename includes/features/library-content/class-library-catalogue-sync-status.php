@@ -13,6 +13,23 @@ class TSOL_Library_Catalogue_Sync_Status {
 
     public function init() {
         add_filter('site_status_tests', array($this, 'register_site_health_test'));
+        add_action('admin_post_tsol_library_catalogue_retry', array($this, 'handle_retry'));
+    }
+
+    public function handle_retry() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You are not allowed to retry catalogue synchronization.', 'tomschooloflife-plugin'), '', array('response' => 403));
+        }
+        check_admin_referer('tsol_library_catalogue_retry');
+
+        $delivered = TSOL_Library_Catalogue_Webhook::retry_pending_now();
+        $url = add_query_arg(
+            'catalogue_retry',
+            $delivered ? 'delivered' : 'pending',
+            TSOL_Library_Admin_Navigation::settings_url(TSOL_Library_Admin_Navigation::SETTINGS_TAB_SYNC)
+        );
+        wp_safe_redirect($url);
+        exit;
     }
 
     public function register_site_health_test($tests) {
@@ -66,12 +83,18 @@ class TSOL_Library_Catalogue_Sync_Status {
         $notice_class = 'good' === $assessment['status']
             ? 'notice-success'
             : ('critical' === $assessment['status'] ? 'notice-error' : 'notice-warning');
+        $retry_notice = isset($_GET['catalogue_retry']) ? sanitize_key(wp_unslash($_GET['catalogue_retry'])) : '';
         ?>
         <h2><?php esc_html_e('Catalogue Synchronization', 'tomschooloflife-plugin'); ?></h2>
         <p class="tsol-library-admin-page__lead"><?php esc_html_e('WordPress remains the editorial source of truth. This page confirms that its durable change journal and the School catalogue projection are moving together.', 'tomschooloflife-plugin'); ?></p>
         <div class="notice <?php echo esc_attr($notice_class); ?> inline">
             <p><strong><?php echo esc_html($assessment['message']); ?></strong></p>
         </div>
+        <?php if ('delivered' === $retry_notice) : ?>
+            <div class="notice notice-success inline"><p><?php esc_html_e('WordPress delivered the pending catalogue change. The School worker is now processing it; refresh this page shortly to confirm matching cursors.', 'tomschooloflife-plugin'); ?></p></div>
+        <?php elseif ('pending' === $retry_notice) : ?>
+            <div class="notice notice-warning inline"><p><?php esc_html_e('The catalogue delivery is still pending. Confirm that the Library URL and catalogue synchronization secret exactly match the School app, then retry.', 'tomschooloflife-plugin'); ?></p></div>
+        <?php endif; ?>
 
         <div class="tsol-library-admin-stats">
             <?php self::render_stat(__('WordPress cursor', 'tomschooloflife-plugin'), $local['source_cursor']); ?>
@@ -96,6 +119,18 @@ class TSOL_Library_Catalogue_Sync_Status {
                 </tbody>
             </table>
         </section>
+
+        <?php if ((int) $local['pending']['count'] > 0) : ?>
+            <section class="card tsol-library-admin-card--wide">
+                <h3><?php esc_html_e('Retry pending synchronization', 'tomschooloflife-plugin'); ?></h3>
+                <p><?php esc_html_e('Retry the retained catalogue cursor immediately after correcting the Library URL or catalogue synchronization secret. This does not recreate, discard, or duplicate catalogue data.', 'tomschooloflife-plugin'); ?></p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="tsol_library_catalogue_retry">
+                    <?php wp_nonce_field('tsol_library_catalogue_retry'); ?>
+                    <?php submit_button(__('Retry synchronization now', 'tomschooloflife-plugin'), 'secondary', 'submit', false); ?>
+                </form>
+            </section>
+        <?php endif; ?>
 
         <section class="card tsol-library-admin-card--wide">
             <h3><?php esc_html_e('Production requirement', 'tomschooloflife-plugin'); ?></h3>

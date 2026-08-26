@@ -323,6 +323,28 @@ class TSOL_Library_Catalogue_Webhook {
         );
     }
 
+    public static function retry_pending_now() {
+        global $wpdb;
+
+        if (self::endpoint_url() === '' || strlen(self::secret()) < 32) {
+            return false;
+        }
+
+        $now = current_time('mysql', true);
+        $wpdb->query(
+            $wpdb->prepare(
+                'UPDATE ' . self::table() . ' SET next_attempt_at = %s WHERE locked_until IS NULL OR locked_until < %s', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static plugin-owned table name.
+                $now,
+                $now
+            )
+        );
+        self::schedule_delivery(time());
+        self::deliver_pending();
+
+        $status = self::delivery_status();
+        return (int) $status['pending']['count'] === 0;
+    }
+
     public static function school_status($source_cursor) {
         $url = self::status_endpoint_url();
         $secret = self::secret();
@@ -396,9 +418,7 @@ class TSOL_Library_Catalogue_Webhook {
     }
 
     private static function secret() {
-        $secret = defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')
-            ? (string) TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET
-            : '';
+        $secret = TSOL_Library_Auth_Settings::catalogue_webhook_secret();
         $secret = trim((string) apply_filters('tsol_library_catalogue_webhook_secret', $secret));
         $client_secret = TSOL_Library_Auth_Settings::client_secret();
         if ($secret !== '' && $client_secret !== '' && hash_equals($client_secret, $secret)) {

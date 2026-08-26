@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.2 - 2026-08-26
+
+- Added a write-only WordPress fallback for the dedicated catalogue synchronization secret when production hosting cannot provide `TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET`; server-managed constants still take precedence.
+- Added an administrator-only, nonce-protected **Retry synchronization now** action that immediately retries the retained catalogue cursor without recreating or discarding catalogue data.
+- Expanded synchronization guidance and status notices so configuration mismatches can be corrected without re-importing the catalogue.
+
 ## 0.4.1 - 2026-08-26
 
 - Replaced the reference-only migration download with one self-contained ZIP containing the WordPress Library catalogue, portable Access Groups, and every referenced WordPress upload.

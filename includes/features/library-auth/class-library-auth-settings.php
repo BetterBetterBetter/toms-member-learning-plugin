@@ -13,6 +13,7 @@ class TSOL_Library_Auth_Settings {
     public const APP_URL_OPTION = 'tsol_library_auth_app_url';
     public const CLIENT_ID_OPTION = 'tsol_library_auth_client_id';
     public const CLIENT_SECRET_OPTION = 'tsol_library_auth_client_secret';
+    public const CATALOGUE_WEBHOOK_SECRET_OPTION = 'tsol_library_catalogue_webhook_secret';
 
     public function init() {
         add_action('admin_init', array($this, 'register'));
@@ -35,6 +36,10 @@ class TSOL_Library_Auth_Settings {
         ));
         register_setting('tsol_library_auth', self::CLIENT_SECRET_OPTION, array(
             'sanitize_callback' => array($this, 'sanitize_secret'),
+            'default' => '',
+        ));
+        register_setting('tsol_library_auth', self::CATALOGUE_WEBHOOK_SECRET_OPTION, array(
+            'sanitize_callback' => array($this, 'sanitize_catalogue_webhook_secret'),
             'default' => '',
         ));
     }
@@ -75,6 +80,26 @@ class TSOL_Library_Auth_Settings {
         return $value;
     }
 
+    public function sanitize_catalogue_webhook_secret($value) {
+        if (defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
+            return (string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, '');
+        }
+
+        $value = trim((string) wp_unslash($value));
+        if ($value === '') {
+            return (string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, '');
+        }
+        if (strlen($value) < 32) {
+            add_settings_error(self::CATALOGUE_WEBHOOK_SECRET_OPTION, 'short_secret', __('The catalogue synchronization secret must be at least 32 characters.', 'tomschooloflife-plugin'));
+            return (string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, '');
+        }
+        if (self::client_secret() !== '' && hash_equals(self::client_secret(), $value)) {
+            add_settings_error(self::CATALOGUE_WEBHOOK_SECRET_OPTION, 'reused_secret', __('The catalogue synchronization secret must be different from the Library client secret.', 'tomschooloflife-plugin'));
+            return (string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, '');
+        }
+        return $value;
+    }
+
     public function render($embedded = false) {
         if (!current_user_can('manage_options')) {
             return;
@@ -83,6 +108,10 @@ class TSOL_Library_Auth_Settings {
         $secret_from_constant = defined('TSOL_LIBRARY_CLIENT_SECRET');
         $secret_is_present = self::client_secret() !== '';
         $secret_is_valid = strlen(self::client_secret()) >= 32;
+        $catalogue_secret_from_constant = defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET');
+        $catalogue_secret_is_present = self::catalogue_webhook_secret() !== '';
+        $catalogue_secret_is_valid = strlen(self::catalogue_webhook_secret()) >= 32
+            && ($secret_is_valid ? !hash_equals(self::client_secret(), self::catalogue_webhook_secret()) : true);
         $reason = self::readiness_error();
         $memberpress_ready = class_exists('MeprUser') && class_exists('MeprRule');
         ?>
@@ -148,6 +177,34 @@ class TSOL_Library_Auth_Settings {
                             <p class="description"><?php echo esc_html($secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'tomschooloflife-plugin') : __('Leave this field blank to keep the current secret. Entering a value replaces it after you save; the saved value is never displayed.', 'tomschooloflife-plugin')); ?></p>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row"><label for="tsol-library-catalogue-webhook-secret"><?php esc_html_e('Catalogue synchronization secret', 'tomschooloflife-plugin'); ?></label></th>
+                        <td>
+                            <p style="margin: 0 0 10px;">
+                                <?php if ($catalogue_secret_is_valid) : ?>
+                                    <span data-library-catalogue-secret-status="configured" style="align-items: center; background: #edfaef; border: 1px solid #8fd19e; border-radius: 999px; color: #166534; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-yes-alt" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Configured', 'tomschooloflife-plugin'); ?>
+                                    </span>
+                                <?php elseif ($catalogue_secret_is_present) : ?>
+                                    <span data-library-catalogue-secret-status="invalid" style="align-items: center; background: #fcf0f1; border: 1px solid #d63638; border-radius: 999px; color: #8a2424; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-warning" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Needs replacement', 'tomschooloflife-plugin'); ?>
+                                    </span>
+                                <?php else : ?>
+                                    <span data-library-catalogue-secret-status="missing" style="align-items: center; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 999px; color: #50575e; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-marker" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Not configured', 'tomschooloflife-plugin'); ?>
+                                    </span>
+                                <?php endif; ?>
+                                <span class="description" style="margin-left: 6px;">
+                                    <?php echo esc_html($catalogue_secret_from_constant ? __('Provided by the server environment', 'tomschooloflife-plugin') : ($catalogue_secret_is_present ? __('Saved in WordPress; the value is never displayed', 'tomschooloflife-plugin') : __('No secret has been provided yet', 'tomschooloflife-plugin'))); ?>
+                                </span>
+                            </p>
+                            <input id="tsol-library-catalogue-webhook-secret" class="regular-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr(self::CATALOGUE_WEBHOOK_SECRET_OPTION); ?>" value="" <?php disabled($catalogue_secret_from_constant); ?> placeholder="<?php echo esc_attr($catalogue_secret_is_present ? __('Enter a new secret to replace the current one', 'tomschooloflife-plugin') : __('At least 32 characters', 'tomschooloflife-plugin')); ?>">
+                            <p class="description"><?php echo esc_html($catalogue_secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'tomschooloflife-plugin') : __('Paste the exact TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET from the School app. Leave blank to keep the current value; the saved value is never displayed.', 'tomschooloflife-plugin')); ?></p>
+                        </td>
+                    </tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
@@ -179,6 +236,13 @@ class TSOL_Library_Auth_Settings {
             return trim((string) TSOL_LIBRARY_CLIENT_SECRET);
         }
         return trim((string) get_option(self::CLIENT_SECRET_OPTION, ''));
+    }
+
+    public static function catalogue_webhook_secret() {
+        if (defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
+            return trim((string) TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET);
+        }
+        return trim((string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, ''));
     }
 
     public static function configured() {

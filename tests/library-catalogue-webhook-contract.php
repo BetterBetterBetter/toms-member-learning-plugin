@@ -143,8 +143,7 @@ if (0 === $existing_rows) {
     $assert(false !== wp_next_scheduled(TSOL_Library_Catalogue_Webhook::WATCHDOG_HOOK), 'A failed delivery lost the recurring recovery watchdog.');
 
     $transport_outcome = 'success';
-    $wpdb->update($table, array('next_attempt_at' => current_time('mysql', true)), array('delivery_id' => $retry_delivery_id), array('%s'), array('%s'));
-    TSOL_Library_Catalogue_Webhook::deliver_pending();
+    $assert(TSOL_Library_Catalogue_Webhook::retry_pending_now(), 'The administrator retry did not drain an accepted pending delivery.');
     $assert(5 === count($requests), 'A retry did not perform a second HTTP request.');
     if (5 === count($requests)) {
         $retried_payload = json_decode((string) $requests[4]['args']['body'], true);
