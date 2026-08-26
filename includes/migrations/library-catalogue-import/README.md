@@ -37,8 +37,8 @@ require their exact confirmation strings and fail outside
   was edited, published, or lost its ownership marker.
 - The importer never mutates legacy content or MemberPress authority.
 
-Current local result: six published Courses, 142 published content records,
-zero projected mixed Collections, and 148 preserved legacy mappings. The
+Current local result: six published Courses, 144 published content records,
+zero projected mixed Collections, and 150 preserved legacy mappings. The
 separately reversible Series structure migration groups all 121 non-course
 items into six published Series and creates the course-only `Masterclasses`
 Collection for five courses. Native access is active locally and the verifier

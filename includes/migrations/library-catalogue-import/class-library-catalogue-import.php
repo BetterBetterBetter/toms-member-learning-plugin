@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Catalogue_Import {
 
-    const VERSION = '20260809.4';
+    const VERSION = '20260826.1';
     const WORKING_HOST = 'tomschooloflife.test';
     const STATE_OPTION = 'tsol_library_catalogue_import_state';
     const LOCK_OPTION = 'tsol_library_catalogue_import_lock';

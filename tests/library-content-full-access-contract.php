@@ -173,8 +173,8 @@ foreach ($user_ids as $user_id) {
     unset($group);
 }
 
-$assert(148 === count($mappings), 'Access matrix did not cover all 148 normalized mappings.');
-$assert(148 === (int) $verification['authorization_delegations_equivalent'], 'Full verification did not establish 148 equivalent delegations.');
+$assert(150 === count($mappings), 'Access matrix did not cover all 150 normalized mappings.');
+$assert(150 === (int) $verification['authorization_delegations_equivalent'], 'Full verification did not establish 150 equivalent delegations.');
 $assert(!empty($user_ids), 'Access matrix did not cover any WordPress users.');
 $assert(!empty($administrator_ids), 'Access matrix did not cover an administrator.');
 $assert(!empty($wordpress_only_non_admin_ids), 'Access matrix did not cover a WordPress-only non-administrator.');

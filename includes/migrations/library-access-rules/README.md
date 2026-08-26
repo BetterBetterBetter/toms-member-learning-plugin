@@ -49,7 +49,7 @@ Neither correction is active while the migration is staged.
 
 ## Current local rehearsal
 
-On 2026-08-10, all 154 normalized records were published locally and the eight
+On 2026-08-26, all 156 normalized records were published locally and the eight
 migration-owned rules were activated after explicit approval. The complete
 5,273-user matrix evaluated 812,042 decisions with zero allow-to-deny and 18
 approved Social Media Course-root deny-to-allow transitions. Exact rollback to
@@ -59,7 +59,7 @@ unchanged. Production remains a no-go pending its own snapshot, matrix,
 authenticated browser QA, and approval.
 
 The runtime-matrix contract evaluates MemberPress's real legacy decision and
-the staged native conditions for every local WordPress user and all 154 TSOL
+the staged native conditions for every local WordPress user and all 156 TSOL
 targets. It reports aggregate transition counts only and fails if an existing
 allow becomes a deny, an administrator is denied, a WordPress-only non-admin is
 granted protected content, or the person-specific exception disappears.

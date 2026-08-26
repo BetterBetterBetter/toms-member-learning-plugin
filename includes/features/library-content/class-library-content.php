@@ -14,6 +14,7 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
 
     private $admin = null;
     private $access_column = null;
+    private $access_groups_admin = null;
     private $collection_admin = null;
     private $homepage_curation = null;
     private $navigation = null;
@@ -41,6 +42,8 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
             $this->homepage_curation->init();
             $this->access_column = new TSOL_Library_Content_Access_Column();
             $this->access_column->init();
+            $this->access_groups_admin = new TSOL_Library_Access_Groups_Admin();
+            $this->access_groups_admin->init();
             $this->collection_admin = new TSOL_Library_Collection_Admin();
             $this->collection_admin->init();
             $this->url_admin = new TSOL_Library_URL_Admin();

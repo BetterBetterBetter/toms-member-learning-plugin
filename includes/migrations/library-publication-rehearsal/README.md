@@ -1,6 +1,6 @@
 # Local Library publication rehearsal
 
-This command publishes only the 154 normalized TSOL Course, Series, and Content
+This command publishes only the 156 normalized TSOL Course, Series, and Content
 records on `tomschooloflife.test`. It records every prior status and can restore
 those statuses after native access has been rolled back.
 

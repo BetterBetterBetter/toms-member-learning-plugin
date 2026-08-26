@@ -120,7 +120,7 @@ $series_episode_count = (int) $wpdb->get_var($wpdb->prepare(
 $access_verification = (new TSOL_Library_Access_Rules_Migration())->verify();
 $assert(6 <= $course_count, 'The locked six-Course baseline is missing.');
 $assert(6 <= $series_count, 'The locked six-Series baseline is missing.');
-$assert(142 <= $content_count, 'The locked 142-item content baseline is missing.');
+$assert(144 <= $content_count, 'The locked 144-item content baseline is missing.');
 $assert(121 <= $series_episode_count, 'The locked 121-episode Series baseline is missing.');
 $expected_authorization_mode = 'activated' === $access_verification['phase'] ? 'tsol_native' : 'legacy_delegation';
 $assert($expected_authorization_mode === $access_verification['authorization_mode'], 'The modernization authorization mode is inconsistent with its phase.');

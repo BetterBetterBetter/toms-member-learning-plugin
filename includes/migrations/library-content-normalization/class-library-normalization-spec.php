@@ -12,8 +12,8 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Normalization_Spec {
 
-    const VERSION = '20260809.3';
-    const SOURCE_FINGERPRINT = 'eac2344e9d2cafa392de22bafdb33cf89b0fcbe4a8d820bf9dd2e5a22d0eaab2';
+    const VERSION = '20260826.1';
+    const SOURCE_FINGERPRINT = '5c90b0e458ed980ac8b01a664e9c5490007841391b3fdd1ef3d20e28a2e60638';
     const ARCHIVE_RULE_ID = 99915;
     const MASTERCLASS_HUB_ID = 103647;
     const PILOT_KEY = 'against-the-machine-masterclass';
@@ -22,12 +22,12 @@ class TSOL_Library_Normalization_Spec {
         return array(
             'source_archive_posts' => 124,
             'source_masterclass_roots' => 5,
-            'source_masterclass_lessons' => 18,
+            'source_masterclass_lessons' => 20,
             'courses' => 6,
             'sections' => 7,
-            'lessons' => 21,
+            'lessons' => 23,
             'library_items' => 121,
-            'playable_pages' => 142,
+            'playable_pages' => 144,
             'collection_roots' => 7,
             'collection_terms' => 15,
             'numbered_sessions' => 96,
@@ -41,12 +41,12 @@ class TSOL_Library_Normalization_Spec {
 
     public static function expected_media_summary() {
         return array(
-            'playable_pages' => 142,
-            'media_assets' => 147,
+            'playable_pages' => 144,
+            'media_assets' => 149,
             'pages_with_multiple_assets' => 3,
-            'private_reference_count' => 143,
+            'private_reference_count' => 145,
             'providers' => array(
-                'vimeo' => 143,
+                'vimeo' => 145,
                 'wordpress' => 1,
                 'youtube' => 3,
             ),
@@ -229,6 +229,8 @@ class TSOL_Library_Normalization_Spec {
                         'lessons' => array(
                             array('source_id' => 103898, 'title' => 'Session 1'),
                             array('source_id' => 103900, 'title' => 'Session 2'),
+                            array('source_id' => 103907, 'title' => 'Session 3'),
+                            array('source_id' => 103917, 'title' => 'Session 4'),
                         ),
                     ),
                 ),

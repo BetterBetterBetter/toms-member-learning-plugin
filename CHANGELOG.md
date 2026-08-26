@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-26
+
+- Added **TSOL Library → Access Groups**, where administrators create named reusable Library access packages and define the Courses, Series, collections, or broad Library areas each package unlocks.
+- Added a **Library Access Groups** panel to MemberPress membership editors so new and existing products can receive one or more packages without duplicating access conditions.
+- Added guarded compilation to native MemberPress rules, full current-user/content access comparison, explicit publication confirmation, concurrent-operation locking, source-change detection, and one-step rollback.
+- Imported the complete current policy—including the separately shipped New Marketer Workshop rule—into eight editable groups while preserving the non-membership exception.
+- Made Access Groups the ownership boundary for TSOL Library rules: plugin-owned stragglers can be reconciled without changing live access, arbitrary rules are never auto-modified, and publishing is blocked while any Library rule remains unmanaged.
+- Retired the completed Import & Legacy browser tab while preserving its guarded WP-CLI verification and rollback tools, and updated Library Settings to direct administrators to Access Groups instead of raw MemberPress rules.
+
+## 0.2.3 - 2026-08-26
+
+- Updated the guarded Library normalization, catalogue, publication, and MemberPress access manifests for the latest production snapshot, including Medicine Cabinet Sessions 3 and 4 and the production Social Media course slug.
+
 ## 0.2.2 - 2026-08-26
 
 - Made MemberPress migration verification identify approved Course-root access corrections by stable WordPress slug instead of mutable titles.

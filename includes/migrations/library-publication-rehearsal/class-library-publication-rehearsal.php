@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Publication_Rehearsal {
 
-    const VERSION = '20260810.1';
+    const VERSION = '20260826.1';
     const WORKING_HOST = 'tomschooloflife.test';
     const STATE_OPTION = 'tsol_library_publication_rehearsal_state';
     const LOCK_OPTION = 'tsol_library_publication_rehearsal_lock';
@@ -110,7 +110,7 @@ class TSOL_Library_Publication_Rehearsal {
             throw new RuntimeException('The local publication rehearsal has not started.');
         }
         $ids = array_values(array_map('intval', (array) ($state['target_ids'] ?? array())));
-        if (154 !== count($ids) || $ids !== $this->target_ids()) {
+        if (156 !== count($ids) || $ids !== $this->target_ids()) {
             throw new RuntimeException('The normalized publication target inventory changed.');
         }
         if ((string) ($state['structure_fingerprint'] ?? '') !== $this->structure_fingerprint($ids)) {
@@ -172,8 +172,8 @@ class TSOL_Library_Publication_Rehearsal {
     }
 
     private function assert_readiness($ids) {
-        if (154 !== count($ids)) {
-            throw new RuntimeException('Publication requires exactly 154 normalized Course, Series, and Content records.');
+        if (156 !== count($ids)) {
+            throw new RuntimeException('Publication requires exactly 156 normalized Course, Series, and Content records.');
         }
         $counts = array(
             TSOL_Library_Content_Model::COURSE_POST_TYPE => 0,
@@ -219,7 +219,7 @@ class TSOL_Library_Publication_Rehearsal {
                 }
             }
         }
-        if (array(6, 6, 142) !== array_values($counts) || 21 !== $course_items || 121 !== $series_items) {
+        if (array(6, 6, 144) !== array_values($counts) || 23 !== $course_items || 121 !== $series_items) {
             throw new RuntimeException('The Course, Series, lesson, or Series-item inventory changed.');
         }
     }
@@ -235,7 +235,7 @@ class TSOL_Library_Publication_Rehearsal {
             'posts_per_page' => -1,
             'fields' => 'ids',
             'suppress_filters' => true,
-            // Keep this historical rehearsal locked to its original 154
+            // Keep this historical rehearsal locked to its 156 normalized
             // targets. Additive imports have their own publication verifier.
             'meta_query' => array(
                 'relation' => 'AND',

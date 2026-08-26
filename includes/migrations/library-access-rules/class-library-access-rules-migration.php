@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Access_Rules_Migration {
 
-    const VERSION = '20260810.1';
+    const VERSION = '20260826.1';
     const WORKING_HOST = 'tomschooloflife.test';
     const STATE_OPTION = 'tsol_library_access_rules_migration_state';
     const LOCK_OPTION = 'tsol_library_access_rules_migration_lock';
@@ -430,14 +430,14 @@ class TSOL_Library_Access_Rules_Migration {
             'orderby' => 'ID',
             'order' => 'ASC',
             'suppress_filters' => true,
-            // This migration's persisted plan is the locked 20260810.1
+            // This migration's persisted plan is the locked 20260826.1
             // rehearsal inventory. Later imports and WordPress-native records
             // own their access lifecycle independently and must not silently
             // expand this historical migration's scope.
             'meta_query' => array(
                 array(
                     'key' => TSOL_Library_Content_Model::META_MIGRATION_VERSION,
-                    'value' => array('20260809.4', '20260810.3'),
+                    'value' => array('20260826.1', '20260810.3'),
                     'compare' => 'IN',
                 ),
             ),
@@ -450,8 +450,8 @@ class TSOL_Library_Access_Rules_Migration {
         $content = array_map('intval', get_posts($query));
         $all = array_values(array_unique(array_merge($courses, $series, $content)));
         sort($all, SORT_NUMERIC);
-        if (6 !== count($courses) || 6 !== count($series) || 142 !== count($content) || 154 !== count($all)) {
-            throw new RuntimeException('The TSOL access plan requires the locked six-Course, six-Series, 142-item rehearsal inventory.');
+        if (6 !== count($courses) || 6 !== count($series) || 144 !== count($content) || 156 !== count($all)) {
+            throw new RuntimeException('The TSOL access plan requires the locked six-Course, six-Series, 144-item rehearsal inventory.');
         }
         return compact('courses', 'series', 'content', 'all');
     }
@@ -583,7 +583,7 @@ class TSOL_Library_Access_Rules_Migration {
             $slug = (string) get_post_field('post_name', $target_id);
             $key = sanitize_key($title) . '-policy-change';
             if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type
-                && in_array($slug, array('social-media', 'social-media-for-people-who-hate-social-media'), true)
+                && in_array($slug, array('social-media', 'social-media-masterclass', 'social-media-for-people-who-hate-social-media'), true)
             ) {
                 $key = 'social-media-course-root-inherits-lesson-access';
             } elseif (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type && 'the-ai-advantage' === $slug) {

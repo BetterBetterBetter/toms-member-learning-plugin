@@ -32,7 +32,7 @@ Supported development/deployed plugin basenames:
 - `includes/features/cookie-consent/class-cookie-consent-settings.php` - Cookie consent settings and sanitization.
 - `includes/features/library-auth/` - Narrow WordPress identity, MemberPress content-authorization, and Library-session security bridge for the standalone Library.
 - `includes/features/library-auth/class-library-account-security.php` - MemberPress Account Security tab and confirmed all-device Library-session revocation action.
-- `includes/features/library-content/` - Private TSOL-owned courses/content/Speaker profiles, public Course landing fields, editorial UI, catalogue projection, and read-only MemberPress access presentation.
+- `includes/features/library-content/` - Private TSOL-owned courses/content/Speaker profiles, public Course landing fields, editorial UI, catalogue projection, and guarded MemberPress Access Groups management.
 - `includes/migrations/library-catalogue-import/` - Guarded local clone-only importer from the locked legacy inventory.
 - `assets/admin/` - Admin page assets.
 - `assets/features/accountability-modal/` - Accountability modal assets.
@@ -101,6 +101,24 @@ The plugin also registers a **TSOL Library Footer** menu location under WordPres
 
 Every authenticated WordPress account can enter and browse the Library. Access to each protected course or lesson is decided from that content's existing MemberPress rules, including drip and expiry behavior; unprotected published content is available to signed-in users. WordPress users with `manage_options` retain full administrator access. The plugin does not maintain a second membership or staff allowlist.
 
+Administrators create named reusable authorization packages under **TSOL
+Library → Access Groups** and define the broad Library areas, Collections,
+Courses, or Series each package unlocks. A **Library Access Groups** panel on
+each MemberPress membership assigns one or more of those packages to the
+product. The saved mapping is only a draft: MemberPress remains the runtime
+authority. Publishing first
+creates inactive native MemberPress rules and compares every current WordPress
+user against every current Library authorization target. The operation is
+blocked if any current user would lose access, requires the exact confirmation
+phrase `publish-access-groups`, detects source-rule changes, and retains a
+one-step rollback to the previous native rules. Memberships, subscriptions,
+transactions, legacy MemberPress Courses, and non-Library MemberPress rules are
+not rewritten by the grouping layer. Every published rule affecting TSOL
+Library content must be owned by Access Groups before a new policy can be
+checked or published. A guarded reconciliation can absorb separately shipped
+TSOL-owned Library rules without changing live access; arbitrary MemberPress
+rules are never changed automatically.
+
 The MemberPress Account page includes a **Security** tab for signing the member
 out of the standalone Library on every device. The authenticated action uses a
 POST request, WordPress nonce, and explicit confirmation before placing the
@@ -155,8 +173,8 @@ Its private `tsol_library_course` and `tsol_library_item` types own the new
 editorial structure. Native MemberPress Courses and legacy Pages remain
 untouched; MemberPress Rules remains the sole live access authority.
 
-The local clone importer currently produces six draft courses and 142 draft
-content records while delegating all 148 access mappings to their unchanged
+The local clone importer currently produces six draft courses and 144 draft
+content records while delegating all 150 access mappings to their unchanged
 legacy sources. Watch routes use immutable content UUIDs, kept separate from
 authorization pointers. The native Course body is the public **About this
 course** source; protected downloads and links belong in lesson Resources.

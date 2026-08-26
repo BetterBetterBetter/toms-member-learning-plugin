@@ -57,7 +57,7 @@ $assert(($type_counts['course'] ?? 0) === 7, 'Catalogue did not contain seven co
 $assert(($type_counts['series'] ?? 0) === 6, 'Catalogue did not contain the six locked Series.');
 $assert(($type_counts['lesson'] ?? 0) === 75, 'Catalogue did not contain 75 lessons.');
 $assert(($type_counts['item'] ?? 0) === 121, 'Catalogue did not contain 121 Series items.');
-$assert(array_sum(array_map(static function ($item) { return count($item['media']); }, $all)) === 199, 'Catalogue did not contain 199 playable media records.');
+$assert(array_sum(array_map(static function ($item) { return count($item['media']); }, $all)) === 201, 'Catalogue did not contain 201 playable media records.');
 $assert(array_sum(array_map(static function ($item) { return count($item['resources']); }, $all)) >= 30, 'Catalogue lost one or more of the 30 locked imported resources.');
 $assert(array_sum(array_map(static function ($item) { return 'course' === $item['record_type'] ? count($item['course']['sections']) : 0; }, $all)) === 14, 'Catalogue did not contain fourteen course sections.');
 $assert(count(array_filter($all, static function ($item) {
@@ -70,7 +70,7 @@ $assert(count(array_filter($all, static function ($item) {
 $coming_soon_records = array_values(array_filter($all, static function ($item) {
     return 'coming_soon' === (string) ($item['availability'] ?? '');
 }));
-$assert(2 === count($coming_soon_records), 'Catalogue did not contain the two approved coming-soon Medicine Cabinet lessons.');
+$assert(0 === count($coming_soon_records), 'Published Medicine Cabinet sessions were unexpectedly retained as coming-soon placeholders.');
 $coming_soon_by_migration_key = array();
 foreach ($coming_soon_records as $coming_soon_record) {
     $coming_soon_by_migration_key[(string) $coming_soon_record['migration_key']] = $coming_soon_record;
@@ -78,10 +78,7 @@ foreach ($coming_soon_records as $coming_soon_record) {
     $assert(106936 === (int) ($coming_soon_record['course']['course_id'] ?? 0), 'A coming-soon lesson was assigned outside The $100 Medicine Cabinet.');
     $assert(array() === $coming_soon_record['media'], 'A Medicine Cabinet placeholder unexpectedly exposes playable media.');
 }
-$expected_coming_soon = array(
-    'manual-tsol_library_item-1e605183-98c5-4224-b71d-23efaae75d94' => array(3, '2026-08-11T23:00:00+00:00'),
-    'manual-tsol_library_item-0e24585f-75a6-4da4-9c9a-6eac89dfcb1a' => array(4, '2026-08-18T23:00:00+00:00'),
-);
+$expected_coming_soon = array();
 foreach ($expected_coming_soon as $migration_key => $expected) {
     $record = $coming_soon_by_migration_key[$migration_key] ?? null;
     $assert(is_array($record), sprintf('Medicine Cabinet lesson position %d is missing from the coming-soon catalogue.', $expected[0]));
@@ -254,25 +251,25 @@ $assert(count(array_filter($all, static function ($item) {
     return 'item' === (string) $item['record_type'] && null !== $item['series'] && 'series' !== (string) ($item['speaker_source'] ?? '');
 })) === 0, 'An imported Series item did not inherit its Series Speakers.');
 
-$ai_course_records = array_values(array_filter($all, static function ($item) {
-    return 'course' === (string) $item['record_type'] && 'The AI Advantage' === (string) $item['title'];
+$speaker_course_records = array_values(array_filter($all, static function ($item) {
+    return 'course' === (string) $item['record_type'] && 'The New Marketer Workshop' === (string) $item['title'];
 }));
-$assert(1 === count($ai_course_records), 'The Speaker inheritance contract could not identify The AI Advantage Course.');
-if (1 === count($ai_course_records)) {
-    $ai_course = $ai_course_records[0];
-    $ai_course_speaker_ids = array_map('intval', array_column($ai_course['speakers'], 'wordpress_id'));
-    $assert('direct' === (string) ($ai_course['speaker_source'] ?? ''), 'The AI Advantage Course did not retain its direct Speaker source.');
-    $assert(!empty($ai_course_speaker_ids), 'The AI Advantage Course has no published Speaker to exercise inheritance.');
-    $ai_lessons = array_values(array_filter($all, static function ($item) use ($ai_course) {
+$assert(1 === count($speaker_course_records), 'The Speaker inheritance contract could not identify The New Marketer Workshop Course.');
+if (1 === count($speaker_course_records)) {
+    $speaker_course = $speaker_course_records[0];
+    $course_speaker_ids = array_map('intval', array_column($speaker_course['speakers'], 'wordpress_id'));
+    $assert('direct' === (string) ($speaker_course['speaker_source'] ?? ''), 'The New Marketer Workshop Course did not retain its direct Speaker source.');
+    $assert(!empty($course_speaker_ids), 'The New Marketer Workshop Course has no published Speaker to exercise inheritance.');
+    $speaker_lessons = array_values(array_filter($all, static function ($item) use ($speaker_course) {
         return 'lesson' === (string) $item['record_type']
-            && (int) ($item['course']['course_id'] ?? 0) === (int) $ai_course['wordpress_id'];
+            && (int) ($item['course']['course_id'] ?? 0) === (int) $speaker_course['wordpress_id'];
     }));
-    $assert(!empty($ai_lessons), 'The AI Advantage Course has no lessons to exercise Speaker inheritance.');
-    foreach ($ai_lessons as $ai_lesson) {
-        $assert('course' === (string) ($ai_lesson['speaker_source'] ?? ''), 'An AI Advantage lesson did not identify its Course as the Speaker source.');
+    $assert(!empty($speaker_lessons), 'The New Marketer Workshop Course has no lessons to exercise Speaker inheritance.');
+    foreach ($speaker_lessons as $speaker_lesson) {
+        $assert('course' === (string) ($speaker_lesson['speaker_source'] ?? ''), 'A New Marketer Workshop lesson did not identify its Course as the Speaker source.');
         $assert(
-            $ai_course_speaker_ids === array_map('intval', array_column($ai_lesson['speakers'], 'wordpress_id')),
-            'An AI Advantage lesson did not project the parent Course Speaker order.'
+            $course_speaker_ids === array_map('intval', array_column($speaker_lesson['speakers'], 'wordpress_id')),
+            'A New Marketer Workshop lesson did not project the parent Course Speaker order.'
         );
     }
 }

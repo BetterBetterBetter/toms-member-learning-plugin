@@ -181,7 +181,7 @@ foreach ($groups as $group) {
 
 $assert(in_array($verification['phase'], array('staged', 'activated'), true), 'The access-rule migration is not staged or activated.');
 $assert((int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->users}") === count($user_ids), 'The runtime matrix did not cover the complete current local user population.');
-$assert(154 === count($plan['target_ids']), 'The runtime matrix did not cover every TSOL Library target.');
+$assert(156 === count($plan['target_ids']), 'The runtime matrix did not cover every TSOL Library target.');
 $assert(0 === $summary['allow_to_deny'], 'The TSOL policy removes access granted by MemberPress at runtime.');
 $assert(18 === $summary['deny_to_allow'], 'The approved Social Media Course-root correction changed.');
 $assert($administrator_count > 0, 'The runtime matrix did not cover an administrator.');

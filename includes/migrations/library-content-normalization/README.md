@@ -15,7 +15,7 @@ Current reusable files:
 - `class-library-normalization-manifest.php`: read-only classification, media,
   resource, curriculum, collection, and access mapping discovery.
 
-The manifest expects 147 distinct published sources and 148 mappings, with
+The manifest expects 149 distinct published sources and 150 mappings, with
 source fingerprint
 `eac2344e9d2cafa392de22bafdb33cf89b0fcbe4a8d820bf9dd2e5a22d0eaab2`.
 

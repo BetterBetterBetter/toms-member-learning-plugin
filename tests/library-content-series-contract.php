@@ -18,7 +18,7 @@ $report = (new TSOL_Library_Series_Import())->verify();
 $target_status = (string) $report['target_status'];
 $reviewable_statuses = array('publish', 'draft', 'pending', 'private', 'future');
 $authorization_mode = (string) $report['authorization_mode'];
-$assert(148 === (int) $base['authorization_delegations_equivalent'], 'The original 148 authorization delegations changed.');
+$assert(150 === (int) $base['authorization_delegations_equivalent'], 'The original 150 authorization delegations changed.');
 $assert(6 === (int) $report['series'] && 121 === (int) $report['episodes'], 'The structure is not six Series containing all 121 non-course items.');
 $assert(array(
     'Sessions' => 96,

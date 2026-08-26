@@ -174,14 +174,14 @@ $assert(6 === $counts[TSOL_Library_Content_Model::SERIES_POST_TYPE], 'The catalo
 $assert(196 === $counts[TSOL_Library_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 196 reviewable Content records.');
 $assert(75 === $course_items, 'The catalogue does not contain 75 Course lessons.');
 $assert(121 === $series_items, 'The catalogue does not contain 121 Series items.');
-$assert(2 === $manual_records, 'The catalogue does not contain the two approved WordPress-native Medicine Cabinet lessons.');
-$assert(2 === $coming_soon_items, 'The catalogue does not contain the two approved coming-soon lessons.');
-$assert(199 === $media_assets, 'The catalogue does not contain the expected 199 media assets.');
+$assert(0 === $manual_records, 'Published Medicine Cabinet sessions were unexpectedly retained as WordPress-native placeholders.');
+$assert(0 === $coming_soon_items, 'Published Medicine Cabinet sessions were unexpectedly retained as coming-soon lessons.');
+$assert(201 === $media_assets, 'The catalogue does not contain the expected 201 media assets.');
 $assert(30 <= $resource_count, 'The catalogue lost one or more of the 30 locked imported resources.');
 $assert(7 === count(array_filter($course_item_counts)), 'A Course has no curriculum.');
 $assert(6 === count(array_filter($series_item_counts)), 'A Series has no content.');
 ksort($provider_counts, SORT_STRING);
-$assert(array('vimeo' => 195, 'wordpress' => 1, 'youtube' => 3) === $provider_counts, 'The media provider inventory changed.');
+$assert(array('vimeo' => 197, 'wordpress' => 1, 'youtube' => 3) === $provider_counts, 'The media provider inventory changed.');
 
 $published_speaker_ids = get_posts(array(
     'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,

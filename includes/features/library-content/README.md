@@ -233,8 +233,12 @@ determine Series membership or order.
 - Homepage
 - Settings, with capability-aware tabs for:
   - Authentication
-  - Import & Legacy
-  - Access Overview
+  - Sync Status
+  - Access
+
+The completed catalogue import and legacy transition are no longer exposed as
+everyday browser settings. Their guarded WP-CLI verification and rollback
+commands remain available for recovery work.
 
 TSOL fields, taxonomies, assets, columns, and editor behavior are registered
 only on the TSOL content and Speaker post types. Native MemberPress Courses,
@@ -293,9 +297,29 @@ and organisation, shows headshot and status context, and preserves an explicit
 multi-Speaker order. The underlying native multiple select remains the
 no-JavaScript fallback for direct mode.
 
-The access panel and compact list column are read-only projections of the live
-MemberPress rules. Administrators create and edit access in MemberPress Rules;
-there is no second checklist or copied allowlist in TSOL.
+The access panel and compact list column remain read-only projections of the
+live MemberPress rules. Administrators standardize membership access under
+**TSOL Library → Access Groups** rather than maintaining a growing set of
+membership conditions by hand. Administrators create and name only the
+packages they need, then select the broad Library areas, Collections, Courses,
+or Series each package unlocks. A **Library Access Groups** panel on every
+MemberPress membership assigns one or more packages. New memberships are
+explicitly unassigned until an administrator makes that choice.
+
+Access Groups are a management/compiler layer, not a second runtime authority.
+Saving changes creates a versioned draft only. Staging creates inactive native
+MemberPress rules, verifies their structure, and compares every current user
+against every current Library authorization target. Every published rule that
+affects Library content must be owned by the Access Groups baseline;
+publication is blocked while any unmanaged Library rule remains. A guarded
+reconciliation can bring separately shipped TSOL-owned rules into the draft,
+but arbitrary MemberPress rules are never modified automatically. Publication
+is also blocked on any allow-to-deny change, requires the exact
+`publish-access-groups` phrase, and swaps the complete managed Library rule set.
+Rollback republishes the prior rules and deletes the generated set.
+Non-membership member/role/capability exceptions found in the imported rules
+are preserved. Timed or otherwise unsupported rules fail closed during import
+rather than being approximated.
 
 New standalone records authorize against themselves. A new lesson assigned to
 a course authorizes against its TSOL course; a Series item authorizes against
@@ -307,7 +331,9 @@ the authorization pointer in WordPress and then ask MemberPress.
 
 The local `library-access-rules` migration owns eight native MemberPress rules:
 one Masterclasses Collection rule, five residual Masterclass Course rules, one
-Freedom OS Course rule, and one shared Series rule. Staging leaves every legacy
+Freedom OS Course rule, and one shared Series rule. The separately shipped New
+Marketer Workshop rule is reconciled as the ninth Access Groups baseline rule.
+Staging leaves every legacy
 rule and authorization pointer unchanged. Activation is blocked until all TSOL
 records are published, the complete matrix passes, and the two known
 Course-root inheritance corrections are approved. The current local rehearsal
@@ -349,6 +375,10 @@ php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/libr
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-catalogue-contract.php --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-series-contract.php --skip-themes
 php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-content-full-access-contract.php --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-access-groups-contract.php --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-access-groups-active-edit-contract.php --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-access-groups-membership-assignment-contract.php --skip-themes
+php -d memory_limit=512M /usr/local/bin/wp eval-file /absolute/plugin/tests/library-access-groups-definition-contract.php --skip-themes
 ```
 
 Focused browser verification is available from `test/e2e` with
@@ -360,8 +390,8 @@ structure.
 The current local inventory is seven courses, six Series, 194 content records
 (73 course lessons and 121 Series items), one Collection containing five
 Masterclass courses, zero standalone items, and 207 projected records. The
-original guarded import retains its locked 148 equivalent source authorization
-delegations and 154 owned records; the additive New Marketer Workshop module
+original guarded import retains its locked 150 equivalent source authorization
+delegations and 156 owned records; the additive New Marketer Workshop module
 owns the remaining Course and 52 lessons.
 
 ## Future AI assistance

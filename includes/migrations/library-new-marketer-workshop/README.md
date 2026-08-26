@@ -29,7 +29,7 @@ and the read-only production clone. A mismatch stops before writes.
 
 The migration is deliberately separate from the locked 2026-08-09 catalogue
 import and 2026-08-10 access migration. Those historical verifiers continue to
-cover their original 154 records and eight rules; this module owns and verifies
+cover their original 156 records and eight rules; this module owns and verifies
 its additional 53 records and one rule.
 
 ## Commands

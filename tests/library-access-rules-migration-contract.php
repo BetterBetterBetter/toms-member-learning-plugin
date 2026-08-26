@@ -51,9 +51,9 @@ $published_native_count = count(array_filter($owned_ids, static function ($rule_
 }));
 $assert(('activated' === $phase ? 8 : 0) === $published_native_count, 'The TSOL-native rule publication state is incorrect.');
 $assert(('activated' === $phase ? 'tsol_native' : 'legacy_delegation') === $verification['authorization_mode'], 'The authorization-pointer mode is incorrect.');
-$assert(154 === (int) $verification['targets_checked'], 'Verification did not cover all 154 TSOL records.');
+$assert(156 === (int) $verification['targets_checked'], 'Verification did not cover all 156 TSOL records.');
 $assert($expected_user_count === (int) $verification['matrix']['users_checked'], 'The complete current local user population was not checked.');
-$assert($expected_user_count * 154 === (int) $verification['matrix']['decisions_checked'], 'The complete current user-by-content matrix was not checked.');
+$assert($expected_user_count * 156 === (int) $verification['matrix']['decisions_checked'], 'The complete current user-by-content matrix was not checked.');
 $assert(0 === (int) $verification['matrix']['allow_to_deny'], 'The native policy would remove existing access.');
 $assert(18 === (int) $verification['matrix']['deny_to_allow'], 'The recorded Social Media Course-root correction changed.');
 $assert(empty($verification['matrix']['unexpected_policy_differences']), 'An unregistered access difference was found.');
@@ -119,7 +119,7 @@ foreach ($target_ids as $target_id) {
     }
 }
 $assert(!$verification['activation_blocked_until_targets_are_published'] === $all_targets_published, 'The publication activation gate is incorrect.');
-$assert(('activated' === $phase ? 0 : 154) === $legacy_pointer_count, 'The historical migration legacy authorization-pointer count is incorrect.');
+$assert(('activated' === $phase ? 0 : 156) === $legacy_pointer_count, 'The historical migration legacy authorization-pointer count is incorrect.');
 $assert(('activated' === $phase ? 209 : 55) === $native_pointer_count, 'The combined native authorization-pointer count is incorrect.');
 
 $condition_count = (int) $wpdb->get_var(

@@ -1,0 +1,320 @@
+.tsol-access-groups-heading {
+    align-items: center;
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    margin: 24px 0 12px;
+}
+
+.tsol-access-groups-steps {
+    counter-reset: access-step;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    list-style: none;
+    margin: 16px 0 20px;
+    max-width: 1180px;
+    padding: 0;
+}
+
+.tsol-access-groups-steps li {
+    align-items: start;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    counter-increment: access-step;
+    display: grid;
+    gap: 2px;
+    grid-template-columns: 28px 1fr;
+    padding: 12px;
+}
+
+.tsol-access-groups-steps li::before {
+    align-items: center;
+    background: #2271b1;
+    border-radius: 50%;
+    color: #fff;
+    content: counter(access-step);
+    display: flex;
+    font-weight: 700;
+    grid-row: 1 / span 2;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+.tsol-access-groups-steps span {
+    color: #50575e;
+}
+
+.tsol-access-publish-status {
+    border-left: 5px solid #dba617;
+    box-sizing: border-box;
+    margin: 20px 0 28px;
+    max-width: 1180px;
+    padding: 20px 22px;
+}
+
+.tsol-access-publish-status--staged {
+    border-left-color: #2271b1;
+}
+
+.tsol-access-publish-status--active {
+    border-left-color: #00a32a;
+}
+
+.tsol-access-publish-status--failed,
+.tsol-access-publish-status--staging {
+    border-left-color: #d63638;
+}
+
+.tsol-access-publish-status__label {
+    color: #646970;
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.tsol-access-publish-status h2 {
+    margin: 0 0 6px;
+}
+
+.tsol-access-publish-status > p {
+    font-size: 14px;
+    margin: 0 0 16px;
+    max-width: 820px;
+}
+
+.tsol-access-publish-status__result {
+    background: #f0f6fc;
+    border-radius: 3px;
+    padding: 10px 12px;
+}
+
+.tsol-access-publish-status__confirm {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.tsol-access-publish-status__confirm label {
+    display: grid;
+    gap: 5px;
+}
+
+.tsol-access-publish-status__confirm .button {
+    margin-bottom: 1px;
+}
+
+.tsol-access-groups-heading h2,
+.tsol-access-groups-heading p {
+    margin-bottom: 4px;
+    margin-top: 0;
+}
+
+.tsol-access-groups-list {
+    display: grid;
+    gap: 12px;
+    max-width: 1180px;
+}
+
+.tsol-access-groups-form-fields {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.tsol-access-groups-form-fields:disabled {
+    opacity: .62;
+}
+
+.tsol-access-group-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.tsol-access-group-card[open] {
+    border-color: #8c8f94;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.tsol-access-group-card > summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 14px 16px;
+}
+
+.tsol-access-group-card > summary span {
+    color: #646970;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.tsol-access-group-card__body {
+    border-top: 1px solid #dcdcde;
+    padding: 16px;
+}
+
+.tsol-access-group-card__identity {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(220px, 1fr) minmax(280px, 2fr);
+    margin-bottom: 20px;
+}
+
+.tsol-access-group-card__identity label {
+    display: grid;
+    gap: 5px;
+}
+
+.tsol-access-group-card__identity input,
+.tsol-access-group-card__identity textarea {
+    width: 100%;
+}
+
+.tsol-access-group-card fieldset {
+    border: 0;
+    margin: 0 0 18px;
+    padding: 0;
+}
+
+.tsol-access-group-card legend {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.tsol-access-group-scopes {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 12px;
+}
+
+.tsol-access-group-scopes h4 {
+    margin: 0 0 8px;
+}
+
+.tsol-access-group-scopes label,
+.tsol-membership-access-groups label {
+    align-items: start;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding: 8px;
+}
+
+.tsol-access-group-scopes label:has(input:checked),
+.tsol-membership-access-groups label:has(input:checked) {
+    border-color: #2271b1;
+    box-shadow: inset 3px 0 #2271b1;
+}
+
+.tsol-access-group-scopes input,
+.tsol-membership-access-groups input {
+    margin-top: 2px;
+}
+
+.tsol-access-group-scopes small,
+.tsol-membership-access-groups small {
+    display: block;
+    margin-top: 2px;
+}
+
+.tsol-access-group-card__memberships {
+    background: #f6f7f7;
+    border-left: 3px solid #72aee6;
+    margin: 0 0 16px;
+    padding: 0;
+}
+
+.tsol-access-group-card__memberships summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 10px 12px;
+}
+
+.tsol-access-group-card__memberships > .description {
+    margin: 0;
+    padding: 0 12px 8px;
+}
+
+.tsol-access-group-card__memberships ul {
+    display: grid;
+    gap: 6px 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    max-height: 260px;
+    overflow: auto;
+    padding: 4px 12px 12px 32px;
+}
+
+/* A staged form is intentionally disabled. Avoid leaving a keyboard-scroll
+ * region inside that disabled fieldset; the full list can expand instead. */
+.tsol-access-groups-form-fields:disabled .tsol-access-group-card__memberships ul {
+    max-height: none;
+    overflow: visible;
+}
+
+.tsol-access-group-card__memberships li {
+    margin: 0;
+}
+
+.tsol-access-group-card__memberships a {
+    display: inline-block;
+    line-height: 1.35;
+}
+
+.tsol-membership-access-groups {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.tsol-access-groups-save {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 18px 0 26px;
+}
+
+.tsol-access-groups-save span {
+    color: #50575e;
+}
+
+@media (max-width: 900px) {
+    .tsol-access-group-scopes {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 782px) {
+    .tsol-access-groups-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .tsol-access-groups-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tsol-access-group-card__identity {
+        grid-template-columns: 1fr;
+    }
+
+    .tsol-access-group-card__memberships ul {
+        grid-template-columns: 1fr;
+    }
+}

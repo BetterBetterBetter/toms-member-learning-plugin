@@ -114,7 +114,10 @@ class TSOL_Library_Admin_Navigation {
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         $legacy_tabs = array(
             self::AUTH_SLUG => array(self::SETTINGS_TAB_AUTHENTICATION, 'manage_options'),
-            self::IMPORT_SLUG => array(self::SETTINGS_TAB_IMPORT, 'manage_options'),
+            // The browser import screen was retired after the catalogue
+            // migration. Keep the old URL harmless and useful while the
+            // guarded WP-CLI recovery commands remain available.
+            self::IMPORT_SLUG => array(self::SETTINGS_TAB_SYNC, 'manage_options'),
             self::ACCESS_SLUG => array(self::SETTINGS_TAB_ACCESS, 'edit_pages'),
         );
         if (!isset($legacy_tabs[$page]) || !current_user_can($legacy_tabs[$page][1])) {
@@ -259,9 +262,13 @@ class TSOL_Library_Admin_Navigation {
                     </p>
                 </section>
                 <section class="card">
-                    <h2><?php esc_html_e('Access stays in MemberPress', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Library records are real MemberPress Rule targets. Imported drafts continue to delegate to their untouched legacy source until an approved transition.', 'tomschooloflife-plugin'); ?></p>
-                    <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'tomschooloflife-plugin'); ?></a></p>
+                    <h2><?php esc_html_e('Access Groups', 'tomschooloflife-plugin'); ?></h2>
+                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'tomschooloflife-plugin'); ?></p>
+                    <?php if (current_user_can('manage_options')) : ?>
+                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+                    <?php else : ?>
+                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'tomschooloflife-plugin'); ?></a></p>
+                    <?php endif; ?>
                 </section>
             </div>
         </div>
@@ -298,8 +305,6 @@ class TSOL_Library_Admin_Navigation {
                 if (self::SETTINGS_TAB_AUTHENTICATION === $active_tab) {
                     $auth_settings = new TSOL_Library_Auth_Settings();
                     $auth_settings->render(true);
-                } elseif (self::SETTINGS_TAB_IMPORT === $active_tab) {
-                    $this->render_import(true);
                 } elseif (self::SETTINGS_TAB_SYNC === $active_tab) {
                     $sync_status = new TSOL_Library_Catalogue_Sync_Status();
                     $sync_status->render();
@@ -324,11 +329,11 @@ class TSOL_Library_Admin_Navigation {
         ?>
         <?php if (!$embedded) : ?><div class="wrap tsol-library-admin-page"><?php endif; ?>
             <?php if ($embedded) : ?>
-                <h2><?php esc_html_e('Library Access Overview', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h2>
             <?php else : ?>
-                <h1><?php esc_html_e('Library Access Overview', 'tomschooloflife-plugin'); ?></h1>
+                <h1><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h1>
             <?php endif; ?>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('This is a read-only view of live MemberPress authority. It does not copy memberships or create a second permission system.', 'tomschooloflife-plugin'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('MemberPress remains the live permission engine. Access Groups provide the standard way to manage which memberships unlock each part of the Library.', 'tomschooloflife-plugin'); ?></p>
             <?php if ('staged' === $access_phase) : ?>
                 <div class="notice notice-info inline">
                     <p><strong><?php esc_html_e('Modern Library access rules are staged for review.', 'tomschooloflife-plugin'); ?></strong></p>
@@ -348,15 +353,15 @@ class TSOL_Library_Admin_Navigation {
                 <?php $this->render_stat(__('Native Library access', 'tomschooloflife-plugin'), $summary['native']); ?>
             </div>
             <section class="card tsol-library-admin-card--wide">
-                <h2><?php esc_html_e('How to control access', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('How to control Library access', 'tomschooloflife-plugin'); ?></h2>
                 <ol>
-                    <li><?php esc_html_e('Create or open a normal MemberPress Rule.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Choose a Library Course, Series, Content item, or Course Collection target.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Select the memberships or other conditions that grant access, then save in MemberPress.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Create a reusable Access Group and choose the Library content it unlocks.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Assign that group from the relevant MemberPress membership editor.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Check the full access comparison, then publish the change from Access Groups.', 'tomschooloflife-plugin'); ?></li>
                 </ol>
-                <p><?php esc_html_e('MemberPress timing, drip, expiry, and OR-rule behavior remain native. Each Library editor and list shows the resulting effective rules.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Publishing compiles the groups into native MemberPress Rules. Membership billing and all non-Library MemberPress rules remain unchanged.', 'tomschooloflife-plugin'); ?></p>
                 <?php if (current_user_can('manage_options')) : ?>
-                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('edit.php?post_type=memberpressrule')); ?>"><?php esc_html_e('Open MemberPress Rules', 'tomschooloflife-plugin'); ?></a></p>
+                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
                 <?php endif; ?>
             </section>
         <?php if (!$embedded) : ?></div><?php endif; ?>
@@ -409,11 +414,10 @@ class TSOL_Library_Admin_Navigation {
         $tabs = array();
         if (current_user_can('manage_options')) {
             $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'tomschooloflife-plugin');
-            $tabs[self::SETTINGS_TAB_IMPORT] = __('Import & Legacy', 'tomschooloflife-plugin');
             $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'tomschooloflife-plugin');
         }
         if (current_user_can('edit_pages')) {
-            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access Overview', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access', 'tomschooloflife-plugin');
         }
         return $tabs;
     }

@@ -181,12 +181,12 @@ if (is_array($manifest)) {
     $assert($manifest['expected_counts'] === $manifest['actual_counts'], 'Expected and actual manifest counts differ.');
     $assert($manifest['expected_media_summary'] === $manifest['media_summary'], 'Expected and actual media summaries differ.');
     $assert($manifest['expected_resource_summary'] === $manifest['resource_summary'], 'Expected and actual resource summaries differ.');
-    $assert(142 === (int) $manifest['media_summary']['playable_pages'], 'Media scan did not cover 142 playable pages.');
-    $assert(147 === (int) $manifest['media_summary']['media_assets'], 'Media scan did not find the expected 147 playable assets.');
+    $assert(144 === (int) $manifest['media_summary']['playable_pages'], 'Media scan did not cover 144 playable pages.');
+    $assert(149 === (int) $manifest['media_summary']['media_assets'], 'Media scan did not find the expected 149 playable assets.');
     $assert(40 === (int) $manifest['resource_summary']['resources'], 'Resource scan did not find all 40 user-facing links and downloads.');
     $assert(0 === array_sum($manifest['writes']), 'Dry-run manifest reported a write.');
     $assert(1 === preg_match('/^[a-f0-9]{64}$/', $manifest['source_fingerprint']), 'Source fingerprint is not a SHA-256 value.');
-    $assert(147 === count($manifest['source_entry_fingerprints']), 'Source fingerprint does not cover exactly 147 unique records.');
+    $assert(149 === count($manifest['source_entry_fingerprints']), 'Source fingerprint does not cover exactly 149 unique records.');
     $assert(121 === count($manifest['library_items']), 'Manifest does not contain 121 standalone Library Items.');
     $assert(6 === count($manifest['courses']), 'Manifest does not contain six courses.');
 }
@@ -194,10 +194,10 @@ if (is_array($manifest)) {
 $normalized_item_count = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = %s AND pm.meta_value = %s WHERE p.post_type = %s AND p.post_status NOT IN ('trash', 'auto-draft')",
     TSOL_Library_Content_Model::META_MIGRATION_VERSION,
-    '20260809.4',
+    '20260826.1',
     TSOL_Library_Content_Model::ITEM_POST_TYPE
 ));
-$assert(in_array($normalized_item_count, array(0, 142), true), 'Normalized Library Content count is neither the clean baseline nor the complete rehearsal target.');
+$assert(in_array($normalized_item_count, array(0, 144), true), 'Normalized Library Content count is neither the clean baseline nor the complete rehearsal target.');
 
 if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
