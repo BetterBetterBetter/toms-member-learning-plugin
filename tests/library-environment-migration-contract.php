@@ -28,6 +28,10 @@ $json = $migration->encode($package);
 $decoded = $migration->decode($json);
 $preview = $migration->preview($decoded);
 $post_count = count((array) ($package['data']['posts'] ?? array()));
+$records_by_uuid = array();
+foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+    $records_by_uuid[(string) ($record['uuid'] ?? '')] = $record;
+}
 
 $assert('wordpress-library-only' === (string) ($package['manifest']['scope'] ?? ''), 'The package is not explicitly limited to WordPress Library data.');
 $assert($post_count > 0, 'The package contains no WordPress Library records.');
@@ -64,6 +68,39 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
         $assert(!is_numeric($speaker_uuid), 'A Speaker relationship contains a source WordPress post ID.');
     }
 }
+
+$inherited_authority_count = 0;
+foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+    $meta = (array) ($record['meta'] ?? array());
+    foreach (array(TSOL_Library_Content_Model::META_COURSE_ID, TSOL_Library_Content_Model::META_SERIES_ID) as $key) {
+        $parent_uuid = (string) ($meta[$key]['__post_uuid'] ?? '');
+        $parent_authority = (array) ($records_by_uuid[$parent_uuid]['legacy_authorization'] ?? array());
+        if ('' !== $parent_uuid && !empty($parent_authority)) {
+            $inherited_authority_count++;
+            $assert($parent_authority === (array) ($record['legacy_authorization'] ?? array()), 'A child record did not inherit its parent’s portable authorization source.');
+        }
+    }
+}
+$assert($inherited_authority_count > 0, 'The migration fixture contains no inherited portable authorization relationships.');
+
+$legacy_resolver = new ReflectionMethod(TSOL_Library_Environment_Migration::class, 'package_legacy_authorization_ref');
+$compatibility_checked = false;
+foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+    $meta = (array) ($record['meta'] ?? array());
+    $has_parent = isset($meta[TSOL_Library_Content_Model::META_COURSE_ID]['__post_uuid'])
+        || isset($meta[TSOL_Library_Content_Model::META_SERIES_ID]['__post_uuid']);
+    if (!$has_parent || empty($record['legacy_authorization'])) {
+        continue;
+    }
+    $expected = $record['legacy_authorization'];
+    $legacy_record = $record;
+    $legacy_record['legacy_authorization'] = array();
+    $recovered = $legacy_resolver->invoke($migration, $legacy_record, $records_by_uuid);
+    $assert($expected === $recovered, 'An existing pre-0.4.4 ZIP cannot recover a child record authorization source from its parent UUID.');
+    $compatibility_checked = true;
+    break;
+}
+$assert($compatibility_checked, 'The migration fixture contains no parent-authorized record for backward-compatibility testing.');
 
 if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));

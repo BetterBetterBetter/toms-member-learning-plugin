@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.4 - 2026-08-27
+
+- Preserved portable MemberPress authorization for Library lessons and Series items by following their Course or Series authority to its legacy WordPress source.
+- Added backward-compatible recovery for ZIP packages exported before 0.4.4, allowing the existing production package to repair missing child catalogue records without another export.
+- Reapplying the verified ZIP now relinks its bundled featured images, Speaker headshots, and other WordPress attachment references while retaining the existing rollback boundary.
+
 ## 0.4.3 - 2026-08-27
 
 - Fixed full catalogue snapshot pagination when legacy posts share Library post types but cannot be exported, ensuring every continuation cursor identifies the final emitted record and preventing `INVALID_SNAPSHOT_CURSOR` failures in the School worker.

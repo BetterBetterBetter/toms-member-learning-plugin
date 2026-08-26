@@ -223,6 +223,10 @@ class TSOL_Library_Environment_Migration {
             'warnings' => array(),
         );
         $seen = array();
+        $records_by_uuid = array();
+        foreach ((array) $package['data']['posts'] as $record) {
+            $records_by_uuid[(string) ($record['uuid'] ?? '')] = $record;
+        }
         $bundle_index = $has_verified_bundle ? $this->bundle_index($package) : array();
         $current_fingerprints = array();
         foreach ($this->export_posts() as $current_record) {
@@ -254,7 +258,8 @@ class TSOL_Library_Environment_Migration {
             foreach ($this->record_attachment_refs($record) as $attachment) {
                 $this->assess_attachment_ref($attachment, $bundle_index, $report);
             }
-            if (!empty($record['legacy_authorization']) && !$this->resolve_external_post($record['legacy_authorization'])) {
+            $authorization_ref = $this->package_legacy_authorization_ref($record, $records_by_uuid);
+            if (!empty($authorization_ref) && !$this->resolve_external_post($authorization_ref)) {
                 $report['errors'][] = sprintf('Legacy authorization source for “%s” is missing in production.', $record['post_title']);
             }
         }
@@ -381,7 +386,9 @@ class TSOL_Library_Environment_Migration {
         $this->validate($package);
         $term_ids = $this->upsert_terms((array) $package['data']['terms'], $created);
         $post_ids = array();
+        $records_by_uuid = array();
         foreach ((array) $package['data']['posts'] as $record) {
+            $records_by_uuid[(string) $record['uuid']] = $record;
             $existing = $this->find_post_by_uuid((string) $record['uuid'], (string) $record['post_type']);
             if (!$existing) {
                 $candidate = $this->find_slug_owner((string) $record['post_name'], (string) $record['post_type']);
@@ -440,8 +447,9 @@ class TSOL_Library_Environment_Migration {
             } else {
                 delete_post_thumbnail($post_id);
             }
-            if (!empty($record['legacy_authorization'])) {
-                $authorization_id = $this->resolve_external_post($record['legacy_authorization']);
+            $authorization_ref = $this->package_legacy_authorization_ref($record, $records_by_uuid);
+            if (!empty($authorization_ref)) {
+                $authorization_id = $this->resolve_external_post($authorization_ref);
                 if (!$authorization_id) {
                     throw new RuntimeException(sprintf('Legacy authorization source for “%s” disappeared during import.', $record['post_title']));
                 }
@@ -703,12 +711,48 @@ class TSOL_Library_Environment_Migration {
         return $result;
     }
 
-    private function legacy_authorization_ref($post_id) {
+    private function legacy_authorization_ref($post_id, $visited = array()) {
+        $post_id = absint($post_id);
+        if (!$post_id || isset($visited[$post_id])) {
+            return array();
+        }
+        $visited[$post_id] = true;
         $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
         if ($authorization_id === $post_id || !$authorization_id) {
             $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true);
         }
+        if ($authorization_id > 0 && in_array((string) get_post_type($authorization_id), $this->post_types(), true)) {
+            return $this->legacy_authorization_ref($authorization_id, $visited);
+        }
         return $this->external_post_ref($authorization_id);
+    }
+
+    /**
+     * Releases before 0.4.4 did not copy a child record's portable authority
+     * through its Course or Series. Recover that reference from the stable
+     * parent UUID so an already-exported ZIP can be reapplied safely.
+     */
+    private function package_legacy_authorization_ref($record, $records_by_uuid, $visited = array()) {
+        $uuid = (string) ($record['uuid'] ?? '');
+        if ('' !== $uuid) {
+            if (isset($visited[$uuid])) {
+                return array();
+            }
+            $visited[$uuid] = true;
+        }
+        $direct = (array) ($record['legacy_authorization'] ?? array());
+        if (!empty($direct)) {
+            return $direct;
+        }
+        $meta = (array) ($record['meta'] ?? array());
+        foreach (array(TSOL_Library_Content_Model::META_COURSE_ID, TSOL_Library_Content_Model::META_SERIES_ID) as $key) {
+            $relation = (array) ($meta[$key] ?? array());
+            $parent_uuid = (string) ($relation['__post_uuid'] ?? '');
+            if ('' !== $parent_uuid && isset($records_by_uuid[$parent_uuid])) {
+                return $this->package_legacy_authorization_ref($records_by_uuid[$parent_uuid], $records_by_uuid, $visited);
+            }
+        }
+        return array();
     }
 
     private function external_post_ref($post_id) {
