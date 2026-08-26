@@ -580,10 +580,13 @@ class TSOL_Library_Access_Rules_Migration {
             }
             $title = (string) get_the_title($target_id);
             $post_type = (string) get_post_type($target_id);
+            $slug = (string) get_post_field('post_name', $target_id);
             $key = sanitize_key($title) . '-policy-change';
-            if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type && 'Social Media' === $title) {
+            if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type
+                && in_array($slug, array('social-media', 'social-media-for-people-who-hate-social-media'), true)
+            ) {
                 $key = 'social-media-course-root-inherits-lesson-access';
-            } elseif (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type && 'The AI Advantage' === $title) {
+            } elseif (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type && 'the-ai-advantage' === $slug) {
                 $key = 'ai-advantage-course-root-inherits-lesson-access';
             }
             $differences[$key] = array(
