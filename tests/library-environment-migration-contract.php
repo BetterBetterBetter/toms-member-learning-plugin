@@ -102,6 +102,32 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 $assert($compatibility_checked, 'The migration fixture contains no parent-authorized record for backward-compatibility testing.');
 
+$with_lock = new ReflectionMethod(TSOL_Library_Environment_Migration::class, 'with_lock');
+delete_option(TSOL_Library_Environment_Migration::LOCK_OPTION);
+add_option(
+    TSOL_Library_Environment_Migration::LOCK_OPTION,
+    time() - TSOL_Library_Environment_Migration::LOCK_TTL - 1,
+    '',
+    'no'
+);
+$stale_lock_result = $with_lock->invoke($migration, static function () {
+    return 'stale-lock-recovered';
+});
+$assert('stale-lock-recovered' === $stale_lock_result, 'An interrupted migration lock was not recovered after its safety window.');
+$assert(false === get_option(TSOL_Library_Environment_Migration::LOCK_OPTION, false), 'The recovered migration lock was not released.');
+
+add_option(TSOL_Library_Environment_Migration::LOCK_OPTION, time(), '', 'no');
+$active_lock_blocked = false;
+try {
+    $with_lock->invoke($migration, static function () {
+        return 'must-not-run';
+    });
+} catch (Throwable $exception) {
+    $active_lock_blocked = false !== strpos($exception->getMessage(), 'Another Library migration operation is running.');
+}
+delete_option(TSOL_Library_Environment_Migration::LOCK_OPTION);
+$assert($active_lock_blocked, 'An active migration lock did not retain exclusive access.');
+
 if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.4.5 - 2026-08-27
+
+- Automatically recovers Library migration locks left behind for more than one hour by an interrupted PHP request, while retaining exclusive locking for active imports.
+
 ## 0.4.4 - 2026-08-27
 
 - Preserved portable MemberPress authorization for Library lessons and Series items by following their Course or Series authority to its legacy WordPress source.

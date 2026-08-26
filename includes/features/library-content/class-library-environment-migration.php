@@ -12,6 +12,7 @@ class TSOL_Library_Environment_Migration {
     const SCHEMA_VERSION = 1;
     const ROLLBACK_OPTION = 'tsol_library_environment_migration_rollback';
     const LOCK_OPTION = 'tsol_library_environment_migration_lock';
+    const LOCK_TTL = 3600;
     const OWNER_META = '_tsol_library_environment_migration';
     const ROLLBACK_CONFIRMATION = 'rollback-library-migration';
     const BUNDLE_FORMAT = 'tsol-wordpress-library-zip-v1';
@@ -1303,7 +1304,16 @@ class TSOL_Library_Environment_Migration {
     }
 
     private function with_lock($callback) {
-        if (!add_option(self::LOCK_OPTION, time(), '', 'no')) {
+        $now = time();
+        $acquired = add_option(self::LOCK_OPTION, $now, '', 'no');
+        if (!$acquired) {
+            $locked_at = (int) get_option(self::LOCK_OPTION, 0);
+            if ($locked_at > 0 && $locked_at <= $now - self::LOCK_TTL) {
+                delete_option(self::LOCK_OPTION);
+                $acquired = add_option(self::LOCK_OPTION, $now, '', 'no');
+            }
+        }
+        if (!$acquired) {
             throw new RuntimeException('Another Library migration operation is running.');
         }
         try {
