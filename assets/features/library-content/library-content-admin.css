@@ -288,6 +288,36 @@
     margin-top: 5px;
 }
 
+.tsol-library-transcript-editor {
+    border-top: 1px solid #dcdcde;
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+.tsol-library-transcript-editor h3,
+.tsol-library-transcript-status p {
+    margin: 0;
+}
+
+.tsol-library-transcript-status {
+    background: #f6f7f7;
+    border-left: 4px solid #72aee6;
+    margin-top: 14px;
+    padding: 10px 12px;
+}
+
+.tsol-library-transcript-status p + p {
+    margin-top: 6px;
+}
+
+.tsol-library-transcript-status__delivered {
+    color: #008a20;
+}
+
+.tsol-library-transcript-status__pending {
+    color: #996800;
+}
+
 .tsol-library-field-grid {
     display: grid;
     gap: 16px;

@@ -19,6 +19,7 @@ $assert = static function ($condition, $message) use (&$failures) {
 
 $assert(class_exists('TSOL_Library_Content_Transcripts'), 'Transcript delivery is not loaded.');
 $assert(false !== has_action(TSOL_Library_Content_Transcripts::RETRY_HOOK, array('TSOL_Library_Content_Transcripts', 'deliver')), 'Transcript retry handler is not registered.');
+$assert(false === has_action('add_meta_boxes_' . TSOL_Library_Content_Model::ITEM_POST_TYPE, array('TSOL_Library_Content_Transcripts', 'add_meta_box')), 'Transcript upload still registers a separate metabox.');
 
 $transcript_keys = array(
     TSOL_Library_Content_Model::META_TRANSCRIPT_CONTENT,

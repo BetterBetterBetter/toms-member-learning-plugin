@@ -604,6 +604,9 @@ try {
     $assert(false !== strpos($media_html, 'id="tsol-library-availability"'), 'The media editor omitted its availability control.');
     $assert(false !== strpos($media_html, 'type="date"'), 'The media editor omitted its optional date-only release control.');
     $assert(false === strpos($media_html, 'type="datetime-local"'), 'The media editor still asks administrators for a release time.');
+    $assert(false !== strpos($media_html, 'data-library-transcript-editor'), 'The transcript upload is not integrated with the media editor.');
+    $assert(false !== strpos($media_html, 'Primary video transcript'), 'The media editor does not identify which source owns the transcript.');
+    $assert(false !== strpos($media_html, 'name="' . TSOL_Library_Content_Transcripts::FILE_NAME . '"'), 'The media editor omitted the WebVTT upload control.');
 
     ob_start();
     $editor->render_protection_meta_box(get_post($fixture_id));

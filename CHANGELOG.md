@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.5.1 - 2026-08-27
+
+- Moved the WebVTT transcript upload and synchronization status into the Content editor’s Media panel, directly beneath the primary playback source.
+
 ## 0.5.0 - 2026-08-27
 
 - Added a private WebVTT upload panel to every Library Content editor, with replacement status and validation for UTF-8 `.vtt` files up to 5 MB.

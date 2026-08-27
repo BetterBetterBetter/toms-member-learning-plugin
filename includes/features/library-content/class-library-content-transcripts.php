@@ -19,23 +19,11 @@ class TSOL_Library_Content_Transcripts {
     const ATTEMPT_META = '_tsol_library_transcript_delivery_attempt';
 
     public static function register_hooks() {
-        add_action('add_meta_boxes_' . TSOL_Library_Content_Model::ITEM_POST_TYPE, array(__CLASS__, 'add_meta_box'));
         add_action('post_edit_form_tag', array(__CLASS__, 'enable_file_upload'));
         add_action('save_post_' . TSOL_Library_Content_Model::ITEM_POST_TYPE, array(__CLASS__, 'save_upload'), 40, 3);
         add_action(self::RETRY_HOOK, array(__CLASS__, 'deliver'));
         add_action('added_post_meta', array(__CLASS__, 'schedule_after_import'), 10, 4);
         add_action('updated_post_meta', array(__CLASS__, 'schedule_after_import'), 10, 4);
-    }
-
-    public static function add_meta_box() {
-        add_meta_box(
-            'tsol-library-transcript',
-            __('Transcript', 'tomschooloflife-plugin'),
-            array(__CLASS__, 'render_meta_box'),
-            TSOL_Library_Content_Model::ITEM_POST_TYPE,
-            'normal',
-            'default'
-        );
     }
 
     public static function enable_file_upload() {
@@ -45,32 +33,45 @@ class TSOL_Library_Content_Transcripts {
         }
     }
 
-    public static function render_meta_box($post) {
+    public static function render_media_fields($post) {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
         $hash = sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_TRANSCRIPT_HASH, true));
         $filename = sanitize_file_name((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_TRANSCRIPT_FILENAME, true));
         $modified_at = sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_TRANSCRIPT_MODIFIED_AT, true));
         $delivery_status = sanitize_key((string) get_post_meta($post->ID, self::STATUS_META, true));
         ?>
-        <p><label for="tsol-library-transcript-file"><strong><?php esc_html_e('WebVTT transcript (.vtt)', 'tomschooloflife-plugin'); ?></strong></label></p>
-        <input id="tsol-library-transcript-file" name="<?php echo esc_attr(self::FILE_NAME); ?>" type="file" accept=".vtt,text/vtt" />
-        <p class="description"><?php esc_html_e('Choose a UTF-8 WebVTT file up to 5 MB. Saving without choosing a file keeps the current transcript.', 'tomschooloflife-plugin'); ?></p>
-        <?php if ('' !== $hash) : ?>
-            <p>
-                <strong><?php esc_html_e('Current transcript:', 'tomschooloflife-plugin'); ?></strong>
-                <?php echo esc_html('' !== $filename ? $filename : __('WebVTT file', 'tomschooloflife-plugin')); ?>
-                <?php if ('' !== $modified_at) : ?>
-                    <span class="description"><?php echo esc_html(sprintf(__('updated %s UTC', 'tomschooloflife-plugin'), $modified_at)); ?></span>
-                <?php endif; ?>
-            </p>
-            <p><code><?php echo esc_html(substr($hash, 0, 12)); ?>&hellip;</code>
-                <?php if ('delivered' === $delivery_status) : ?>
-                    <span style="color:#008a20"><?php esc_html_e('Synchronized with School', 'tomschooloflife-plugin'); ?></span>
-                <?php else : ?>
-                    <span style="color:#996800"><?php esc_html_e('Waiting to synchronize with School', 'tomschooloflife-plugin'); ?></span>
-                <?php endif; ?>
-            </p>
-        <?php endif;
+        <section class="tsol-library-transcript-editor" data-library-transcript-editor aria-labelledby="tsol-library-transcript-heading">
+            <div class="tsol-library-section-intro">
+                <div>
+                    <h3 id="tsol-library-transcript-heading"><?php esc_html_e('Primary video transcript', 'tomschooloflife-plugin'); ?></h3>
+                    <p><?php esc_html_e('Upload the transcript for the primary playback source in the first media row.', 'tomschooloflife-plugin'); ?></p>
+                    <p class="description"><?php esc_html_e('Choose a UTF-8 WebVTT file up to 5 MB. Saving without choosing a file keeps the current transcript.', 'tomschooloflife-plugin'); ?></p>
+                </div>
+            </div>
+            <div class="tsol-library-field tsol-library-field--wide">
+                <label for="tsol-library-transcript-file"><?php esc_html_e('WebVTT transcript (.vtt)', 'tomschooloflife-plugin'); ?></label>
+                <input id="tsol-library-transcript-file" name="<?php echo esc_attr(self::FILE_NAME); ?>" type="file" accept=".vtt,text/vtt" />
+            </div>
+            <?php if ('' !== $hash) : ?>
+                <div class="tsol-library-transcript-status" role="status">
+                    <p>
+                        <strong><?php esc_html_e('Current transcript:', 'tomschooloflife-plugin'); ?></strong>
+                        <?php echo esc_html('' !== $filename ? $filename : __('WebVTT file', 'tomschooloflife-plugin')); ?>
+                        <?php if ('' !== $modified_at) : ?>
+                            <span class="description"><?php echo esc_html(sprintf(__('updated %s UTC', 'tomschooloflife-plugin'), $modified_at)); ?></span>
+                        <?php endif; ?>
+                    </p>
+                    <p><code><?php echo esc_html(substr($hash, 0, 12)); ?>&hellip;</code>
+                        <?php if ('delivered' === $delivery_status) : ?>
+                            <span class="tsol-library-transcript-status__delivered"><?php esc_html_e('Synchronized with School', 'tomschooloflife-plugin'); ?></span>
+                        <?php else : ?>
+                            <span class="tsol-library-transcript-status__pending"><?php esc_html_e('Waiting to synchronize with School', 'tomschooloflife-plugin'); ?></span>
+                        <?php endif; ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+        </section>
+        <?php
     }
 
     public static function save_upload($post_id, $post, $update) {

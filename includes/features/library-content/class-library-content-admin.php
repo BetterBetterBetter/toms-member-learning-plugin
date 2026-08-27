@@ -1208,6 +1208,8 @@ class TSOL_Library_Content_Admin {
             <script type="text/html" data-media-template>
                 <?php $this->render_media_row('__index__', array()); ?>
             </script>
+
+            <?php TSOL_Library_Content_Transcripts::render_media_fields($post); ?>
         </div>
         <?php
     }
