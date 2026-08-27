@@ -33,6 +33,7 @@ class TSOL_Library_Content implements TSOL_Site_Feature {
         add_filter('wp_insert_post_data', array('TSOL_Library_Content_HTML_Sanitizer', 'sanitize_post_data'), 20, 2);
         TSOL_Library_Content_Changes::register_hooks();
         TSOL_Library_Catalogue_Webhook::register_hooks();
+        TSOL_Library_Content_Transcripts::register_hooks();
 
         if (is_admin()) {
             $this->sync_status = new TSOL_Library_Catalogue_Sync_Status();

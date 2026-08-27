@@ -211,6 +211,12 @@ Every Library/Speaker body sent to the application passes through the shared
 strict semantic HTML sanitizer. See `includes/features/library-content/README.md` and
 `../plans/tsol-library-content-model.md` for the model and verification record.
 
+Library Items also provide a private Transcript meta box for replacing a UTF-8
+WebVTT file. WordPress retains that source in private post metadata, includes it
+in WordPress-only Library migration packages, and delivers it to the School app
+through a signed, retryable callback after verifying the exact content UUID and
+video-provider identity.
+
 ## Development
 
 Symlink this directory into a WordPress site's `wp-content/plugins` directory, then activate "Tom's School Of Life Plugin" in WordPress.

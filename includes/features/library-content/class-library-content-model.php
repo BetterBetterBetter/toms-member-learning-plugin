@@ -55,6 +55,12 @@ class TSOL_Library_Content_Model {
     const META_SERIES_GROUPS = '_tsol_library_series_groups';
     const META_SPEAKER_IDS = '_tsol_library_speaker_id';
     const META_SPEAKER_MODE = '_tsol_library_speaker_mode';
+    const META_TRANSCRIPT_CONTENT = '_tsol_library_transcript_vtt';
+    const META_TRANSCRIPT_HASH = '_tsol_library_transcript_sha256';
+    const META_TRANSCRIPT_LANGUAGE = '_tsol_library_transcript_language';
+    const META_TRANSCRIPT_FILENAME = '_tsol_library_transcript_filename';
+    const META_TRANSCRIPT_MODIFIED_AT = '_tsol_library_transcript_modified_at';
+    const META_TRANSCRIPT_VERSION = '_tsol_library_transcript_version';
 
     const COLLECTION_META_OVERVIEW = '_tsol_library_collection_overview';
     const COLLECTION_META_HERO_IMAGE_ID = '_tsol_library_collection_hero_image_id';
@@ -121,6 +127,12 @@ class TSOL_Library_Content_Model {
             self::META_SERIES_GROUPS,
             self::META_SPEAKER_IDS,
             self::META_SPEAKER_MODE,
+            self::META_TRANSCRIPT_CONTENT,
+            self::META_TRANSCRIPT_HASH,
+            self::META_TRANSCRIPT_LANGUAGE,
+            self::META_TRANSCRIPT_FILENAME,
+            self::META_TRANSCRIPT_MODIFIED_AT,
+            self::META_TRANSCRIPT_VERSION,
         );
     }
 
@@ -138,6 +150,12 @@ class TSOL_Library_Content_Model {
             self::META_RELEASE_AT_GMT,
             self::META_AI_ASSISTANT_ENABLED,
             self::META_AI_ASSISTANT_QUESTIONS,
+            self::META_TRANSCRIPT_CONTENT,
+            self::META_TRANSCRIPT_HASH,
+            self::META_TRANSCRIPT_LANGUAGE,
+            self::META_TRANSCRIPT_FILENAME,
+            self::META_TRANSCRIPT_MODIFIED_AT,
+            self::META_TRANSCRIPT_VERSION,
         )));
         if (self::COURSE_POST_TYPE === $post_type) {
             $keys[] = self::META_COURSE_SECTIONS;
@@ -151,6 +169,12 @@ class TSOL_Library_Content_Model {
         } elseif (self::ITEM_POST_TYPE === $post_type) {
             $keys[] = self::META_AVAILABILITY;
             $keys[] = self::META_RELEASE_AT_GMT;
+            $keys[] = self::META_TRANSCRIPT_CONTENT;
+            $keys[] = self::META_TRANSCRIPT_HASH;
+            $keys[] = self::META_TRANSCRIPT_LANGUAGE;
+            $keys[] = self::META_TRANSCRIPT_FILENAME;
+            $keys[] = self::META_TRANSCRIPT_MODIFIED_AT;
+            $keys[] = self::META_TRANSCRIPT_VERSION;
         }
         return $keys;
     }
@@ -786,6 +810,18 @@ class TSOL_Library_Content_Model {
                 },
             ));
         }
+
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_CONTENT, 'string', array(__CLASS__, 'sanitize_transcript_vtt'));
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_HASH, 'string', 'sanitize_text_field');
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_LANGUAGE, 'string', 'sanitize_text_field');
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_FILENAME, 'string', 'sanitize_file_name');
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_MODIFIED_AT, 'string', 'sanitize_text_field');
+        self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_VERSION, 'integer', 'absint');
+    }
+
+    public static function sanitize_transcript_vtt($value) {
+        $value = is_string($value) ? str_replace("\0", '', $value) : '';
+        return 0 === strpos(ltrim($value, "\xEF\xBB\xBF"), 'WEBVTT') ? $value : '';
     }
 
     private static function register_meta($post_type, $key, $type, $sanitize_callback) {

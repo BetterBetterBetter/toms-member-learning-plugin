@@ -3,7 +3,7 @@
  * Plugin Name: Tom's School Of Life Plugin
  * Plugin URI: https://github.com/BetterBetterBetter/tomschooloflife-plugin
  * Description: Site-specific functionality for Tom's School Of Life.
- * Version: 0.4.6
+ * Version: 0.5.0
  * Author: Thrice Agency
  * License: GPL v2 or later
  * Text Domain: tomschooloflife-plugin
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('TSOL_SITE_PLUGIN_VERSION', '0.4.6');
+define('TSOL_SITE_PLUGIN_VERSION', '0.5.0');
 define('TSOL_SITE_PLUGIN_FILE', __FILE__);
 define('TSOL_SITE_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('TSOL_SITE_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -82,6 +82,7 @@ require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-lib
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-admin-navigation.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-url-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-admin.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-transcripts.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-collection-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-speaker-admin.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/features/library-content/class-library-content-access-column.php';

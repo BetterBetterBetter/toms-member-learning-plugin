@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-08-27
+
+- Added a private WebVTT upload panel to every Library Content editor, with replacement status and validation for UTF-8 `.vtt` files up to 5 MB.
+- Delivers transcript replacements to the School app through an exact content/video identity match, dedicated signed headers, bounded retries, and fail-closed request validation.
+- Includes WordPress-owned transcript sources in WordPress-only Library migration packages while keeping transcripts out of the public catalogue payload.
+
 ## 0.4.6 - 2026-08-27
 
 - Replaced the long synchronous attachment import with resumable two-file requests and visible progress, then applies catalogue records only after every bundled file passes its checksum.
