@@ -15,6 +15,8 @@ class TSOL_Library_Environment_Migration_Admin {
     const IMPORT_CONFIRMATION = 'import-wordpress-library';
     const NONCE_ACTION = 'tsol_library_environment_migration';
     const CHUNK_BYTES = 524288;
+    const PENDING_TTL = 86400;
+    const ATTACHMENT_BATCH_SIZE = 2;
 
     public function init() {
         add_action('admin_menu', array($this, 'add_page'), 21);
@@ -23,6 +25,7 @@ class TSOL_Library_Environment_Migration_Admin {
         add_action('admin_post_tsol_library_migration_apply', array($this, 'apply'));
         add_action('admin_post_tsol_library_migration_rollback', array($this, 'rollback'));
         add_action('wp_ajax_tsol_library_migration_upload_chunk', array($this, 'upload_chunk'));
+        add_action('wp_ajax_tsol_library_migration_prepare_attachments', array($this, 'prepare_attachments'));
     }
 
     public function add_page() {
@@ -102,6 +105,8 @@ class TSOL_Library_Environment_Migration_Admin {
             'created_at' => time(),
             'bundle_path' => $zip_path,
             'report' => $report,
+            'attachment_index' => 0,
+            'prepared_created' => array('posts' => array(), 'terms' => array(), 'attachments' => array()),
         ), false);
         delete_option($this->upload_option_name());
         wp_safe_redirect(add_query_arg(array('page' => self::PAGE_SLUG, 'preview' => 'ready'), admin_url('admin.php')));
@@ -206,9 +211,22 @@ class TSOL_Library_Environment_Migration_Admin {
         try {
             $migration = new TSOL_Library_Environment_Migration();
             $bundle_path = (string) ($pending['bundle_path'] ?? '');
+            $attachments_prepared = !empty($_POST['attachments_prepared']);
+            $attachment_total = (int) ($pending['report']['attachment_files'] ?? 0);
+            if ($attachments_prepared && (int) ($pending['attachment_index'] ?? 0) < $attachment_total) {
+                throw new RuntimeException('The attachment preparation is incomplete. Resume the staged import.');
+            }
             @set_time_limit(0);
-            $package = $migration->decode_bundle($bundle_path);
-            $migration->apply($package, (string) ($pending['report']['package_hash'] ?? ''), $bundle_path);
+            $package = $attachments_prepared
+                ? $migration->decode_bundle_manifest($bundle_path)
+                : $migration->decode_bundle($bundle_path);
+            $migration->apply(
+                $package,
+                (string) ($pending['report']['package_hash'] ?? ''),
+                $bundle_path,
+                (array) ($pending['prepared_created'] ?? array()),
+                $attachments_prepared
+            );
             $this->delete_private_bundle($bundle_path);
             delete_option(self::PENDING_OPTION);
         } catch (Throwable $exception) {
@@ -216,6 +234,45 @@ class TSOL_Library_Environment_Migration_Admin {
         }
         wp_safe_redirect(add_query_arg(array('page' => self::PAGE_SLUG, 'result' => 'applied'), admin_url('admin.php')));
         exit;
+    }
+
+    public function prepare_attachments() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('You are not allowed to migrate the Library.', 'tomschooloflife-plugin')), 403);
+        }
+        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+        $pending = $this->pending();
+        $token = sanitize_text_field(wp_unslash((string) ($_POST['migration_token'] ?? '')));
+        if (empty($pending) || !hash_equals((string) ($pending['token'] ?? ''), $token)) {
+            wp_send_json_error(array('message' => __('The migration preview expired or changed.', 'tomschooloflife-plugin')), 409);
+        }
+        try {
+            @set_time_limit(0);
+            $migration = new TSOL_Library_Environment_Migration();
+            $package = $migration->decode_bundle_manifest((string) $pending['bundle_path']);
+            if (!hash_equals((string) ($pending['report']['package_hash'] ?? ''), (string) ($package['manifest']['data_sha256'] ?? ''))) {
+                throw new RuntimeException('The staged migration package changed after preview.');
+            }
+            $created = (array) ($pending['prepared_created'] ?? array('posts' => array(), 'terms' => array(), 'attachments' => array()));
+            $progress = $migration->prepare_attachment_batch(
+                $package,
+                (string) $pending['bundle_path'],
+                (int) ($pending['attachment_index'] ?? 0),
+                self::ATTACHMENT_BATCH_SIZE,
+                $created
+            );
+            $pending['attachment_index'] = (int) $progress['next'];
+            $pending['prepared_created'] = $created;
+            $pending['last_progress_at'] = time();
+            update_option(self::PENDING_OPTION, $pending, false);
+            wp_send_json_success(array(
+                'processed' => (int) $progress['next'],
+                'total' => (int) $progress['total'],
+                'complete' => (int) $progress['next'] >= (int) $progress['total'],
+            ));
+        } catch (Throwable $exception) {
+            wp_send_json_error(array('message' => $exception->getMessage()), 409);
+        }
     }
 
     public function rollback() {
@@ -306,13 +363,16 @@ class TSOL_Library_Environment_Migration_Admin {
                     <?php endif; ?>
                     <?php if (empty($report['errors'])) : ?>
                         <p><?php esc_html_e('Importing creates a rollback snapshot and leaves Access Groups unpublished. Existing legacy MemberPress authorization remains active until the separate access comparison is checked and explicitly published.', 'tomschooloflife-plugin'); ?></p>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <form id="tsol-library-migration-apply" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="tsol_library_migration_apply">
                             <input type="hidden" name="migration_token" value="<?php echo esc_attr((string) $pending['token']); ?>">
+                            <input type="hidden" name="attachments_prepared" value="0">
                             <?php wp_nonce_field(self::NONCE_ACTION); ?>
                             <label for="tsol-library-migration-confirmation"><strong><?php esc_html_e('Type import-wordpress-library to confirm', 'tomschooloflife-plugin'); ?></strong></label><br>
                             <input id="tsol-library-migration-confirmation" class="regular-text code" name="confirmation" autocomplete="off" required>
                             <?php submit_button(__('Import WordPress Library', 'tomschooloflife-plugin'), 'primary', 'submit', false); ?>
+                            <progress id="tsol-library-migration-apply-progress" max="100" value="<?php echo esc_attr((int) round(100 * (int) ($pending['attachment_index'] ?? 0) / max(1, (int) ($report['attachment_files'] ?? 0)))); ?>" hidden></progress>
+                            <p id="tsol-library-migration-apply-status" class="description" aria-live="polite"></p>
                         </form>
                     <?php endif; ?>
                 </section>
@@ -379,6 +439,45 @@ class TSOL_Library_Environment_Migration_Admin {
                     fileInput.disabled = false;
                 }
             });
+
+            const applyForm = document.getElementById('tsol-library-migration-apply');
+            const applyProgress = document.getElementById('tsol-library-migration-apply-progress');
+            const applyStatus = document.getElementById('tsol-library-migration-apply-status');
+            if (applyForm && applyProgress && applyStatus) {
+                applyForm.addEventListener('submit', async (event) => {
+                    if (applyForm.dataset.ready === 'true') return;
+                    event.preventDefault();
+                    if (!applyForm.reportValidity()) return;
+                    const submit = applyForm.querySelector('[type="submit"]');
+                    if (submit) submit.disabled = true;
+                    applyProgress.hidden = false;
+                    try {
+                        let complete = false;
+                        while (!complete) {
+                            const body = new FormData();
+                            body.append('action', 'tsol_library_migration_prepare_attachments');
+                            body.append('nonce', <?php echo wp_json_encode(wp_create_nonce(self::NONCE_ACTION)); ?>);
+                            body.append('migration_token', <?php echo wp_json_encode((string) ($pending['token'] ?? '')); ?>);
+                            const response = await fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, { method: 'POST', credentials: 'same-origin', body });
+                            const result = await response.json();
+                            if (!response.ok || !result.success) throw new Error(result?.data?.message || <?php echo wp_json_encode(__('The staged import could not continue.', 'tomschooloflife-plugin')); ?>);
+                            const processed = Number(result.data.processed || 0);
+                            const total = Number(result.data.total || 0);
+                            complete = Boolean(result.data.complete);
+                            applyProgress.value = total > 0 ? Math.round(processed / total * 100) : 100;
+                            applyStatus.textContent = complete
+                                ? <?php echo wp_json_encode(__('Files prepared. Applying catalogue records…', 'tomschooloflife-plugin')); ?>
+                                : <?php echo wp_json_encode(__('Preparing bundled files…', 'tomschooloflife-plugin')); ?> + ' ' + processed + ' / ' + total;
+                        }
+                        applyForm.querySelector('[name="attachments_prepared"]').value = '1';
+                        applyForm.dataset.ready = 'true';
+                        applyForm.submit();
+                    } catch (error) {
+                        applyStatus.textContent = error instanceof Error ? error.message : <?php echo wp_json_encode(__('The staged import could not continue.', 'tomschooloflife-plugin')); ?>;
+                        if (submit) submit.disabled = false;
+                    }
+                });
+            }
         })();
         </script>
         <?php
@@ -388,7 +487,7 @@ class TSOL_Library_Environment_Migration_Admin {
         $pending = get_option(self::PENDING_OPTION, array());
         if (!is_array($pending)
             || (int) ($pending['user_id'] ?? 0) !== get_current_user_id()
-            || time() - (int) ($pending['created_at'] ?? 0) > HOUR_IN_SECONDS
+            || time() - (int) ($pending['created_at'] ?? 0) > self::PENDING_TTL
         ) {
             if (!empty($pending)) {
                 $this->delete_private_bundle((string) ($pending['bundle_path'] ?? ''));

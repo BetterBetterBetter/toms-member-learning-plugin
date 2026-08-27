@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.6 - 2026-08-27
+
+- Replaced the long synchronous attachment import with resumable two-file requests and visible progress, then applies catalogue records only after every bundled file passes its checksum.
+- Reuses the existing verified ZIP and preview for up to 24 hours, so interrupted production imports resume without another 378.5 MB upload.
+- Avoids expensive image-size generation during migration; the School catalogue can use the verified original WordPress media URLs immediately.
+
 ## 0.4.5 - 2026-08-27
 
 - Automatically recovers Library migration locks left behind for more than one hour by an interrupted PHP request, while retaining exclusive locking for active imports.

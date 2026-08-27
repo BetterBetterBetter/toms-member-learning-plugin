@@ -20,6 +20,7 @@ $assert(false !== has_action('admin_post_tsol_library_migration_preview'), 'The 
 $assert(false !== has_action('admin_post_tsol_library_migration_apply'), 'The migration apply action is not registered.');
 $assert(false !== has_action('admin_post_tsol_library_migration_rollback'), 'The migration rollback action is not registered.');
 $assert(false !== has_action('wp_ajax_tsol_library_migration_upload_chunk'), 'The chunked ZIP upload action is not registered.');
+$assert(false !== has_action('wp_ajax_tsol_library_migration_prepare_attachments'), 'The resumable attachment preparation action is not registered.');
 $assert(class_exists('ZipArchive'), 'The PHP Zip extension required for complete migration packages is unavailable.');
 
 $migration = new TSOL_Library_Environment_Migration();

@@ -12,7 +12,7 @@ class TSOL_Library_Environment_Migration {
     const SCHEMA_VERSION = 1;
     const ROLLBACK_OPTION = 'tsol_library_environment_migration_rollback';
     const LOCK_OPTION = 'tsol_library_environment_migration_lock';
-    const LOCK_TTL = 3600;
+    const LOCK_TTL = 300;
     const OWNER_META = '_tsol_library_environment_migration';
     const ROLLBACK_CONFIRMATION = 'rollback-library-migration';
     const BUNDLE_FORMAT = 'tsol-wordpress-library-zip-v1';
@@ -162,6 +162,51 @@ class TSOL_Library_Environment_Migration {
         }
     }
 
+    /**
+     * Loads the already-previewed package without re-hashing every bundled file.
+     * Each attachment is checksum-verified when its resumable batch is applied.
+     */
+    public function decode_bundle_manifest($zip_path) {
+        if (!class_exists('ZipArchive')) {
+            throw new RuntimeException('The PHP Zip extension is required to inspect a Library package.');
+        }
+        if (!is_file($zip_path) || filesize($zip_path) <= 0 || filesize($zip_path) > self::MAX_BUNDLE_BYTES) {
+            throw new RuntimeException('The Library ZIP package is missing, empty, or larger than 2 GB.');
+        }
+        $zip = new ZipArchive();
+        if (true !== $zip->open((string) $zip_path, ZipArchive::RDONLY)) {
+            throw new RuntimeException('The uploaded file is not a readable ZIP package.');
+        }
+        try {
+            if ($zip->numFiles < 1 || $zip->numFiles > self::MAX_BUNDLE_ENTRIES) {
+                throw new RuntimeException('The Library ZIP package contains an unsafe number of files.');
+            }
+            $package_json = $zip->getFromName(self::PACKAGE_FILENAME, 25 * MB_IN_BYTES);
+            if (false === $package_json) {
+                throw new RuntimeException('The Library ZIP package has no valid manifest.');
+            }
+            $package = $this->decode($package_json);
+            if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
+                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+            }
+            foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
+                $relative = (string) ($attachment['relative_file'] ?? '');
+                $archive_path = (string) ($attachment['archive_path'] ?? '');
+                $stat = $zip->statName($archive_path);
+                if (!$this->safe_relative_upload_path($relative)
+                    || 'attachments/' . $relative !== $archive_path
+                    || false === $stat
+                    || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)
+                ) {
+                    throw new RuntimeException('The Library ZIP attachment manifest contains a missing or unsafe file.');
+                }
+            }
+            return $package;
+        } finally {
+            $zip->close();
+        }
+    }
+
     public function decode($json) {
         $package = json_decode((string) $json, true);
         if (!is_array($package)) {
@@ -289,10 +334,12 @@ class TSOL_Library_Environment_Migration {
         return $report;
     }
 
-    public function apply($package, $expected_hash, $bundle_path = '') {
+    public function apply($package, $expected_hash, $bundle_path = '', $prepared_created = array(), $attachments_prepared = false) {
         $has_bundle = '' !== (string) $bundle_path;
         if ($has_bundle) {
-            $verified = $this->decode_bundle($bundle_path);
+            $verified = $attachments_prepared
+                ? $this->decode_bundle_manifest($bundle_path)
+                : $this->decode_bundle($bundle_path);
             if (!hash_equals((string) ($verified['manifest']['data_sha256'] ?? ''), (string) ($package['manifest']['data_sha256'] ?? ''))) {
                 throw new RuntimeException('The uploaded Library ZIP changed after preview.');
             }
@@ -308,16 +355,20 @@ class TSOL_Library_Environment_Migration {
             throw new RuntimeException('Roll back or finish the current Access Groups stage before importing.');
         }
 
-        return $this->with_lock(function () use ($package, $report, $bundle_path) {
+        return $this->with_lock(function () use ($package, $report, $bundle_path, $prepared_created, $attachments_prepared) {
             $before = $this->build_package();
             $raw_before = array(
                 'access_groups' => get_option(TSOL_Library_Access_Groups::OPTION_NAME, null),
                 'homepage' => get_option(TSOL_Library_Homepage_Curation::OPTION_NAME, null),
                 'authorization' => $this->authorization_snapshot(),
             );
-            $created = array('posts' => array(), 'terms' => array(), 'attachments' => array());
+            $created = array(
+                'posts' => array_values((array) ($prepared_created['posts'] ?? array())),
+                'terms' => array_values((array) ($prepared_created['terms'] ?? array())),
+                'attachments' => array_values((array) ($prepared_created['attachments'] ?? array())),
+            );
             try {
-                if ('' !== (string) $bundle_path) {
+                if ('' !== (string) $bundle_path && !$attachments_prepared) {
                     $this->import_bundle_attachments($package, $bundle_path, $created);
                 }
                 $this->apply_data($package, (string) $report['package_hash'], $created);
@@ -863,6 +914,27 @@ class TSOL_Library_Environment_Migration {
     }
 
     private function import_bundle_attachments($package, $zip_path, &$created) {
+        $this->import_bundle_attachment_range($package, $zip_path, 0, PHP_INT_MAX, $created, true);
+    }
+
+    public function prepare_attachment_batch($package, $zip_path, $start, $limit, &$created) {
+        $this->validate($package);
+        $attachments = array_values((array) ($package['data']['attachments'] ?? array()));
+        $start = max(0, (int) $start);
+        $limit = max(1, min(5, (int) $limit));
+        if ($start > count($attachments)) {
+            throw new RuntimeException('The resumable attachment cursor is invalid.');
+        }
+        return $this->with_lock(function () use ($package, $zip_path, $start, $limit, &$created, $attachments) {
+            $this->import_bundle_attachment_range($package, $zip_path, $start, $limit, $created, false);
+            return array(
+                'next' => min(count($attachments), $start + $limit),
+                'total' => count($attachments),
+            );
+        });
+    }
+
+    private function import_bundle_attachment_range($package, $zip_path, $start, $limit, &$created, $generate_metadata) {
         $zip = new ZipArchive();
         if (true !== $zip->open((string) $zip_path, ZipArchive::RDONLY)) {
             throw new RuntimeException('The verified Library ZIP could not be reopened for import.');
@@ -873,7 +945,8 @@ class TSOL_Library_Environment_Migration {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         try {
-            foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
+            $attachments = array_slice(array_values((array) ($package['data']['attachments'] ?? array())), (int) $start, (int) $limit);
+            foreach ($attachments as $attachment) {
                 $relative = (string) $attachment['relative_file'];
                 $destination = $base . $relative;
                 $ref = array('relative_file' => $relative, 'source_url' => (string) ($attachment['source_url'] ?? ''));
@@ -910,7 +983,7 @@ class TSOL_Library_Environment_Migration {
                 if ($attachment_id > 0) {
                     if (!$file_existed) {
                         $old_metadata = get_post_meta($attachment_id, '_wp_attachment_metadata', true);
-                        $metadata = wp_generate_attachment_metadata($attachment_id, $destination);
+                        $metadata = $generate_metadata ? wp_generate_attachment_metadata($attachment_id, $destination) : array();
                         if (!empty($metadata)) {
                             wp_update_attachment_metadata($attachment_id, $metadata);
                         }
@@ -935,7 +1008,7 @@ class TSOL_Library_Environment_Migration {
                 if (is_wp_error($attachment_id) || (int) $attachment_id <= 0) {
                     throw new RuntimeException(sprintf('WordPress could not register bundled upload “%s”.', $relative));
                 }
-                $metadata = wp_generate_attachment_metadata((int) $attachment_id, $destination);
+                $metadata = $generate_metadata ? wp_generate_attachment_metadata((int) $attachment_id, $destination) : array();
                 if (!empty($metadata)) {
                     wp_update_attachment_metadata((int) $attachment_id, $metadata);
                 }
