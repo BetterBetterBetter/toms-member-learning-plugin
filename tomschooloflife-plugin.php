@@ -41,6 +41,7 @@ if (file_exists(TSOL_SITE_PLUGIN_DIR . 'plugin-update-checker/plugin-update-chec
 
 // Include required files immediately to ensure classes are available for all hooks.
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/contracts/interface-feature.php';
+require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-brand.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-dependencies.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-admin-settings.php';
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-gemini-client.php';

@@ -32,7 +32,7 @@ class TSOL_Library_Auth_Settings {
         ));
         register_setting('tsol_library_auth', self::CLIENT_ID_OPTION, array(
             'sanitize_callback' => array($this, 'sanitize_client_id'),
-            'default' => 'tsol-library',
+            'default' => TSOL_Library_Brand::client_id_default(),
         ));
         register_setting('tsol_library_auth', self::CLIENT_SECRET_OPTION, array(
             'sanitize_callback' => array($this, 'sanitize_secret'),
@@ -58,7 +58,7 @@ class TSOL_Library_Auth_Settings {
         $value = trim((string) wp_unslash($value));
         if ($value !== '' && !preg_match('/^[A-Za-z0-9._-]{3,128}$/', $value)) {
             add_settings_error(self::CLIENT_ID_OPTION, 'invalid_client_id', __('Use 3–128 letters, numbers, dots, underscores, or hyphens.', 'tomschooloflife-plugin'));
-            return (string) get_option(self::CLIENT_ID_OPTION, 'tsol-library');
+            return (string) get_option(self::CLIENT_ID_OPTION, TSOL_Library_Brand::client_id_default());
         }
 
         return $value;
@@ -147,7 +147,7 @@ class TSOL_Library_Auth_Settings {
                     </tr>
                     <tr>
                         <th scope="row"><label for="tsol-library-client-id"><?php esc_html_e('Client ID', 'tomschooloflife-plugin'); ?></label></th>
-                        <td><input id="tsol-library-client-id" class="regular-text code" type="text" name="<?php echo esc_attr(self::CLIENT_ID_OPTION); ?>" value="<?php echo esc_attr((string) get_option(self::CLIENT_ID_OPTION, 'tsol-library')); ?>"><p class="description"><?php esc_html_e('Use a different client ID per environment. TSOL_LIBRARY_CLIENT_ID overrides this setting.', 'tomschooloflife-plugin'); ?></p></td>
+                        <td><input id="tsol-library-client-id" class="regular-text code" type="text" name="<?php echo esc_attr(self::CLIENT_ID_OPTION); ?>" value="<?php echo esc_attr((string) get_option(self::CLIENT_ID_OPTION, TSOL_Library_Brand::client_id_default())); ?>"><p class="description"><?php esc_html_e('Use a different client ID per environment. TSOL_LIBRARY_CLIENT_ID overrides this setting.', 'tomschooloflife-plugin'); ?></p></td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="tsol-library-client-secret"><?php esc_html_e('Client secret', 'tomschooloflife-plugin'); ?></label></th>
@@ -227,7 +227,7 @@ class TSOL_Library_Auth_Settings {
     }
 
     public static function client_id() {
-        $value = defined('TSOL_LIBRARY_CLIENT_ID') ? TSOL_LIBRARY_CLIENT_ID : get_option(self::CLIENT_ID_OPTION, 'tsol-library');
+        $value = defined('TSOL_LIBRARY_CLIENT_ID') ? TSOL_LIBRARY_CLIENT_ID : get_option(self::CLIENT_ID_OPTION, TSOL_Library_Brand::client_id_default());
         return trim((string) $value);
     }
 

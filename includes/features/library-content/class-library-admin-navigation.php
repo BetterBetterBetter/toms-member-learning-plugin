@@ -39,8 +39,8 @@ class TSOL_Library_Admin_Navigation {
 
     public function add_root_menu() {
         add_menu_page(
-            __('TSOL Library', 'tomschooloflife-plugin'),
-            __('TSOL Library', 'tomschooloflife-plugin'),
+            TSOL_Library_Brand::library_menu_label(),
+            TSOL_Library_Brand::library_menu_label(),
             'edit_pages',
             self::MENU_SLUG,
             array($this, 'render_dashboard'),

@@ -59,7 +59,7 @@ class TomsSchoolOfLifePlugin {
     public function add_admin_menu() {
         $this->admin_page_hooks[] = add_menu_page(
             __('TSOL (Tom\'s School Of Life)', 'tomschooloflife-plugin'),
-            __('TSOL', 'tomschooloflife-plugin'),
+            TSOL_Library_Brand::menu_label(),
             'manage_options',
             'tsol-site',
             array($this, 'render_settings_page'),

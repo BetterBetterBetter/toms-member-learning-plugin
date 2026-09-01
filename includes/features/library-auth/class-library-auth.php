@@ -904,7 +904,7 @@ class TSOL_Library_Auth {
         status_header($status);
         if (!headers_sent()) {
             header('Content-Type: text/html; charset=' . get_option('blog_charset'), true);
-            header("Content-Security-Policy: default-src 'none'; img-src https://tomschooloflife.com; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
+            header("Content-Security-Policy: default-src 'none'; img-src " . esc_attr(TSOL_Library_Brand::image_csp_src()) . "; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
             header('X-Frame-Options: DENY', true);
             header('X-Robots-Tag: noindex, nofollow, noarchive', true);
         }
@@ -938,7 +938,7 @@ class TSOL_Library_Auth {
         </head>
         <body>
             <main>
-                <img class="brand" src="https://tomschooloflife.com/wp-content/uploads/2020/04/THE-TOM-WOODS-SCHOOL-OF-LIFE-logo.svg" alt="<?php esc_attr_e('The Tom Woods School of Life', 'tomschooloflife-plugin'); ?>" width="190" height="51">
+                <img class="brand" src="<?php echo esc_url(TSOL_Library_Brand::logo_url()); ?>" alt="<?php echo esc_attr(TSOL_Library_Brand::name()); ?>" width="190" height="51">
                 <section class="panel" aria-labelledby="library-error-title">
                     <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
                     <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>
