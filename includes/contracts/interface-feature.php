@@ -7,6 +7,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-interface TSOL_Site_Feature {
+interface MemberLibrary_Feature {
     public function init();
 }

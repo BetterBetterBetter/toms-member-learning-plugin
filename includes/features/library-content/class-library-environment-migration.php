@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Environment_Migration {
+class MemberLibrary_Environment_Migration {
 
     const SCHEMA_VERSION = 2;
     const ROLLBACK_OPTION = 'tsol_library_environment_migration_rollback';
@@ -21,7 +21,7 @@ class TSOL_Library_Environment_Migration {
     const MAX_BUNDLE_ENTRIES = 1000;
 
     public function build_package() {
-        TSOL_Library_Homepage_Curation::reset_cache();
+        MemberLibrary_Homepage_Curation::reset_cache();
         $data = array(
             'posts' => $this->export_posts(),
             'terms' => $this->export_terms(),
@@ -30,7 +30,7 @@ class TSOL_Library_Environment_Migration {
         );
         $manifest = array(
             'schema_version' => self::SCHEMA_VERSION,
-            'plugin_version' => TSOL_SITE_PLUGIN_VERSION,
+            'plugin_version' => MEMBER_LIBRARY_PLUGIN_VERSION,
             'source_url' => home_url('/'),
             'created_at' => gmdate('c'),
             'scope' => 'wordpress-library-only',
@@ -351,15 +351,15 @@ class TSOL_Library_Environment_Migration {
         if (!empty($report['errors'])) {
             throw new RuntimeException('The migration has blocking conflicts and was not applied.');
         }
-        if (!empty(get_option(TSOL_Library_Access_Groups::STAGE_OPTION, array()))) {
+        if (!empty(get_option(MemberLibrary_Access_Groups::STAGE_OPTION, array()))) {
             throw new RuntimeException('Roll back or finish the current Access Groups stage before importing.');
         }
 
         return $this->with_lock(function () use ($package, $report, $bundle_path, $prepared_created, $attachments_prepared) {
             $before = $this->build_package();
             $raw_before = array(
-                'access_groups' => get_option(TSOL_Library_Access_Groups::OPTION_NAME, null),
-                'homepage' => get_option(TSOL_Library_Homepage_Curation::OPTION_NAME, null),
+                'access_groups' => get_option(MemberLibrary_Access_Groups::OPTION_NAME, null),
+                'homepage' => get_option(MemberLibrary_Homepage_Curation::OPTION_NAME, null),
                 'authorization' => $this->authorization_snapshot(),
             );
             $created = array(
@@ -401,7 +401,7 @@ class TSOL_Library_Environment_Migration {
         if (self::ROLLBACK_CONFIRMATION !== (string) $confirmation) {
             throw new RuntimeException('Enter the exact Library migration rollback confirmation.');
         }
-        if (!empty(get_option(TSOL_Library_Access_Groups::STAGE_OPTION, array()))) {
+        if (!empty(get_option(MemberLibrary_Access_Groups::STAGE_OPTION, array()))) {
             throw new RuntimeException('Roll back the Access Groups stage before rolling back the Library migration.');
         }
         return $this->with_lock(function () {
@@ -505,7 +505,7 @@ class TSOL_Library_Environment_Migration {
                 if (!$authorization_id) {
                     throw new RuntimeException(sprintf('Legacy authorization source for “%s” disappeared during import.', $record['post_title']));
                 }
-                update_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $authorization_id);
+                update_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $authorization_id);
                 $transition[$post_id] = $authorization_id;
             }
         }
@@ -515,16 +515,16 @@ class TSOL_Library_Environment_Migration {
         $this->import_homepage((array) ($package['data']['homepage'] ?? array()), $post_ids);
         $access = (array) ($package['data']['access_groups'] ?? array());
         if (!empty($access['groups'])) {
-            (new TSOL_Library_Access_Groups())->import_portable_configuration(
+            (new MemberLibrary_Access_Groups())->import_portable_configuration(
                 (array) $access['groups'],
                 (array) $access['assignments'],
                 (array) $access['exceptions'],
                 $transition
             );
         } else {
-            delete_option(TSOL_Library_Access_Groups::OPTION_NAME);
+            delete_option(MemberLibrary_Access_Groups::OPTION_NAME);
         }
-        TSOL_Library_Homepage_Curation::reset_cache();
+        MemberLibrary_Homepage_Curation::reset_cache();
         return $created;
     }
 
@@ -555,7 +555,7 @@ class TSOL_Library_Environment_Migration {
                 'parent_uuid' => $parent_uuid,
                 'meta' => $this->export_post_meta((int) $post->ID, (string) $post->post_type),
                 'taxonomies' => $this->export_post_terms((int) $post->ID),
-                'speaker_uuids' => array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', get_post_meta($post->ID, TSOL_Library_Content_Model::META_SPEAKER_IDS, false))))),
+                'speaker_uuids' => array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', get_post_meta($post->ID, MemberLibrary_Content_Model::META_SPEAKER_IDS, false))))),
                 'featured_attachment' => $this->attachment_ref((int) get_post_thumbnail_id($post->ID)),
                 'legacy_authorization' => $this->legacy_authorization_ref((int) $post->ID),
             );
@@ -568,11 +568,11 @@ class TSOL_Library_Environment_Migration {
     private function export_post_meta($post_id, $post_type) {
         $excluded = array(
             $this->uuid_key($post_type),
-            TSOL_Library_Content_Model::META_COURSE_ID,
-            TSOL_Library_Content_Model::META_SERIES_ID,
-            TSOL_Library_Content_Model::META_SPEAKER_IDS,
-            TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
-            TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID,
+            MemberLibrary_Content_Model::META_COURSE_ID,
+            MemberLibrary_Content_Model::META_SERIES_ID,
+            MemberLibrary_Content_Model::META_SPEAKER_IDS,
+            MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID,
+            MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID,
         );
         $keys = $this->portable_meta_keys($post_type);
         $meta = array();
@@ -582,13 +582,13 @@ class TSOL_Library_Environment_Migration {
                 $meta[$key] = $this->portable_attachment_values($value);
             }
         }
-        $course_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
-        $series_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        $course_id = (int) get_post_meta($post_id, MemberLibrary_Content_Model::META_COURSE_ID, true);
+        $series_id = (int) get_post_meta($post_id, MemberLibrary_Content_Model::META_SERIES_ID, true);
         if ($course_id) {
-            $meta[TSOL_Library_Content_Model::META_COURSE_ID] = array('__post_uuid' => $this->post_uuid($course_id));
+            $meta[MemberLibrary_Content_Model::META_COURSE_ID] = array('__post_uuid' => $this->post_uuid($course_id));
         }
         if ($series_id) {
-            $meta[TSOL_Library_Content_Model::META_SERIES_ID] = array('__post_uuid' => $this->post_uuid($series_id));
+            $meta[MemberLibrary_Content_Model::META_SERIES_ID] = array('__post_uuid' => $this->post_uuid($series_id));
         }
         ksort($meta, SORT_STRING);
         return $meta;
@@ -608,10 +608,10 @@ class TSOL_Library_Environment_Migration {
             }
             update_post_meta($post_id, (string) $key, $value);
         }
-        delete_post_meta($post_id, TSOL_Library_Content_Model::META_SPEAKER_IDS);
+        delete_post_meta($post_id, MemberLibrary_Content_Model::META_SPEAKER_IDS);
         foreach ((array) ($record['speaker_uuids'] ?? array()) as $speaker_uuid) {
             if (isset($post_ids[$speaker_uuid])) {
-                add_post_meta($post_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, (int) $post_ids[$speaker_uuid], false);
+                add_post_meta($post_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, (int) $post_ids[$speaker_uuid], false);
             }
         }
     }
@@ -633,11 +633,11 @@ class TSOL_Library_Environment_Migration {
                     'parent_slug' => $parent instanceof WP_Term ? (string) $parent->slug : '',
                     'meta' => array(),
                 );
-                if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
-                    $record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] = (string) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, true);
-                    $record['meta']['hero_attachment'] = $this->attachment_ref((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, true));
-                    $record['meta']['featured_course_uuid'] = $this->post_uuid((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, true));
-                    $record['meta']['appearance'] = TSOL_Library_Content_Model::collection_appearance((int) $term->term_id);
+                if (MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
+                    $record['meta'][MemberLibrary_Content_Model::COLLECTION_META_OVERVIEW] = (string) get_term_meta($term->term_id, MemberLibrary_Content_Model::COLLECTION_META_OVERVIEW, true);
+                    $record['meta']['hero_attachment'] = $this->attachment_ref((int) get_term_meta($term->term_id, MemberLibrary_Content_Model::COLLECTION_META_HERO_IMAGE_ID, true));
+                    $record['meta']['featured_course_uuid'] = $this->post_uuid((int) get_term_meta($term->term_id, MemberLibrary_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, true));
+                    $record['meta']['appearance'] = MemberLibrary_Content_Model::collection_appearance((int) $term->term_id);
                 }
                 $records[] = $record;
             }
@@ -670,10 +670,10 @@ class TSOL_Library_Environment_Migration {
             $term_id = (int) $ids[$taxonomy][$slug];
             $parent_id = !empty($record['parent_slug']) ? (int) ($ids[$taxonomy][$record['parent_slug']] ?? 0) : 0;
             wp_update_term($term_id, $taxonomy, array('parent' => $parent_id));
-            if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
-                update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, (string) ($record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] ?? ''));
+            if (MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy) {
+                update_term_meta($term_id, MemberLibrary_Content_Model::COLLECTION_META_OVERVIEW, (string) ($record['meta'][MemberLibrary_Content_Model::COLLECTION_META_OVERVIEW] ?? ''));
                 $hero_id = $this->resolve_attachment((array) ($record['meta']['hero_attachment'] ?? array()));
-                update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_id);
+                update_term_meta($term_id, MemberLibrary_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_id);
                 $this->import_collection_appearance($term_id, $record['meta']['appearance'] ?? null);
             }
         }
@@ -682,7 +682,7 @@ class TSOL_Library_Environment_Migration {
 
     private function import_collection_appearance($term_id, $appearance) {
         $portable_keys = array('light_background', 'light_foreground', 'dark_background', 'dark_foreground');
-        $meta_keys = TSOL_Library_Content_Model::collection_appearance_meta_keys();
+        $meta_keys = MemberLibrary_Content_Model::collection_appearance_meta_keys();
         $colors = array();
         foreach ($portable_keys as $index => $portable_key) {
             $colors[$index] = is_array($appearance)
@@ -691,8 +691,8 @@ class TSOL_Library_Environment_Migration {
         }
         $valid = !in_array('', $colors, true)
             && !in_array(null, $colors, true)
-            && TSOL_Library_Content_Model::collection_color_contrast($colors[0], $colors[1]) >= 4.5
-            && TSOL_Library_Content_Model::collection_color_contrast($colors[2], $colors[3]) >= 4.5;
+            && MemberLibrary_Content_Model::collection_color_contrast($colors[0], $colors[1]) >= 4.5
+            && MemberLibrary_Content_Model::collection_color_contrast($colors[2], $colors[3]) >= 4.5;
         foreach ($meta_keys as $index => $meta_key) {
             if ($valid) {
                 update_term_meta((int) $term_id, $meta_key, strtolower($colors[$index]));
@@ -704,7 +704,7 @@ class TSOL_Library_Environment_Migration {
 
     private function import_term_meta($records, $term_ids, $post_ids) {
         foreach ($records as $record) {
-            if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY !== (string) $record['taxonomy']) {
+            if (MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY !== (string) $record['taxonomy']) {
                 continue;
             }
             $term_id = (int) ($term_ids[$record['taxonomy']][$record['slug']] ?? 0);
@@ -714,14 +714,14 @@ class TSOL_Library_Environment_Migration {
             $featured_uuid = (string) ($record['meta']['featured_course_uuid'] ?? '');
             update_term_meta(
                 $term_id,
-                TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID,
+                MemberLibrary_Content_Model::COLLECTION_META_FEATURED_COURSE_ID,
                 (int) ($post_ids[$featured_uuid] ?? 0)
             );
         }
     }
 
     private function export_homepage() {
-        $layout = TSOL_Library_Homepage_Curation::layout();
+        $layout = MemberLibrary_Homepage_Curation::layout();
         $rails = array();
         foreach ((array) ($layout['rails'] ?? array()) as $rail => $post_ids) {
             $rails[$rail] = array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', (array) $post_ids))));
@@ -731,7 +731,7 @@ class TSOL_Library_Environment_Migration {
 
     private function import_homepage($portable, $post_ids) {
         $rails = array();
-        foreach (array_keys(TSOL_Library_Homepage_Curation::rails()) as $rail) {
+        foreach (array_keys(MemberLibrary_Homepage_Curation::rails()) as $rail) {
             $rails[$rail] = array();
             foreach ((array) ($portable['rails'][$rail] ?? array()) as $uuid) {
                 if (isset($post_ids[$uuid])) {
@@ -739,11 +739,11 @@ class TSOL_Library_Environment_Migration {
                 }
             }
         }
-        update_option(TSOL_Library_Homepage_Curation::OPTION_NAME, array('version' => 1, 'rails' => $rails, 'updated_at' => gmdate('Y-m-d H:i:s')), false);
+        update_option(MemberLibrary_Homepage_Curation::OPTION_NAME, array('version' => 1, 'rails' => $rails, 'updated_at' => gmdate('Y-m-d H:i:s')), false);
     }
 
     private function export_access_groups() {
-        $configuration = get_option(TSOL_Library_Access_Groups::OPTION_NAME, array());
+        $configuration = get_option(MemberLibrary_Access_Groups::OPTION_NAME, array());
         if (!is_array($configuration) || empty($configuration['groups'])) {
             return array('groups' => array(), 'assignments' => array(), 'exceptions' => array());
         }
@@ -793,9 +793,9 @@ class TSOL_Library_Environment_Migration {
             return array();
         }
         $visited[$post_id] = true;
-        $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+        $authorization_id = (int) get_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
         if ($authorization_id === $post_id || !$authorization_id) {
-            $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true);
+            $authorization_id = (int) get_post_meta($post_id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID, true);
         }
         if ($authorization_id > 0 && in_array((string) get_post_type($authorization_id), $this->post_types(), true)) {
             return $this->legacy_authorization_ref($authorization_id, $visited);
@@ -821,7 +821,7 @@ class TSOL_Library_Environment_Migration {
             return $direct;
         }
         $meta = (array) ($record['meta'] ?? array());
-        foreach (array(TSOL_Library_Content_Model::META_COURSE_ID, TSOL_Library_Content_Model::META_SERIES_ID) as $key) {
+        foreach (array(MemberLibrary_Content_Model::META_COURSE_ID, MemberLibrary_Content_Model::META_SERIES_ID) as $key) {
             $relation = (array) ($meta[$key] ?? array());
             $parent_uuid = (string) ($relation['__post_uuid'] ?? '');
             if ('' !== $parent_uuid && isset($records_by_uuid[$parent_uuid])) {
@@ -1260,9 +1260,9 @@ class TSOL_Library_Environment_Migration {
     }
 
     private function uuid_key($post_type) {
-        return TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post_type
-            ? TSOL_Library_Content_Model::SPEAKER_META_UUID
-            : TSOL_Library_Content_Model::META_UUID;
+        return MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post_type
+            ? MemberLibrary_Content_Model::SPEAKER_META_UUID
+            : MemberLibrary_Content_Model::META_UUID;
     }
 
     private function find_post_by_uuid($uuid, $post_type) {
@@ -1327,7 +1327,7 @@ class TSOL_Library_Environment_Migration {
     }
 
     private function restore_raw_options($options) {
-        foreach (array('access_groups' => TSOL_Library_Access_Groups::OPTION_NAME, 'homepage' => TSOL_Library_Homepage_Curation::OPTION_NAME) as $key => $option) {
+        foreach (array('access_groups' => MemberLibrary_Access_Groups::OPTION_NAME, 'homepage' => MemberLibrary_Homepage_Curation::OPTION_NAME) as $key => $option) {
             if (!array_key_exists($key, $options) || null === $options[$key]) {
                 delete_option($option);
             } else {
@@ -1339,26 +1339,26 @@ class TSOL_Library_Environment_Migration {
                 continue;
             }
             if (null === $value) {
-                delete_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID);
+                delete_post_meta((int) $post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID);
             } else {
-                update_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, (int) $value);
+                update_post_meta((int) $post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, (int) $value);
             }
         }
-        TSOL_Library_Homepage_Curation::reset_cache();
+        MemberLibrary_Homepage_Curation::reset_cache();
     }
 
     private function authorization_snapshot() {
         $snapshot = array();
         $post_ids = get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::post_types(),
+            'post_type' => MemberLibrary_Content_Model::post_types(),
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',
             'suppress_filters' => true,
         ));
         foreach ($post_ids as $post_id) {
-            $snapshot[(int) $post_id] = metadata_exists('post', (int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID)
-                ? (int) get_post_meta((int) $post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true)
+            $snapshot[(int) $post_id] = metadata_exists('post', (int) $post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID)
+                ? (int) get_post_meta((int) $post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true)
                 : null;
         }
         return $snapshot;
@@ -1373,29 +1373,29 @@ class TSOL_Library_Environment_Migration {
     }
 
     private function post_types() {
-        return array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE));
+        return array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE));
     }
 
     private function taxonomies() {
-        return array(TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, TSOL_Library_Content_Model::TOPIC_TAXONOMY);
+        return array(MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY, MemberLibrary_Content_Model::TOPIC_TAXONOMY);
     }
 
     private function portable_meta_keys($post_type) {
-        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post_type) {
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post_type) {
             return array(
-                TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE,
-                TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION,
-                TSOL_Library_Content_Model::SPEAKER_META_WEBSITE_URL,
-                TSOL_Library_Content_Model::SPEAKER_META_SOCIAL_LINKS,
+                MemberLibrary_Content_Model::SPEAKER_META_JOB_TITLE,
+                MemberLibrary_Content_Model::SPEAKER_META_ORGANIZATION,
+                MemberLibrary_Content_Model::SPEAKER_META_WEBSITE_URL,
+                MemberLibrary_Content_Model::SPEAKER_META_SOCIAL_LINKS,
             );
         }
         return array_values(array_diff(
-            TSOL_Library_Content_Model::metadata_keys_for_post_type($post_type),
+            MemberLibrary_Content_Model::metadata_keys_for_post_type($post_type),
             array(
                 $this->uuid_key($post_type),
-                TSOL_Library_Content_Model::META_SPEAKER_IDS,
-                TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
-                TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID,
+                MemberLibrary_Content_Model::META_SPEAKER_IDS,
+                MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID,
+                MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID,
             )
         ));
     }

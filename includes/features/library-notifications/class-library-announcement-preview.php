@@ -7,19 +7,19 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Announcement_Preview {
+class MemberLibrary_Announcement_Preview {
 
     const ENDPOINT_PATH = '/api/internal/announcement-audience/preview';
 
     public static function run($definition) {
-        $definition = TSOL_Library_Announcement_Audience_Contract::normalize($definition);
+        $definition = MemberLibrary_Announcement_Audience_Contract::normalize($definition);
         if (is_wp_error($definition)) {
             return new WP_Error('announcement_preview_invalid');
         }
-        if (!TSOL_Library_Auth_Settings::configured()) {
+        if (!MemberLibrary_Auth_Settings::configured()) {
             return new WP_Error('announcement_preview_not_configured');
         }
-        $url = (string) apply_filters('tsol_library_announcement_preview_url', TSOL_Library_Auth_Settings::app_url() . self::ENDPOINT_PATH);
+        $url = (string) apply_filters('tsol_library_announcement_preview_url', MemberLibrary_Auth_Settings::app_url() . self::ENDPOINT_PATH);
         $body = wp_json_encode(array('schemaVersion' => 1, 'definition' => $definition), JSON_UNESCAPED_SLASHES);
         if (!is_string($body) || strlen($body) > 65536) {
             return new WP_Error('announcement_preview_invalid');
@@ -30,8 +30,8 @@ class TSOL_Library_Announcement_Preview {
             'sslverify' => true,
             'headers' => array(
                 'content-type' => 'application/json',
-                'x-tsol-client-id' => TSOL_Library_Auth_Settings::client_id(),
-                'x-tsol-client-secret' => TSOL_Library_Auth_Settings::client_secret(),
+                'x-tsol-client-id' => MemberLibrary_Auth_Settings::client_id(),
+                'x-tsol-client-secret' => MemberLibrary_Auth_Settings::client_secret(),
             ),
             'body' => $body,
         ));
@@ -39,7 +39,7 @@ class TSOL_Library_Announcement_Preview {
             return new WP_Error('announcement_preview_unavailable');
         }
         $result = json_decode((string) wp_remote_retrieve_body($response), true);
-        return self::validate_result($result, TSOL_Library_Announcement_Audience_Contract::hash($definition));
+        return self::validate_result($result, MemberLibrary_Announcement_Audience_Contract::hash($definition));
     }
 
     public static function validate_result($result, $expected_hash) {

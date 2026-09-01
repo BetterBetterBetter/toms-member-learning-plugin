@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Content_Changes {
+class MemberLibrary_Content_Changes {
 
     const SCHEMA_VERSION = '20260809.1';
     const SCHEMA_OPTION = 'tsol_library_content_changes_schema_version';
@@ -84,7 +84,7 @@ class TSOL_Library_Content_Changes {
     public static function record_saved_post($post_id, $post, $update) {
         unset($update);
         if ($post instanceof WP_Post) {
-            if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
+            if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
                 self::record_speaker_content((int) $post_id);
                 return;
             }
@@ -95,7 +95,7 @@ class TSOL_Library_Content_Changes {
     public static function record_status_change($new_status, $old_status, $post) {
         unset($new_status, $old_status);
         if ($post instanceof WP_Post) {
-            if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
+            if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
                 self::record_speaker_content((int) $post->ID);
                 return;
             }
@@ -107,7 +107,7 @@ class TSOL_Library_Content_Changes {
         if (!$post instanceof WP_Post) {
             return;
         }
-        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
             $content_ids = self::speaker_content_ids((int) $post_id);
             foreach ($content_ids as $content_id) {
                 $content_ids = array_merge($content_ids, self::inheriting_child_ids((int) $content_id));
@@ -122,7 +122,7 @@ class TSOL_Library_Content_Changes {
     }
 
     public static function record_post_deleted($post_id, $post) {
-        if (!$post instanceof WP_Post || TSOL_Library_Content_Model::SPEAKER_POST_TYPE !== $post->post_type) {
+        if (!$post instanceof WP_Post || MemberLibrary_Content_Model::SPEAKER_POST_TYPE !== $post->post_type) {
             return;
         }
         $content_ids = self::$deleting_speaker_content_ids[(int) $post_id] ?? array();
@@ -135,8 +135,8 @@ class TSOL_Library_Content_Changes {
     public static function record_term_change($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids) {
         unset($terms, $tt_ids, $append, $old_tt_ids);
         if (in_array((string) $taxonomy, array(
-            TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
-            TSOL_Library_Content_Model::TOPIC_TAXONOMY,
+            MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
+            MemberLibrary_Content_Model::TOPIC_TAXONOMY,
         ), true)) {
             self::record_current_state((int) $object_id);
         }
@@ -170,17 +170,17 @@ class TSOL_Library_Content_Changes {
 
     public static function record_meta_change($meta_id, $post_id, $meta_key, $meta_value) {
         unset($meta_id, $meta_value);
-        if (in_array((string) $meta_key, TSOL_Library_Content_Model::metadata_keys(), true)) {
+        if (in_array((string) $meta_key, MemberLibrary_Content_Model::metadata_keys(), true)) {
             self::record_current_state((int) $post_id);
-            if (TSOL_Library_Content_Model::META_SPEAKER_IDS === (string) $meta_key) {
+            if (MemberLibrary_Content_Model::META_SPEAKER_IDS === (string) $meta_key) {
                 foreach (self::inheriting_child_ids((int) $post_id) as $child_id) {
                     self::record_current_state($child_id);
                 }
             }
             return;
         }
-        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === get_post_type((int) $post_id)
-            && in_array((string) $meta_key, TSOL_Library_Content_Model::speaker_metadata_keys(), true)
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === get_post_type((int) $post_id)
+            && in_array((string) $meta_key, MemberLibrary_Content_Model::speaker_metadata_keys(), true)
         ) {
             self::record_speaker_content((int) $post_id);
         }
@@ -207,17 +207,17 @@ class TSOL_Library_Content_Changes {
         if (!self::has_library_identity($post)) {
             return;
         }
-        self::record($post_id, TSOL_Library_Content_Catalogue::is_exportable_post($post) ? 'upsert' : 'delete');
+        self::record($post_id, MemberLibrary_Content_Catalogue::is_exportable_post($post) ? 'upsert' : 'delete');
         self::record_parent_state($post);
     }
 
     private static function record_parent_state(WP_Post $post) {
-        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== (string) $post->post_type) {
+        if (MemberLibrary_Content_Model::ITEM_POST_TYPE !== (string) $post->post_type) {
             return;
         }
 
-        $course_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_COURSE_ID, true);
-        $series_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        $course_id = (int) get_post_meta($post->ID, MemberLibrary_Content_Model::META_COURSE_ID, true);
+        $series_id = (int) get_post_meta($post->ID, MemberLibrary_Content_Model::META_SERIES_ID, true);
         $parent_id = $course_id > 0 ? $course_id : $series_id;
         if ($parent_id > 0) {
             self::record_current_state($parent_id);
@@ -225,17 +225,17 @@ class TSOL_Library_Content_Changes {
     }
 
     private static function has_library_identity(WP_Post $post) {
-        if (!in_array((string) $post->post_type, TSOL_Library_Content_Model::post_types(), true)) {
+        if (!in_array((string) $post->post_type, MemberLibrary_Content_Model::post_types(), true)) {
             return false;
         }
 
-        return (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_UUID, true) !== '';
+        return (string) get_post_meta($post->ID, MemberLibrary_Content_Model::META_UUID, true) !== '';
     }
 
     private static function is_projected_taxonomy($taxonomy) {
         return in_array((string) $taxonomy, array(
-            TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
-            TSOL_Library_Content_Model::TOPIC_TAXONOMY,
+            MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
+            MemberLibrary_Content_Model::TOPIC_TAXONOMY,
         ), true);
     }
 
@@ -244,11 +244,11 @@ class TSOL_Library_Content_Changes {
             return array();
         }
         return array_values(array_unique(array_map('intval', get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::post_types(),
+            'post_type' => MemberLibrary_Content_Model::post_types(),
             'post_status' => array('publish', 'draft', 'private', 'pending', 'future'),
             'numberposts' => -1,
             'fields' => 'ids',
-            'meta_key' => TSOL_Library_Content_Model::META_SPEAKER_IDS,
+            'meta_key' => MemberLibrary_Content_Model::META_SPEAKER_IDS,
             'meta_value' => $speaker_id,
             'suppress_filters' => true,
         )))));
@@ -256,17 +256,17 @@ class TSOL_Library_Content_Changes {
 
     private static function inheriting_child_ids($parent_id) {
         $parent_type = get_post_type((int) $parent_id);
-        $meta_key = TSOL_Library_Content_Model::COURSE_POST_TYPE === $parent_type
-            ? TSOL_Library_Content_Model::META_COURSE_ID
-            : (TSOL_Library_Content_Model::SERIES_POST_TYPE === $parent_type
-                ? TSOL_Library_Content_Model::META_SERIES_ID
+        $meta_key = MemberLibrary_Content_Model::COURSE_POST_TYPE === $parent_type
+            ? MemberLibrary_Content_Model::META_COURSE_ID
+            : (MemberLibrary_Content_Model::SERIES_POST_TYPE === $parent_type
+                ? MemberLibrary_Content_Model::META_SERIES_ID
                 : '');
         if ('' === $meta_key) {
             return array();
         }
 
         $child_ids = get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+            'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
             'post_status' => array('publish', 'draft', 'private', 'pending', 'future'),
             'numberposts' => -1,
             'fields' => 'ids',
@@ -276,7 +276,7 @@ class TSOL_Library_Content_Changes {
         ));
 
         return array_values(array_filter(array_map('intval', $child_ids), static function ($child_id) {
-            return TSOL_Library_Content_Model::SPEAKER_MODE_INHERIT === TSOL_Library_Content_Model::speaker_mode($child_id);
+            return MemberLibrary_Content_Model::SPEAKER_MODE_INHERIT === MemberLibrary_Content_Model::speaker_mode($child_id);
         }));
     }
 

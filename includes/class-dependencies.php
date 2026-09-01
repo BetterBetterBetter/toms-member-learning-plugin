@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Site_Dependencies {
+class MemberLibrary_Dependencies {
 
     public static function access_sso_available() {
         if (class_exists('AccessPlatformSSO')) {

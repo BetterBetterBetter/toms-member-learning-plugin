@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Access_Groups_Admin {
+class MemberLibrary_Access_Groups_Admin {
 
     const PAGE_SLUG = 'tsol-library-access-groups';
     const NONCE_ACTION = 'tsol_library_access_groups';
@@ -17,7 +17,7 @@ class TSOL_Library_Access_Groups_Admin {
     private $page_hook = '';
 
     public function __construct() {
-        $this->service = new TSOL_Library_Access_Groups();
+        $this->service = new MemberLibrary_Access_Groups();
     }
 
     public function init() {
@@ -38,9 +38,9 @@ class TSOL_Library_Access_Groups_Admin {
 
     public function add_menu_page() {
         $this->page_hook = (string) add_submenu_page(
-            TSOL_Library_Admin_Navigation::MENU_SLUG,
-            __('Library Access Groups', 'tomschooloflife-plugin'),
-            __('Access Groups', 'tomschooloflife-plugin'),
+            MemberLibrary_Admin_Navigation::MENU_SLUG,
+            __('Library Access Groups', 'member-library'),
+            __('Access Groups', 'member-library'),
             'manage_options',
             self::PAGE_SLUG,
             array($this, 'render')
@@ -55,16 +55,16 @@ class TSOL_Library_Access_Groups_Admin {
         }
         wp_enqueue_style(
             'tsol-library-access-groups-admin',
-            TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-access-groups-admin.css',
+            MEMBER_LIBRARY_PLUGIN_URL . 'assets/features/library-content/library-access-groups-admin.css',
             array('tsol-library-content-admin'),
-            TSOL_SITE_PLUGIN_VERSION
+            MEMBER_LIBRARY_PLUGIN_VERSION
         );
         if (!$is_membership_editor) {
             wp_enqueue_script(
                 'tsol-library-access-groups-admin',
-                TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-access-groups-admin.js',
+                MEMBER_LIBRARY_PLUGIN_URL . 'assets/features/library-content/library-access-groups-admin.js',
                 array(),
-                TSOL_SITE_PLUGIN_VERSION,
+                MEMBER_LIBRARY_PLUGIN_VERSION,
                 true
             );
         }
@@ -72,7 +72,7 @@ class TSOL_Library_Access_Groups_Admin {
 
     public function handle_action() {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to manage Library access.', 'tomschooloflife-plugin'));
+            wp_die(esc_html__('You are not allowed to manage Library access.', 'member-library'));
         }
         check_admin_referer(self::NONCE_ACTION, self::NONCE_NAME);
         $operation = isset($_POST['operation']) ? sanitize_key(wp_unslash($_POST['operation'])) : '';
@@ -110,7 +110,7 @@ class TSOL_Library_Access_Groups_Admin {
         }
         add_meta_box(
             'tsol-library-access-groups-membership',
-            __('Library Access Groups', 'tomschooloflife-plugin'),
+            __('Library Access Groups', 'member-library'),
             array($this, 'render_membership_meta_box'),
             'memberpressproduct',
             'side',
@@ -120,7 +120,7 @@ class TSOL_Library_Access_Groups_Admin {
 
     public function render_membership_meta_box($post) {
         if (!$this->service->is_bootstrapped()) {
-            echo '<p>' . esc_html__('Import the current policy under TSOL Library → Access Groups before assigning memberships.', 'tomschooloflife-plugin') . '</p>';
+            echo '<p>' . esc_html__('Import the current policy under TSOL Library → Access Groups before assigning memberships.', 'member-library') . '</p>';
             return;
         }
         $configuration = $this->service->configuration();
@@ -129,11 +129,11 @@ class TSOL_Library_Access_Groups_Admin {
         wp_nonce_field(self::MEMBERSHIP_NONCE_ACTION, self::MEMBERSHIP_NONCE_NAME);
         ?>
         <input type="hidden" name="tsol_library_access_groups_revision" value="<?php echo esc_attr((string) $configuration['revision']); ?>">
-        <p><?php esc_html_e('Choose the reusable Library packages included with this membership. Saving records a pending change only; nothing becomes live until it is checked and published from the Access Groups page.', 'tomschooloflife-plugin'); ?></p>
+        <p><?php esc_html_e('Choose the reusable Library packages included with this membership. Saving records a pending change only; nothing becomes live until it is checked and published from the Access Groups page.', 'member-library'); ?></p>
         <fieldset class="tsol-membership-access-groups">
-            <legend class="screen-reader-text"><?php esc_html_e('Assigned Library Access Groups', 'tomschooloflife-plugin'); ?></legend>
+            <legend class="screen-reader-text"><?php esc_html_e('Assigned Library Access Groups', 'member-library'); ?></legend>
             <?php if (empty($groups)) : ?>
-                <p><?php esc_html_e('No Access Groups have been created.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('No Access Groups have been created.', 'member-library'); ?></p>
             <?php else : ?>
                 <?php foreach ($groups as $group_id => $group) : ?>
                     <label>
@@ -143,7 +143,7 @@ class TSOL_Library_Access_Groups_Admin {
                 <?php endforeach; ?>
             <?php endif; ?>
         </fieldset>
-        <p><a href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+        <p><a href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'member-library'); ?></a></p>
         <?php
     }
 
@@ -168,7 +168,7 @@ class TSOL_Library_Access_Groups_Admin {
             : '';
         try {
             $this->service->save_membership_assignments($post_id, $group_ids, $revision);
-            $this->set_membership_notice(__('Library Access Groups were saved as a draft.', 'tomschooloflife-plugin'), 'success');
+            $this->set_membership_notice(__('Library Access Groups were saved as a draft.', 'member-library'), 'success');
         } catch (Throwable $exception) {
             $this->set_membership_notice($exception->getMessage(), 'error');
         }
@@ -222,12 +222,12 @@ class TSOL_Library_Access_Groups_Admin {
         $error = isset($_GET['tsol_error']) ? sanitize_text_field(wp_unslash($_GET['tsol_error'])) : '';
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-access-groups-page">
-            <h1><?php esc_html_e('Library Access Groups', 'tomschooloflife-plugin'); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Create reusable Library access packages here, then assign them from each MemberPress membership. MemberPress remains the live authority.', 'tomschooloflife-plugin'); ?></p>
-            <ol class="tsol-access-groups-steps" aria-label="<?php esc_attr_e('How Library Access Groups work', 'tomschooloflife-plugin'); ?>">
-                <li><strong><?php esc_html_e('Define access', 'tomschooloflife-plugin'); ?></strong><span><?php esc_html_e('Create a group and choose what it unlocks.', 'tomschooloflife-plugin'); ?></span></li>
-                <li><strong><?php esc_html_e('Assign memberships', 'tomschooloflife-plugin'); ?></strong><span><?php esc_html_e('Select groups while editing a MemberPress membership.', 'tomschooloflife-plugin'); ?></span></li>
-                <li><strong><?php esc_html_e('Check and publish', 'tomschooloflife-plugin'); ?></strong><span><?php esc_html_e('Return here to verify access before anything goes live.', 'tomschooloflife-plugin'); ?></span></li>
+            <h1><?php esc_html_e('Library Access Groups', 'member-library'); ?></h1>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Create reusable Library access packages here, then assign them from each MemberPress membership. MemberPress remains the live authority.', 'member-library'); ?></p>
+            <ol class="tsol-access-groups-steps" aria-label="<?php esc_attr_e('How Library Access Groups work', 'member-library'); ?>">
+                <li><strong><?php esc_html_e('Define access', 'member-library'); ?></strong><span><?php esc_html_e('Create a group and choose what it unlocks.', 'member-library'); ?></span></li>
+                <li><strong><?php esc_html_e('Assign memberships', 'member-library'); ?></strong><span><?php esc_html_e('Select groups while editing a MemberPress membership.', 'member-library'); ?></span></li>
+                <li><strong><?php esc_html_e('Check and publish', 'member-library'); ?></strong><span><?php esc_html_e('Return here to verify access before anything goes live.', 'member-library'); ?></span></li>
             </ol>
 
             <?php if ('' !== $error) : ?>
@@ -238,39 +238,39 @@ class TSOL_Library_Access_Groups_Admin {
 
             <?php if (!$preview['bootstrapped']) : ?>
                 <section class="card tsol-library-admin-card--wide">
-                    <h2><?php esc_html_e('Import current access safely', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Turn the current TSOL-native MemberPress policy into named draft groups without changing memberships, subscriptions, legacy courses, rules, or live member access.', 'tomschooloflife-plugin'); ?></p>
+                    <h2><?php esc_html_e('Import current access safely', 'member-library'); ?></h2>
+                    <p><?php esc_html_e('Turn the current TSOL-native MemberPress policy into named draft groups without changing memberships, subscriptions, legacy courses, rules, or live member access.', 'member-library'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_access_groups">
                         <input type="hidden" name="operation" value="bootstrap">
                         <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
-                        <?php submit_button(__('Import current access into groups', 'tomschooloflife-plugin'), 'primary', 'submit', false); ?>
+                        <?php submit_button(__('Import current access into groups', 'member-library'), 'primary', 'submit', false); ?>
                     </form>
                 </section>
             <?php else : ?>
                 <div class="tsol-library-admin-stats">
-                    <?php $this->stat(__('Access Groups', 'tomschooloflife-plugin'), $preview['group_count']); ?>
-                    <?php $this->stat(__('Assigned memberships', 'tomschooloflife-plugin'), $preview['assigned_memberships']); ?>
-                    <?php $this->stat(__('Unassigned memberships', 'tomschooloflife-plugin'), count($preview['unassigned_membership_ids'])); ?>
+                    <?php $this->stat(__('Access Groups', 'member-library'), $preview['group_count']); ?>
+                    <?php $this->stat(__('Assigned memberships', 'member-library'), $preview['assigned_memberships']); ?>
+                    <?php $this->stat(__('Unassigned memberships', 'member-library'), count($preview['unassigned_membership_ids'])); ?>
                 </div>
 
                 <?php if (!empty($preview['unassigned_membership_ids'])) : ?>
-                    <div class="notice notice-warning inline"><p><strong><?php esc_html_e('Some memberships are unassigned.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('Assign a group from the relevant MemberPress membership only when that product should include Library access.', 'tomschooloflife-plugin'); ?></p></div>
+                    <div class="notice notice-warning inline"><p><strong><?php esc_html_e('Some memberships are unassigned.', 'member-library'); ?></strong> <?php esc_html_e('Assign a group from the relevant MemberPress membership only when that product should include Library access.', 'member-library'); ?></p></div>
                 <?php endif; ?>
 
                 <?php if (!empty($preview['unmanaged_rule_ids'])) : ?>
                     <div class="notice notice-warning inline">
-                        <p><strong><?php esc_html_e('A published Library rule is still outside Access Groups.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('Safety checks and publishing stay blocked until every Library rule is managed here.', 'tomschooloflife-plugin'); ?></p>
+                        <p><strong><?php esc_html_e('A published Library rule is still outside Access Groups.', 'member-library'); ?></strong> <?php esc_html_e('Safety checks and publishing stay blocked until every Library rule is managed here.', 'member-library'); ?></p>
                         <?php if (count($preview['unmanaged_rule_ids']) === count($preview['reconcilable_rule_ids'])) : ?>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="tsol_library_access_groups">
                                 <input type="hidden" name="operation" value="reconcile">
                                 <input type="hidden" name="revision" value="<?php echo esc_attr((string) $configuration['revision']); ?>">
                                 <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
-                                <?php submit_button(__('Bring it into Access Groups', 'tomschooloflife-plugin'), 'secondary', 'submit', false); ?>
+                                <?php submit_button(__('Bring it into Access Groups', 'member-library'), 'secondary', 'submit', false); ?>
                             </form>
                         <?php else : ?>
-                            <p><?php esc_html_e('Review the unmanaged rule inventory with a developer before continuing; arbitrary MemberPress rules are never changed automatically.', 'tomschooloflife-plugin'); ?></p>
+                            <p><?php esc_html_e('Review the unmanaged rule inventory with a developer before continuing; arbitrary MemberPress rules are never changed automatically.', 'member-library'); ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -284,13 +284,13 @@ class TSOL_Library_Access_Groups_Admin {
                     <input type="hidden" name="revision" value="<?php echo esc_attr((string) $configuration['revision']); ?>">
                     <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
                     <?php if ('active' === (string) ($preview['stage']['phase'] ?? '')) : ?>
-                        <div class="notice notice-info inline"><p><?php esc_html_e('The published access remains live when you save. Your edits stay pending until you check and publish them.', 'tomschooloflife-plugin'); ?></p></div>
+                        <div class="notice notice-info inline"><p><?php esc_html_e('The published access remains live when you save. Your edits stay pending until you check and publish them.', 'member-library'); ?></p></div>
                     <?php endif; ?>
                     <fieldset class="tsol-access-groups-form-fields" <?php disabled($editing_locked); ?>>
-                    <?php if ($editing_locked) : ?><legend class="screen-reader-text"><?php esc_html_e('Editing is locked while checked changes await a decision.', 'tomschooloflife-plugin'); ?></legend><?php endif; ?>
+                    <?php if ($editing_locked) : ?><legend class="screen-reader-text"><?php esc_html_e('Editing is locked while checked changes await a decision.', 'member-library'); ?></legend><?php endif; ?>
                     <div class="tsol-access-groups-heading">
-                        <div><h2><?php esc_html_e('Defined access packages', 'tomschooloflife-plugin'); ?></h2><p><?php esc_html_e('A group can unlock broad Library areas or a deliberate combination of individual Courses and Series.', 'tomschooloflife-plugin'); ?></p></div>
-                        <button type="button" class="button" data-add-access-group><?php esc_html_e('Add Access Group', 'tomschooloflife-plugin'); ?></button>
+                        <div><h2><?php esc_html_e('Defined access packages', 'member-library'); ?></h2><p><?php esc_html_e('A group can unlock broad Library areas or a deliberate combination of individual Courses and Series.', 'member-library'); ?></p></div>
+                        <button type="button" class="button" data-add-access-group><?php esc_html_e('Add Access Group', 'member-library'); ?></button>
                     </div>
                     <div class="tsol-access-groups-list" data-access-groups-list>
                         <?php $index = 0; foreach ($groups as $group_id => $group) : ?>
@@ -301,8 +301,8 @@ class TSOL_Library_Access_Groups_Admin {
                         <?php $this->group_editor('__INDEX__', '', array('name' => '', 'description' => '', 'scopes' => array()), $definitions, array()); ?>
                     </template>
                     <div class="tsol-access-groups-save">
-                        <?php submit_button(__('Save changes', 'tomschooloflife-plugin'), 'primary', 'submit', false); ?>
-                        <span><?php esc_html_e('This saves your setup only. Member access does not change until you check and publish it above.', 'tomschooloflife-plugin'); ?></span>
+                        <?php submit_button(__('Save changes', 'member-library'), 'primary', 'submit', false); ?>
+                        <span><?php esc_html_e('This saves your setup only. Member access does not change until you check and publish it above.', 'member-library'); ?></span>
                     </div>
                     </fieldset>
                 </form>
@@ -313,14 +313,14 @@ class TSOL_Library_Access_Groups_Admin {
 
     private function success_message($operation) {
         $messages = array(
-            'bootstrap' => __('Current access was imported safely. Nothing has been published.', 'tomschooloflife-plugin'),
-            'save_groups' => __('Changes saved. Member access has not changed.', 'tomschooloflife-plugin'),
-            'reconcile' => __('The existing plugin-owned rule was added to the Access Groups draft. Live access has not changed.', 'tomschooloflife-plugin'),
-            'stage' => __('Safety checks passed. Review the result before publishing.', 'tomschooloflife-plugin'),
-            'activate' => __('Access Group changes are now live.', 'tomschooloflife-plugin'),
-            'rollback' => __('The checked changes were discarded or the previous access rules were restored.', 'tomschooloflife-plugin'),
+            'bootstrap' => __('Current access was imported safely. Nothing has been published.', 'member-library'),
+            'save_groups' => __('Changes saved. Member access has not changed.', 'member-library'),
+            'reconcile' => __('The existing plugin-owned rule was added to the Access Groups draft. Live access has not changed.', 'member-library'),
+            'stage' => __('Safety checks passed. Review the result before publishing.', 'member-library'),
+            'activate' => __('Access Group changes are now live.', 'member-library'),
+            'rollback' => __('The checked changes were discarded or the previous access rules were restored.', 'member-library'),
         );
-        return $messages[$operation] ?? __('Access Groups were updated.', 'tomschooloflife-plugin');
+        return $messages[$operation] ?? __('Access Groups were updated.', 'member-library');
     }
 
     private function publish_status($preview) {
@@ -331,39 +331,39 @@ class TSOL_Library_Access_Groups_Admin {
         ?>
         <section class="card tsol-library-admin-card--wide tsol-access-publish-status tsol-access-publish-status--<?php echo esc_attr($phase); ?>" aria-labelledby="tsol-access-publish-heading">
             <?php if ('active' === $phase) : ?>
-                <span class="tsol-access-publish-status__label"><?php esc_html_e('Live', 'tomschooloflife-plugin'); ?></span>
-                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Access Groups are published', 'tomschooloflife-plugin'); ?></h2>
-                <p><?php esc_html_e('Members are using these generated MemberPress rules. You can continue editing safely; saved edits become pending changes while the current rules stay live.', 'tomschooloflife-plugin'); ?></p>
-                <?php $this->action_form('rollback', __('Restore previous access rules', 'tomschooloflife-plugin'), 'secondary'); ?>
+                <span class="tsol-access-publish-status__label"><?php esc_html_e('Live', 'member-library'); ?></span>
+                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Access Groups are published', 'member-library'); ?></h2>
+                <p><?php esc_html_e('Members are using these generated MemberPress rules. You can continue editing safely; saved edits become pending changes while the current rules stay live.', 'member-library'); ?></p>
+                <?php $this->action_form('rollback', __('Restore previous access rules', 'member-library'), 'secondary'); ?>
             <?php elseif ('staged' === $phase) : ?>
-                <span class="tsol-access-publish-status__label"><?php esc_html_e('Checks passed', 'tomschooloflife-plugin'); ?></span>
-                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Ready to publish', 'tomschooloflife-plugin'); ?></h2>
-                <p><?php esc_html_e('The proposed MemberPress rules are still inactive. No member access has changed.', 'tomschooloflife-plugin'); ?></p>
-                <p><?php esc_html_e('Publish or discard these checked changes before editing the groups again.', 'tomschooloflife-plugin'); ?></p>
+                <span class="tsol-access-publish-status__label"><?php esc_html_e('Checks passed', 'member-library'); ?></span>
+                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Ready to publish', 'member-library'); ?></h2>
+                <p><?php esc_html_e('The proposed MemberPress rules are still inactive. No member access has changed.', 'member-library'); ?></p>
+                <p><?php esc_html_e('Publish or discard these checked changes before editing the groups again.', 'member-library'); ?></p>
                 <?php if (!empty($matrix)) : ?>
-                    <p class="tsol-access-publish-status__result"><strong><?php echo esc_html(number_format_i18n((int) ($matrix['decisions_checked'] ?? 0))); ?></strong> <?php esc_html_e('member-and-content checks completed', 'tomschooloflife-plugin'); ?> · <strong><?php echo esc_html(number_format_i18n((int) ($matrix['allow_to_deny'] ?? 0))); ?></strong> <?php esc_html_e('members losing access', 'tomschooloflife-plugin'); ?> · <strong><?php echo esc_html(number_format_i18n((int) ($matrix['deny_to_allow'] ?? 0))); ?></strong> <?php esc_html_e('unexpected access grants', 'tomschooloflife-plugin'); ?></p>
+                    <p class="tsol-access-publish-status__result"><strong><?php echo esc_html(number_format_i18n((int) ($matrix['decisions_checked'] ?? 0))); ?></strong> <?php esc_html_e('member-and-content checks completed', 'member-library'); ?> · <strong><?php echo esc_html(number_format_i18n((int) ($matrix['allow_to_deny'] ?? 0))); ?></strong> <?php esc_html_e('members losing access', 'member-library'); ?> · <strong><?php echo esc_html(number_format_i18n((int) ($matrix['deny_to_allow'] ?? 0))); ?></strong> <?php esc_html_e('unexpected access grants', 'member-library'); ?></p>
                 <?php endif; ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="tsol-access-publish-status__confirm">
                     <input type="hidden" name="action" value="tsol_library_access_groups">
                     <input type="hidden" name="operation" value="activate">
                     <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
-                    <label><strong><?php esc_html_e('To publish, type publish-access-groups', 'tomschooloflife-plugin'); ?></strong><input type="text" name="confirmation" autocomplete="off"></label>
-                    <?php submit_button(__('Publish access changes', 'tomschooloflife-plugin'), 'primary', 'submit', false); ?>
+                    <label><strong><?php esc_html_e('To publish, type publish-access-groups', 'member-library'); ?></strong><input type="text" name="confirmation" autocomplete="off"></label>
+                    <?php submit_button(__('Publish access changes', 'member-library'), 'primary', 'submit', false); ?>
                 </form>
-                <?php $this->action_form('rollback', __('Discard checked changes', 'tomschooloflife-plugin'), 'secondary'); ?>
+                <?php $this->action_form('rollback', __('Discard checked changes', 'member-library'), 'secondary'); ?>
             <?php elseif (in_array($phase, array('staging', 'failed'), true)) : ?>
-                <span class="tsol-access-publish-status__label"><?php esc_html_e('Check incomplete', 'tomschooloflife-plugin'); ?></span>
-                <h2 id="tsol-access-publish-heading"><?php esc_html_e('No access changes were published', 'tomschooloflife-plugin'); ?></h2>
-                <p><?php esc_html_e('Remove the incomplete check, review your setup, and try again.', 'tomschooloflife-plugin'); ?></p>
-                <?php $this->action_form('rollback', __('Clear incomplete check', 'tomschooloflife-plugin'), 'secondary'); ?>
+                <span class="tsol-access-publish-status__label"><?php esc_html_e('Check incomplete', 'member-library'); ?></span>
+                <h2 id="tsol-access-publish-heading"><?php esc_html_e('No access changes were published', 'member-library'); ?></h2>
+                <p><?php esc_html_e('Remove the incomplete check, review your setup, and try again.', 'member-library'); ?></p>
+                <?php $this->action_form('rollback', __('Clear incomplete check', 'member-library'), 'secondary'); ?>
             <?php else : ?>
-                <span class="tsol-access-publish-status__label"><?php esc_html_e('Pending changes', 'tomschooloflife-plugin'); ?></span>
-                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Your saved setup is not live yet', 'tomschooloflife-plugin'); ?></h2>
+                <span class="tsol-access-publish-status__label"><?php esc_html_e('Pending changes', 'member-library'); ?></span>
+                <h2 id="tsol-access-publish-heading"><?php esc_html_e('Your saved setup is not live yet', 'member-library'); ?></h2>
                 <?php if (!empty($preview['unmanaged_rule_ids'])) : ?>
-                    <p><?php esc_html_e('Resolve the published Library rule outside Access Groups before running the safety check. Current member access remains unchanged.', 'tomschooloflife-plugin'); ?></p>
+                    <p><?php esc_html_e('Resolve the published Library rule outside Access Groups before running the safety check. Current member access remains unchanged.', 'member-library'); ?></p>
                 <?php else : ?>
-                    <p><?php esc_html_e('Keep editing as needed. When ready, run the safety check to compare the proposed access for every current member and Library item. Current member access remains unchanged.', 'tomschooloflife-plugin'); ?></p>
-                    <?php $this->action_form('stage', __('Check changes before publishing', 'tomschooloflife-plugin'), 'primary'); ?>
+                    <p><?php esc_html_e('Keep editing as needed. When ready, run the safety check to compare the proposed access for every current member and Library item. Current member access remains unchanged.', 'member-library'); ?></p>
+                    <?php $this->action_form('stage', __('Check changes before publishing', 'member-library'), 'primary'); ?>
                 <?php endif; ?>
             <?php endif; ?>
         </section>
@@ -375,19 +375,19 @@ class TSOL_Library_Access_Groups_Admin {
         $selected = array_map('strval', (array) ($group['scopes'] ?? array()));
         ?>
         <details class="tsol-access-group-card" data-access-group-card <?php echo '' === $group_id ? 'open' : ''; ?>>
-            <summary><strong data-access-group-summary><?php echo esc_html((string) ($group['name'] ?: __('New Access Group', 'tomschooloflife-plugin'))); ?></strong><span><?php echo esc_html(sprintf(_n('%d membership', '%d memberships', count($memberships), 'tomschooloflife-plugin'), count($memberships))); ?></span></summary>
+            <summary><strong data-access-group-summary><?php echo esc_html((string) ($group['name'] ?: __('New Access Group', 'member-library'))); ?></strong><span><?php echo esc_html(sprintf(_n('%d membership', '%d memberships', count($memberships), 'member-library'), count($memberships))); ?></span></summary>
             <div class="tsol-access-group-card__body">
                 <input type="hidden" name="<?php echo esc_attr($field_prefix . '[id]'); ?>" value="<?php echo esc_attr($group_id); ?>">
                 <input type="hidden" name="<?php echo esc_attr($field_prefix . '[remove]'); ?>" value="0" data-access-group-remove-value>
                 <div class="tsol-access-group-card__identity">
-                    <label><span><?php esc_html_e('Group name', 'tomschooloflife-plugin'); ?></span><input type="text" name="<?php echo esc_attr($field_prefix . '[name]'); ?>" value="<?php echo esc_attr((string) $group['name']); ?>" required data-access-group-name></label>
-                    <label><span><?php esc_html_e('Admin description', 'tomschooloflife-plugin'); ?></span><textarea name="<?php echo esc_attr($field_prefix . '[description]'); ?>" rows="2"><?php echo esc_textarea((string) $group['description']); ?></textarea></label>
+                    <label><span><?php esc_html_e('Group name', 'member-library'); ?></span><input type="text" name="<?php echo esc_attr($field_prefix . '[name]'); ?>" value="<?php echo esc_attr((string) $group['name']); ?>" required data-access-group-name></label>
+                    <label><span><?php esc_html_e('Admin description', 'member-library'); ?></span><textarea name="<?php echo esc_attr($field_prefix . '[description]'); ?>" rows="2"><?php echo esc_textarea((string) $group['description']); ?></textarea></label>
                 </div>
                 <fieldset>
-                    <legend><?php esc_html_e('Library access', 'tomschooloflife-plugin'); ?></legend>
-                    <p class="description"><?php esc_html_e('Select everything this package unlocks. Collection and all-Series selections also cover future matching content.', 'tomschooloflife-plugin'); ?></p>
+                    <legend><?php esc_html_e('Library access', 'member-library'); ?></legend>
+                    <p class="description"><?php esc_html_e('Select everything this package unlocks. Collection and all-Series selections also cover future matching content.', 'member-library'); ?></p>
                     <div class="tsol-access-group-scopes">
-                        <?php foreach (array('broad' => __('Broad access', 'tomschooloflife-plugin'), 'course' => __('Individual Courses', 'tomschooloflife-plugin'), 'series' => __('Individual Series', 'tomschooloflife-plugin')) as $section => $label) : ?>
+                        <?php foreach (array('broad' => __('Broad access', 'member-library'), 'course' => __('Individual Courses', 'member-library'), 'series' => __('Individual Series', 'member-library')) as $section => $label) : ?>
                             <div><h4><?php echo esc_html($label); ?></h4>
                                 <?php foreach ($definitions as $scope_key => $definition) : ?>
                                     <?php $definition_section = in_array($definition['kind'], array('library', 'collection', 'all_series'), true) ? 'broad' : $definition['kind']; ?>
@@ -400,16 +400,16 @@ class TSOL_Library_Access_Groups_Admin {
                 </fieldset>
                 <?php if (!empty($memberships)) : ?>
                     <details class="tsol-access-group-card__memberships" data-access-group-memberships>
-                        <summary><?php echo esc_html(sprintf(_n('View %d assigned membership', 'View %d assigned memberships', count($memberships), 'tomschooloflife-plugin'), count($memberships))); ?></summary>
-                        <p class="description"><?php esc_html_e('Assignments are changed from each MemberPress membership.', 'tomschooloflife-plugin'); ?></p>
-                        <ul tabindex="0" aria-label="<?php echo esc_attr(sprintf(__('%s assigned memberships', 'tomschooloflife-plugin'), (string) $group['name'])); ?>">
+                        <summary><?php echo esc_html(sprintf(_n('View %d assigned membership', 'View %d assigned memberships', count($memberships), 'member-library'), count($memberships))); ?></summary>
+                        <p class="description"><?php esc_html_e('Assignments are changed from each MemberPress membership.', 'member-library'); ?></p>
+                        <ul tabindex="0" aria-label="<?php echo esc_attr(sprintf(__('%s assigned memberships', 'member-library'), (string) $group['name'])); ?>">
                             <?php foreach ($memberships as $membership_id => $membership_name) : ?>
                                 <li><a href="<?php echo esc_url(admin_url('post.php?post=' . (int) $membership_id . '&action=edit')); ?>"><?php echo esc_html($membership_name); ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </details>
                 <?php endif; ?>
-                <button type="button" class="button-link-delete" data-remove-access-group><?php esc_html_e('Delete this Access Group', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button-link-delete" data-remove-access-group><?php esc_html_e('Delete this Access Group', 'member-library'); ?></button>
             </div>
         </details>
         <?php

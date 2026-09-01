@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Catalogue_Webhook {
+class MemberLibrary_Catalogue_Webhook {
 
     const SCHEMA_VERSION = '20260812.2';
     const SCHEMA_OPTION = 'tsol_library_catalogue_webhook_schema_version';
@@ -75,7 +75,7 @@ class TSOL_Library_Catalogue_Webhook {
         }
         $schedules[self::WATCHDOG_SCHEDULE] = array(
             'interval' => MINUTE_IN_SECONDS,
-            'display' => __('Every minute (TSOL catalogue delivery)', 'tomschooloflife-plugin'),
+            'display' => __('Every minute (TSOL catalogue delivery)', 'member-library'),
         );
         return $schedules;
     }
@@ -256,7 +256,7 @@ class TSOL_Library_Catalogue_Webhook {
             'reject_unsafe_urls' => !self::is_local_url($url),
             'sslverify' => true,
             'timeout' => $blocking ? 5 : 1,
-            'user-agent' => 'TSOL-Library-Catalogue-Webhook/' . TSOL_SITE_PLUGIN_VERSION,
+            'user-agent' => 'TSOL-Library-Catalogue-Webhook/' . MEMBER_LIBRARY_PLUGIN_VERSION,
         ));
         if (is_wp_error($response)) {
             return array('success' => false, 'status_code' => 0, 'error_code' => 'transport_failed');
@@ -302,12 +302,12 @@ class TSOL_Library_Catalogue_Webhook {
 
         $last_delivery = get_option(self::LAST_DELIVERY_OPTION, array());
         $last_delivery = is_array($last_delivery) ? $last_delivery : array();
-        $latest_change_at = $wpdb->get_var('SELECT MAX(changed_at) FROM ' . TSOL_Library_Content_Changes::table()); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static plugin-owned table name.
+        $latest_change_at = $wpdb->get_var('SELECT MAX(changed_at) FROM ' . MemberLibrary_Content_Changes::table()); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static plugin-owned table name.
 
         return array(
             'configured' => self::endpoint_url() !== '' && strlen(self::secret()) >= 32,
             'outbox_installed' => $installed,
-            'source_cursor' => (string) TSOL_Library_Content_Changes::current_cursor(),
+            'source_cursor' => (string) MemberLibrary_Content_Changes::current_cursor(),
             'latest_change_at' => self::mysql_utc_or_null($latest_change_at),
             'pending' => $pending,
             'cron_scheduled_at' => self::timestamp_or_null(wp_next_scheduled(self::CRON_HOOK)),
@@ -379,7 +379,7 @@ class TSOL_Library_Catalogue_Webhook {
             'reject_unsafe_urls' => !self::is_local_url($url),
             'sslverify' => true,
             'timeout' => 5,
-            'user-agent' => 'TSOL-Library-Catalogue-Status/' . TSOL_SITE_PLUGIN_VERSION,
+            'user-agent' => 'TSOL-Library-Catalogue-Status/' . MEMBER_LIBRARY_PLUGIN_VERSION,
         ));
         if (is_wp_error($response)) {
             return array('ok' => false, 'error_code' => 'transport_failed');
@@ -406,21 +406,21 @@ class TSOL_Library_Catalogue_Webhook {
     }
 
     private static function endpoint_url() {
-        $app_url = TSOL_Library_Auth_Settings::app_url();
+        $app_url = MemberLibrary_Auth_Settings::app_url();
         $url = $app_url === '' ? '' : $app_url . self::ENDPOINT_PATH;
         return (string) apply_filters('tsol_library_catalogue_webhook_url', $url);
     }
 
     private static function status_endpoint_url() {
-        $app_url = TSOL_Library_Auth_Settings::app_url();
+        $app_url = MemberLibrary_Auth_Settings::app_url();
         $url = $app_url === '' ? '' : $app_url . self::STATUS_ENDPOINT_PATH;
         return (string) apply_filters('tsol_library_catalogue_status_url', $url);
     }
 
     private static function secret() {
-        $secret = TSOL_Library_Auth_Settings::catalogue_webhook_secret();
+        $secret = MemberLibrary_Auth_Settings::catalogue_webhook_secret();
         $secret = trim((string) apply_filters('tsol_library_catalogue_webhook_secret', $secret));
-        $client_secret = TSOL_Library_Auth_Settings::client_secret();
+        $client_secret = MemberLibrary_Auth_Settings::client_secret();
         if ($secret !== '' && $client_secret !== '' && hash_equals($client_secret, $secret)) {
             return '';
         }

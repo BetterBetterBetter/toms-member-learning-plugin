@@ -17,11 +17,11 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$assert(class_exists('TSOL_Library_Content_Catalogue'), 'Catalogue serializer is not loaded.');
-$assert(class_exists('TSOL_Library_Content_Changes'), 'Catalogue change cursor is not loaded.');
+$assert(class_exists('MemberLibrary_Content_Catalogue'), 'Catalogue serializer is not loaded.');
+$assert(class_exists('MemberLibrary_Content_Changes'), 'Catalogue change cursor is not loaded.');
 
 global $wpdb;
-$changes_table = TSOL_Library_Content_Changes::table();
+$changes_table = MemberLibrary_Content_Changes::table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $changes_table)) === $changes_table, 'Catalogue change table is missing.');
 
 $routes = rest_get_server()->get_routes();
@@ -38,8 +38,8 @@ $all = array();
 $after_id = 0;
 $snapshot_cursor = null;
 do {
-    $page = TSOL_Library_Content_Catalogue::snapshot($after_id, 37);
-    $assert($page['schema_version'] === TSOL_Library_Content_Catalogue::SCHEMA_VERSION, 'Snapshot schema version changed.');
+    $page = MemberLibrary_Content_Catalogue::snapshot($after_id, 37);
+    $assert($page['schema_version'] === MemberLibrary_Content_Catalogue::SCHEMA_VERSION, 'Snapshot schema version changed.');
     $assert(is_string($page['snapshot_cursor']) && ctype_digit($page['snapshot_cursor']), 'Snapshot cursor is not an unsigned integer string.');
     if (null === $snapshot_cursor) {
         $snapshot_cursor = $page['snapshot_cursor'];
@@ -205,14 +205,14 @@ foreach ($all as $item) {
     }
     $rail = (string) ($item['homepage']['rail'] ?? '');
     $position = (int) ($item['homepage']['position'] ?? 0);
-    $assert(isset(TSOL_Library_Homepage_Curation::rails()[$rail]), 'Catalogue emitted an unknown homepage section.');
+    $assert(isset(MemberLibrary_Homepage_Curation::rails()[$rail]), 'Catalogue emitted an unknown homepage section.');
     $assert($position > 0 && !isset($homepage_positions[$rail][$position]), 'Catalogue emitted a duplicate or invalid homepage position.');
     $homepage_positions[$rail][$position] = true;
 }
 $sample_course_id = (int) ($ids[array_search('course', array_column($all, 'record_type'), true)] ?? 0);
 $sample_series_id = (int) ($ids[array_search('series', array_column($all, 'record_type'), true)] ?? 0);
 $sample_lesson_id = (int) ($ids[array_search('lesson', array_column($all, 'record_type'), true)] ?? 0);
-$sanitized_homepage = TSOL_Library_Homepage_Curation::sanitize_rails(array(
+$sanitized_homepage = MemberLibrary_Homepage_Curation::sanitize_rails(array(
     'featured' => array($sample_course_id, $sample_course_id, $sample_lesson_id, PHP_INT_MAX),
     'courses' => array($sample_series_id),
     'series' => array($sample_series_id),
@@ -289,10 +289,10 @@ foreach (array('membership_ids', 'memberpress_rules', 'client_secret', 'legacy_s
     $assert(strpos($encoded, $forbidden) === false, 'Catalogue payload exposed forbidden authority field: ' . $forbidden);
 }
 
-if (TSOL_Library_Auth_Settings::configured()) {
+if (MemberLibrary_Auth_Settings::configured()) {
     $request = new WP_REST_Request('GET', '/tsol-library/v1/catalogue');
-    $request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $request->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $request->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $request->set_param('per_page', 25);
     $response = rest_do_request($request);
     $data = $response->get_data();
@@ -303,20 +303,20 @@ if (TSOL_Library_Auth_Settings::configured()) {
 
     $browser_request = new WP_REST_Request('GET', '/tsol-library/v1/catalogue');
     $browser_request->set_header('origin', home_url('/'));
-    $browser_request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $browser_request->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $browser_request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $browser_request->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $assert(rest_do_request($browser_request)->get_status() === 403, 'Catalogue accepted a browser-origin request.');
 
     $invalid_request = new WP_REST_Request('GET', '/tsol-library/v1/catalogue');
-    $invalid_request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
+    $invalid_request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
     $invalid_request->set_header('x-tsol-client-secret', 'invalid-secret-value-that-is-never-valid');
     $assert(rest_do_request($invalid_request)->get_status() === 401, 'Catalogue accepted an invalid client secret.');
 
     $admin_ids = get_users(array('role' => 'administrator', 'fields' => 'ID', 'number' => 1));
     $batch_request = new WP_REST_Request('POST', '/tsol-library/v1/content-access/' . (int) $admin_ids[0]);
     $batch_request->set_header('content-type', 'application/json');
-    $batch_request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $batch_request->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $batch_request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $batch_request->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $batch_request->set_body(wp_json_encode(array('post_ids' => array_slice($ids, 0, 4))));
     $batch_response = rest_do_request($batch_request);
     $batch_data = $batch_response->get_data();
@@ -326,17 +326,17 @@ if (TSOL_Library_Auth_Settings::configured()) {
 
     $oversized = new WP_REST_Request('POST', '/tsol-library/v1/content-access/' . (int) $admin_ids[0]);
     $oversized->set_header('content-type', 'application/json');
-    $oversized->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $oversized->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $oversized->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $oversized->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $oversized->set_body(wp_json_encode(array('post_ids' => range(1, 201))));
     $assert(rest_do_request($oversized)->get_status() === 400, 'Batch content access accepted more than 200 IDs.');
 } else {
     $failures[] = 'Bridge is not configured, so protected endpoint checks could not run.';
 }
 
-$cursor_before = TSOL_Library_Content_Changes::current_cursor();
+$cursor_before = MemberLibrary_Content_Changes::current_cursor();
 $fixture_id = wp_insert_post(array(
-    'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
     'post_status' => 'draft',
     'post_title' => 'TSOL catalogue contract fixture',
     'post_name' => 'tsol-catalogue-contract-fixture',
@@ -346,15 +346,15 @@ $assert(!is_wp_error($fixture_id), 'Could not create the disposable catalogue fi
 
 if (!is_wp_error($fixture_id)) {
     $fixture_id = (int) $fixture_id;
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_CONTENT_TYPE, 'video');
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_MIGRATION_KEY, 'catalogue-contract-fixture');
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, 'contract');
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_UUID, wp_generate_uuid4());
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $fixture_id);
-    $assert(!metadata_exists('post', $fixture_id, TSOL_Library_Content_Model::META_INCLUDE), 'The automatic Library-CPT fixture unexpectedly received the retired inclusion flag.');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_CONTENT_TYPE, 'video');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_MIGRATION_KEY, 'catalogue-contract-fixture');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_MIGRATION_VERSION, 'contract');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_UUID, wp_generate_uuid4());
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $fixture_id);
+    $assert(!metadata_exists('post', $fixture_id, MemberLibrary_Content_Model::META_INCLUDE), 'The automatic Library-CPT fixture unexpectedly received the retired inclusion flag.');
     do_action('tsol_library_content_changed', $fixture_id);
 
-    $upserts = TSOL_Library_Content_Catalogue::changes($cursor_before, 100);
+    $upserts = MemberLibrary_Content_Catalogue::changes($cursor_before, 100);
     $fixture_upserts = array_values(array_filter($upserts['changes'], static function ($change) use ($fixture_id) {
         return (int) $change['post_id'] === $fixture_id && $change['action'] === 'upsert' && is_array($change['item']);
     }));
@@ -371,13 +371,13 @@ if (!is_wp_error($fixture_id)) {
     $assert(!empty($fixture_upserts) && 'none' === $fixture_upserts[0]['item']['speaker_source'], 'Standalone Content did not default to no effective Speaker source.');
     $assert(!empty($fixture_upserts) && array() === $fixture_upserts[0]['item']['speakers'], 'Standalone Content emitted phantom effective Speakers.');
 
-    $cursor_before_text_update = TSOL_Library_Content_Changes::current_cursor();
+    $cursor_before_text_update = MemberLibrary_Content_Changes::current_cursor();
     wp_update_post(array(
         'ID' => $fixture_id,
         'post_excerpt' => 'Automatic Library excerpt.',
         'post_content' => '<p>&nbsp;</p><iframe src="https://player.example.test/video"></iframe><script>alert("no")</script><p>An automatic <strong>Library Description</strong>.</p><div><p><br /></p></div>[private_embed]secret[/private_embed]',
     ));
-    $description_record = TSOL_Library_Content_Catalogue::record($fixture_id);
+    $description_record = MemberLibrary_Content_Catalogue::record($fixture_id);
     $description_html = (string) $description_record['overview_html'];
     $assert('Automatic Library excerpt.' === (string) $description_record['excerpt'], 'WordPress Excerpt was not projected automatically into catalogue browse metadata.');
     $assert(false !== strpos($description_html, '<strong>Library Description</strong>'), 'Automatic editor formatting was not projected into the Description.');
@@ -386,7 +386,7 @@ if (!is_wp_error($fixture_id)) {
     $assert(false === strpos($description_html, 'private_embed') && false === strpos($description_html, 'secret'), 'A legacy shortcode survived Description sanitization.');
     $assert(false === strpos($description_html, '&nbsp;') && false === strpos($description_html, '<br'), 'Empty legacy spacing survived Description sanitization.');
 
-    $text_updates = TSOL_Library_Content_Catalogue::changes($cursor_before_text_update, 100);
+    $text_updates = MemberLibrary_Content_Catalogue::changes($cursor_before_text_update, 100);
     $fixture_text_updates = array_values(array_filter($text_updates['changes'], static function ($change) use ($fixture_id) {
         return (int) $change['post_id'] === $fixture_id
             && 'upsert' === $change['action']
@@ -398,7 +398,7 @@ if (!is_wp_error($fixture_id)) {
 
     $cursor_after_upsert = (int) $upserts['next_cursor'];
     wp_trash_post($fixture_id);
-    $deletes = TSOL_Library_Content_Catalogue::changes($cursor_after_upsert, 100);
+    $deletes = MemberLibrary_Content_Catalogue::changes($cursor_after_upsert, 100);
     $assert(count(array_filter($deletes['changes'], static function ($change) use ($fixture_id) {
         return (int) $change['post_id'] === $fixture_id && $change['action'] === 'delete' && null === $change['item'];
     })) > 0, 'Incremental cursor did not emit the fixture tombstone.');
@@ -408,12 +408,12 @@ if (!is_wp_error($fixture_id)) {
 }
 
 $aggregate_parent_id = wp_insert_post(array(
-    'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
     'post_status' => 'draft',
     'post_title' => 'TSOL last-updated parent contract fixture',
 ), true);
 $aggregate_child_id = is_wp_error($aggregate_parent_id) ? $aggregate_parent_id : wp_insert_post(array(
-    'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
     'post_status' => 'publish',
     'post_title' => 'TSOL last-updated child contract fixture',
 ), true);
@@ -422,17 +422,17 @@ if (!is_wp_error($aggregate_parent_id) && !is_wp_error($aggregate_child_id)) {
     $aggregate_parent_id = (int) $aggregate_parent_id;
     $aggregate_child_id = (int) $aggregate_child_id;
     foreach (array($aggregate_parent_id, $aggregate_child_id) as $aggregate_id) {
-        update_post_meta($aggregate_id, TSOL_Library_Content_Model::META_UUID, wp_generate_uuid4());
-        update_post_meta($aggregate_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $aggregate_id);
+        update_post_meta($aggregate_id, MemberLibrary_Content_Model::META_UUID, wp_generate_uuid4());
+        update_post_meta($aggregate_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $aggregate_id);
     }
-    update_post_meta($aggregate_child_id, TSOL_Library_Content_Model::META_COURSE_ID, $aggregate_parent_id);
+    update_post_meta($aggregate_child_id, MemberLibrary_Content_Model::META_COURSE_ID, $aggregate_parent_id);
     wp_update_post(array(
         'ID' => $aggregate_parent_id,
         'post_content' => '<h1 class="pasted-title" style="color: red">Public Course heading</h1><p data-pasted="yes">Public <strong>Course landing copy</strong>.</p><style>.leak{color:red}</style><script>alert("no")</script>',
     ));
     update_post_meta(
         $aggregate_parent_id,
-        TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+        MemberLibrary_Content_Model::META_COURSE_LEARNING_OUTCOMES,
         array('Understand the method.', 'Apply the method independently.')
     );
     $wpdb->update($wpdb->posts, array(
@@ -446,7 +446,7 @@ if (!is_wp_error($aggregate_parent_id) && !is_wp_error($aggregate_child_id)) {
     clean_post_cache($aggregate_parent_id);
     clean_post_cache($aggregate_child_id);
 
-    $aggregate_record = TSOL_Library_Content_Catalogue::record($aggregate_parent_id);
+    $aggregate_record = MemberLibrary_Content_Catalogue::record($aggregate_parent_id);
     $assert(false !== strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<strong>Course landing copy</strong>'), 'Catalogue omitted allowed public Course description markup.');
     $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<script'), 'Catalogue exposed unsafe public Course description markup.');
     $assert(false === strpos((string) ($aggregate_record['public_description_html'] ?? ''), '<style'), 'Catalogue exposed pasted Course style markup.');
@@ -466,9 +466,9 @@ if (!is_wp_error($aggregate_parent_id) && !is_wp_error($aggregate_child_id)) {
         'Course Last updated did not roll up its newest published lesson (received ' . wp_json_encode($aggregate_record['last_updated_at'] ?? null) . ').'
     );
 
-    $aggregate_cursor = TSOL_Library_Content_Changes::current_cursor();
+    $aggregate_cursor = MemberLibrary_Content_Changes::current_cursor();
     wp_update_post(array('ID' => $aggregate_child_id, 'post_content' => 'Updated child content.'));
-    $aggregate_changes = TSOL_Library_Content_Catalogue::changes($aggregate_cursor, 100);
+    $aggregate_changes = MemberLibrary_Content_Catalogue::changes($aggregate_cursor, 100);
     $assert(count(array_filter($aggregate_changes['changes'], static function ($change) use ($aggregate_parent_id) {
         return (int) $change['post_id'] === $aggregate_parent_id && 'upsert' === $change['action'];
     })) > 0, 'Updating a published child did not enqueue its parent aggregate for synchronization.');

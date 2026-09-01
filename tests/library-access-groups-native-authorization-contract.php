@@ -9,7 +9,7 @@ $course_id = 0;
 $item_id = 0;
 try {
     $course_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'Authorization contract Course',
     ), true);
@@ -17,16 +17,16 @@ try {
         throw new RuntimeException($course_id->get_error_message());
     }
     $item_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'Authorization contract Item',
     ), true);
     if (is_wp_error($item_id)) {
         throw new RuntimeException($item_id->get_error_message());
     }
-    update_post_meta($item_id, TSOL_Library_Content_Model::META_COURSE_ID, (int) $course_id);
+    update_post_meta($item_id, MemberLibrary_Content_Model::META_COURSE_ID, (int) $course_id);
 
-    $service = new TSOL_Library_Access_Groups();
+    $service = new MemberLibrary_Access_Groups();
     if ((int) $course_id !== $service->native_authorization_post_id((int) $course_id)) {
         throw new RuntimeException('A Course does not authorize through itself.');
     }

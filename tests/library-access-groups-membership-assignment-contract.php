@@ -5,7 +5,7 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this contract through WP-CLI.');
 }
 
-$service = new TSOL_Library_Access_Groups();
+$service = new MemberLibrary_Access_Groups();
 $before_configuration = $service->configuration();
 if (!$service->is_bootstrapped()) {
     WP_CLI::error('Access Groups must be bootstrapped before running this contract.');
@@ -44,7 +44,7 @@ try {
         'group_id' => $group_id,
     ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 } finally {
-    update_option(TSOL_Library_Access_Groups::OPTION_NAME, $before_configuration, false);
+    update_option(MemberLibrary_Access_Groups::OPTION_NAME, $before_configuration, false);
 }
 
 WP_CLI::success('A MemberPress membership can receive a reusable Library Access Group without changing live rules.');

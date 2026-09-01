@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Auth_Revocation {
+class MemberLibrary_Auth_Revocation {
 
     const SCHEMA_VERSION = '20260812.1';
     const SCHEMA_OPTION = 'tsol_library_auth_revocation_schema_version';
@@ -151,7 +151,7 @@ class TSOL_Library_Auth_Revocation {
             'created_at' => $now,
         ), array('%s', '%d', '%s', '%d', '%s', '%s', '%s'));
         if (false === $inserted) {
-            TSOL_Library_Auth_Logger::event('revocation', array('outcome' => 'failure', 'error' => 'outbox_failed', 'endpoint' => 'auth_revocation', 'user_id' => $user_id));
+            MemberLibrary_Auth_Logger::event('revocation', array('outcome' => 'failure', 'error' => 'outbox_failed', 'endpoint' => 'auth_revocation', 'user_id' => $user_id));
             return false;
         }
 
@@ -254,7 +254,7 @@ class TSOL_Library_Auth_Revocation {
             'reject_unsafe_urls' => !self::is_local_url($url),
             'sslverify' => true,
             'timeout' => 5,
-            'user-agent' => 'TSOL-Library-Auth-Revocation/' . TSOL_SITE_PLUGIN_VERSION,
+            'user-agent' => 'TSOL-Library-Auth-Revocation/' . MEMBER_LIBRARY_PLUGIN_VERSION,
         ));
         if (is_wp_error($response)) {
             return array('success' => false, 'status_code' => 0, 'error_code' => 'transport_failed');
@@ -270,7 +270,7 @@ class TSOL_Library_Auth_Revocation {
     }
 
     private static function endpoint_url() {
-        $app_url = TSOL_Library_Auth_Settings::app_url();
+        $app_url = MemberLibrary_Auth_Settings::app_url();
         $url = $app_url === '' ? '' : $app_url . self::ENDPOINT_PATH;
         return (string) apply_filters('tsol_library_auth_revocation_url', $url);
     }
@@ -280,8 +280,8 @@ class TSOL_Library_Auth_Revocation {
             ? trim((string) TSOL_LIBRARY_AUTH_REVOCATION_SECRET)
             : '';
         $secret = trim((string) apply_filters('tsol_library_auth_revocation_secret', $secret));
-        $disallowed = array(TSOL_Library_Auth_Settings::client_secret());
-        $disallowed[] = TSOL_Library_Auth_Settings::catalogue_webhook_secret();
+        $disallowed = array(MemberLibrary_Auth_Settings::client_secret());
+        $disallowed[] = MemberLibrary_Auth_Settings::catalogue_webhook_secret();
         foreach ($disallowed as $candidate) {
             if ($candidate !== '' && $secret !== '' && hash_equals($candidate, $secret)) {
                 return '';

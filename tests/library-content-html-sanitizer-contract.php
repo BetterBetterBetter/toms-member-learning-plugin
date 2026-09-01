@@ -17,7 +17,7 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$assert(class_exists('TSOL_Library_Content_HTML_Sanitizer'), 'Library editor-HTML sanitizer is not loaded.');
+$assert(class_exists('MemberLibrary_Content_HTML_Sanitizer'), 'Library editor-HTML sanitizer is not loaded.');
 
 $source = <<<'HTML'
 <!-- wp:tadv/classic-paragraph -->
@@ -44,12 +44,12 @@ $source = <<<'HTML'
 <!-- /wp:tadv/classic-paragraph -->
 HTML;
 
-$sanitized = TSOL_Library_Content_HTML_Sanitizer::sanitize($source);
+$sanitized = MemberLibrary_Content_HTML_Sanitizer::sanitize($source);
 
 $copied_affiliate_html = <<<'HTML'
 <p>In blogging groups, I heard about the <a href="https://www.amazon.com/gp/product/1942589050/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=1942589050&amp;linkCode=as2&amp;tag=colesmithwrit-20&amp;linkId=a717f7f43097a429e4af1a3c444e177a">Miracle Morning</a> and read it. Holy mole, <a href="https://www.colesmithwrites.com/habit-changed-writing-life/">I was a morning person</a>!!! I discovered Chandler Bolt's book <a href="https://www.amazon.com/gp/product/1539412334/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=1539412334&amp;linkCode=as2&amp;tag=colesmithwrit-20&amp;linkId=bd613542f649498be0d5c76a19f3d6e7"><em>Published</em></a>. In just a few months, I finished and self-pubbed <a href="https://www.amazon.com/gp/product/B07BJJS3T6/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=B07BJJS3T6&amp;linkCode=as2&amp;tag=colesmithwrit-20&amp;linkId=4714824e78d48bd521b6ea9bd53f3a48"><em>Waiting for Jacob</em></a>.</p>
 HTML;
-$sanitized_affiliate_html = TSOL_Library_Content_HTML_Sanitizer::sanitize($copied_affiliate_html);
+$sanitized_affiliate_html = MemberLibrary_Content_HTML_Sanitizer::sanitize($copied_affiliate_html);
 
 foreach (array('Miracle Morning', 'I was a morning person', 'Published', 'Waiting for Jacob') as $linked_text) {
     $assert(
@@ -87,27 +87,27 @@ $assert(false !== strpos($sanitized, 'Protocol-relative destination'), 'Sanitize
 $assert(false !== strpos($sanitized, 'Traversal destination'), 'Sanitizer removed useful traversal-link text.');
 $assert(!preg_match('~<p>\s*(?:<br\s*/?>)?\s*</p>~i', $sanitized), 'Sanitizer retained an empty paragraph.');
 
-foreach (array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)) as $post_type) {
+foreach (array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)) as $post_type) {
     $supported_data = wp_slash(array(
         'post_type' => $post_type,
         'post_content' => $source,
     ));
-    $saved_data = TSOL_Library_Content_HTML_Sanitizer::sanitize_post_data($supported_data, array());
+    $saved_data = MemberLibrary_Content_HTML_Sanitizer::sanitize_post_data($supported_data, array());
     $assert(wp_slash($sanitized) === $saved_data['post_content'], sprintf('%s did not sanitize editor content before storage.', $post_type));
 }
 
 $speaker_summary_data = wp_slash(array(
-    'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
     'post_excerpt' => '<p class="pasted" style="color:red">A short <strong>course-page</strong> biography.</p><style>.leak{color:red}</style>',
 ));
-$saved_speaker_summary_data = TSOL_Library_Content_HTML_Sanitizer::sanitize_post_data($speaker_summary_data, array());
+$saved_speaker_summary_data = MemberLibrary_Content_HTML_Sanitizer::sanitize_post_data($speaker_summary_data, array());
 $assert(
     wp_slash('A short course-page biography.') === $saved_speaker_summary_data['post_excerpt'],
     'Speaker Short bio was not reduced to plain text before storage.'
 );
 
 $saved_post_id = wp_insert_post(wp_slash(array(
-    'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
     'post_status' => 'draft',
     'post_title' => 'TSOL Library editor sanitizer save fixture',
     'post_content' => '<p><a href="/courses/safe-course" class="pasted">Internal Course</a> and <a href="https://example.test/resource" target="_blank">external resource</a>.</p>' . $copied_affiliate_html,
@@ -132,7 +132,7 @@ $unsupported_data = array(
     'post_content' => $source,
 );
 $assert(
-    $unsupported_data === TSOL_Library_Content_HTML_Sanitizer::sanitize_post_data($unsupported_data, array()),
+    $unsupported_data === MemberLibrary_Content_HTML_Sanitizer::sanitize_post_data($unsupported_data, array()),
     'Library sanitizer changed an unrelated WordPress post type.'
 );
 

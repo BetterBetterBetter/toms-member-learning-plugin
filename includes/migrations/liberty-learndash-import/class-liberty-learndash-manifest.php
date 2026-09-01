@@ -47,8 +47,8 @@ class Liberty_Classroom_LearnDash_Manifest {
                 }
                 $live_lesson_ids[$lesson_id] = true;
                 $assets = $this->ordered_media_assets($lesson->post_content);
-                $resources = TSOL_Library_Content_Model::sanitize_resources(
-                    TSOL_Library_Resource_Normalizer::extract_from_content($lesson->post_content)
+                $resources = MemberLibrary_Content_Model::sanitize_resources(
+                    MemberLibrary_Resource_Normalizer::extract_from_content($lesson->post_content)
                 );
                 $resource_only = empty($assets);
                 if ($resource_only && (!in_array($lesson_id, array(25008, 25011), true) || empty($resources))) {
@@ -155,8 +155,8 @@ class Liberty_Classroom_LearnDash_Manifest {
     }
 
     private function ordered_media_assets($content) {
-        $assets = TSOL_Library_Content_Model::sanitize_media_assets(
-            TSOL_Library_Media_Normalizer::extract_from_content($content)
+        $assets = MemberLibrary_Content_Model::sanitize_media_assets(
+            MemberLibrary_Media_Normalizer::extract_from_content($content)
         );
         usort($assets, static function ($left, $right) {
             $left_weight = 'video' === (string) ($left['kind'] ?? '') ? 0 : 1;

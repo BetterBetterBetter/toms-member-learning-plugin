@@ -37,17 +37,17 @@ $raw = array(
     'exclude' => array(array('type' => 'SPECIFIC_USERS', 'wordpressUserIds' => array(11, 7, 11))),
 );
 
-$normalized = TSOL_Library_Announcement_Audience_Contract::normalize($raw);
+$normalized = MemberLibrary_Announcement_Audience_Contract::normalize($raw);
 $assert(!is_wp_error($normalized), 'The valid bounded audience did not normalize.');
 if (!is_wp_error($normalized)) {
     $assert(
         $normalized['exclude'] === array(array('type' => 'SPECIFIC_USERS', 'wordpressUserIds' => array(7, 11))),
         'Specific-user exclusions were not sorted and deduplicated.'
     );
-    $hash = TSOL_Library_Announcement_Audience_Contract::hash($normalized);
+    $hash = MemberLibrary_Announcement_Audience_Contract::hash($normalized);
     $assert((bool) preg_match('/^[a-f0-9]{64}$/', $hash), 'The normalized definition hash is not SHA-256.');
-    $assert($hash === TSOL_Library_Announcement_Audience_Contract::hash($raw), 'Equivalent input did not produce the same hash.');
-    $explanation = TSOL_Library_Announcement_Audience_Contract::explain($normalized);
+    $assert($hash === MemberLibrary_Announcement_Audience_Contract::hash($raw), 'Equivalent input did not produce the same hash.');
+    $explanation = MemberLibrary_Announcement_Audience_Contract::explain($normalized);
     $assert(!is_wp_error($explanation), 'The normalized definition could not be explained.');
     $assert(isset($explanation['groups'][0]['token']) && 'g0' === $explanation['groups'][0]['token'], 'Group tokens are not deterministic.');
 }
@@ -68,7 +68,7 @@ $cross_language_fixture = array(
 );
 $assert(
     'e7041a339c79d27169a39a7b65353e4a47b12156fc152e3842dd6589cb3da8c8'
-        === TSOL_Library_Announcement_Audience_Contract::hash($cross_language_fixture),
+        === MemberLibrary_Announcement_Audience_Contract::hash($cross_language_fixture),
     'The PHP audience hash drifted from the TypeScript fixture.'
 );
 
@@ -88,7 +88,7 @@ $invalid = array(
     array('schemaVersion' => 1, 'groups' => array(array('all' => array(array('type' => 'AUTHENTICATED_SCHOOL_USER')))), 'exclude' => array(array('type' => 'ACTIVE_MEMBERSHIP', 'membershipIds' => array(1)))),
 );
 foreach ($invalid as $index => $definition) {
-    $assert(is_wp_error(TSOL_Library_Announcement_Audience_Contract::normalize($definition)), 'Unsafe definition ' . $index . ' was accepted.');
+    $assert(is_wp_error(MemberLibrary_Announcement_Audience_Contract::normalize($definition)), 'Unsafe definition ' . $index . ' was accepted.');
 }
 
 $all_linked = array(
@@ -96,7 +96,7 @@ $all_linked = array(
     'groups' => array(array('all' => array(array('type' => 'AUTHENTICATED_SCHOOL_USER')))),
     'exclude' => array(),
 );
-$page = TSOL_Library_Announcement_Audience_Resolver::page($all_linked, 0, 3);
+$page = MemberLibrary_Announcement_Audience_Resolver::page($all_linked, 0, 3);
 $assert(!is_wp_error($page), 'The read-only resolver could not scan a bounded user page.');
 if (!is_wp_error($page)) {
     $assert(1 === $page['schemaVersion'], 'The resolver response schema is not version 1.');

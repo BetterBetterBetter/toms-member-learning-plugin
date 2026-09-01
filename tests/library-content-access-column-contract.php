@@ -38,7 +38,7 @@ $rule_snapshot = static function ($post_id) {
 };
 
 try {
-    $assert(class_exists('TSOL_Library_Content_Access_Column'), 'Library access presenter class is unavailable.');
+    $assert(class_exists('MemberLibrary_Content_Access_Column'), 'Library access presenter class is unavailable.');
     $assert(class_exists('MeprRule'), 'MemberPress rule model is unavailable.');
 
     $administrator_ids = get_users(array(
@@ -62,14 +62,14 @@ try {
     ));
     $reviewable_statuses = array_values(array_diff(get_post_stati(), array('trash', 'auto-draft')));
     $library_course_ids = get_posts(array(
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => $reviewable_statuses,
         'numberposts' => -1,
         'fields' => 'ids',
         'suppress_filters' => true,
     ));
     $library_item_ids = get_posts(array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => $reviewable_statuses,
         'numberposts' => -1,
         'fields' => 'ids',
@@ -77,13 +77,13 @@ try {
     ));
     $assert(124 === count($legacy_ids), 'The native MemberPress Course inventory is not the locked 124 sources.');
     $discarded_library_ids = get_posts(array(
-        'post_type' => TSOL_Library_Content_Model::post_types(),
+        'post_type' => MemberLibrary_Content_Model::post_types(),
         'post_status' => array('trash', 'auto-draft'),
         'numberposts' => -1,
         'fields' => 'ids',
         'suppress_filters' => true,
         'meta_query' => array(array(
-            'key' => TSOL_Library_Content_Model::META_MIGRATION_KEY,
+            'key' => MemberLibrary_Content_Model::META_MIGRATION_KEY,
             'compare' => 'EXISTS',
         )),
     ));
@@ -94,7 +94,7 @@ try {
     $target_id = 0;
     $source_id = 0;
     foreach (array_merge($library_course_ids, $library_item_ids) as $candidate_id) {
-        $candidate_source_id = (int) get_post_meta($candidate_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+        $candidate_source_id = (int) get_post_meta($candidate_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
         if ($candidate_source_id > 0 && !empty(MeprRule::get_rules(get_post($candidate_source_id)))) {
             $target_id = (int) $candidate_id;
             $source_id = $candidate_source_id;
@@ -111,10 +111,10 @@ try {
     $source_meta_snapshot = get_post_meta($source_id);
     $rules_snapshot = $rule_snapshot($source_id);
 
-    $presenter = new TSOL_Library_Content_Access_Column();
+    $presenter = new MemberLibrary_Content_Access_Column();
     $presenter->init();
-    $assert(false !== has_filter('manage_edit-' . TSOL_Library_Content_Model::COURSE_POST_TYPE . '_columns', array($presenter, 'add_column')), 'Library Courses did not receive the compact access column.');
-    $assert(false !== has_filter('manage_edit-' . TSOL_Library_Content_Model::ITEM_POST_TYPE . '_columns', array($presenter, 'add_column')), 'Library Content did not receive the compact access column.');
+    $assert(false !== has_filter('manage_edit-' . MemberLibrary_Content_Model::COURSE_POST_TYPE . '_columns', array($presenter, 'add_column')), 'Library Courses did not receive the compact access column.');
+    $assert(false !== has_filter('manage_edit-' . MemberLibrary_Content_Model::ITEM_POST_TYPE . '_columns', array($presenter, 'add_column')), 'Library Content did not receive the compact access column.');
     $assert(false === has_filter('manage_edit-mpcs-course_columns', array($presenter, 'add_column')), 'TSOL registered an access column on native MemberPress Courses.');
     $assert(false === has_action('manage_mpcs-course_posts_custom_column', array($presenter, 'render_column')), 'TSOL registered a renderer on native MemberPress Courses.');
 
@@ -124,13 +124,13 @@ try {
     $assert($memberpress_posts_priority === has_action('manage_posts_custom_column', 'MeprAppCtrl::custom_columns'), 'TSOL changed the MemberPress renderer on its native Courses list.');
     $assert($memberpress_pages_priority === has_action('manage_pages_custom_column', 'MeprAppCtrl::custom_columns'), 'TSOL changed the MemberPress page renderer on the native Courses list.');
 
-    set_current_screen('edit-' . TSOL_Library_Content_Model::COURSE_POST_TYPE);
+    set_current_screen('edit-' . MemberLibrary_Content_Model::COURSE_POST_TYPE);
     $library_screen = get_current_screen();
     $presenter->suppress_memberpress_renderer_on_library_lists($library_screen);
     $assert(false === has_action('manage_posts_custom_column', 'MeprAppCtrl::custom_columns'), 'MemberPress verbose renderer was not suppressed on the TSOL-only list.');
 
     $columns = $presenter->add_column(array('title' => 'Title'));
-    $assert(isset($columns[TSOL_Library_Content_Access_Column::COLUMN]), 'The TSOL list did not receive a MemberPress access heading.');
+    $assert(isset($columns[MemberLibrary_Content_Access_Column::COLUMN]), 'The TSOL list did not receive a MemberPress access heading.');
 
     $target_summary = $presenter->access_summary($target_id);
     $source_summary = $presenter->access_summary($source_id);
@@ -143,7 +143,7 @@ try {
     }
 
     ob_start();
-    $presenter->render_column(TSOL_Library_Content_Access_Column::COLUMN, $target_id);
+    $presenter->render_column(MemberLibrary_Content_Access_Column::COLUMN, $target_id);
     $cell_html = ob_get_clean();
     $assert(false !== strpos($cell_html, 'aria-haspopup="dialog"'), 'Protected TSOL access cell is not an accessible details button.');
     $assert(false === strpos($cell_html, '>Public<'), 'MemberPress verbose Public output leaked into the TSOL access cell.');
@@ -164,8 +164,8 @@ try {
     $assert($source_meta_snapshot === get_post_meta($source_id), 'The access view changed legacy source metadata.');
     $assert($rules_snapshot === $rule_snapshot($source_id), 'The access view changed MemberPress authority.');
 } finally {
-    if ($presenter instanceof TSOL_Library_Content_Access_Column) {
-        foreach (TSOL_Library_Content_Model::post_types() as $post_type) {
+    if ($presenter instanceof MemberLibrary_Content_Access_Column) {
+        foreach (MemberLibrary_Content_Model::post_types() as $post_type) {
             remove_filter('manage_edit-' . $post_type . '_columns', array($presenter, 'add_column'));
             remove_action('manage_' . $post_type . '_posts_custom_column', array($presenter, 'render_column'), 10);
         }

@@ -7,12 +7,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Announcement_Audience_Resolver {
+class MemberLibrary_Announcement_Audience_Resolver {
 
     public static function page($value, $after_user_id, $per_page) {
         global $wpdb;
 
-        $definition = TSOL_Library_Announcement_Audience_Contract::normalize($value);
+        $definition = MemberLibrary_Announcement_Audience_Contract::normalize($value);
         if (is_wp_error($definition)) {
             return $definition;
         }
@@ -46,12 +46,12 @@ class TSOL_Library_Announcement_Audience_Resolver {
             }
         }
 
-        $hash = TSOL_Library_Announcement_Audience_Contract::hash($definition);
+        $hash = MemberLibrary_Announcement_Audience_Contract::hash($definition);
         if (is_wp_error($hash)) {
             return $hash;
         }
         return array(
-            'schemaVersion' => TSOL_Library_Announcement_Audience_Contract::SCHEMA_VERSION,
+            'schemaVersion' => MemberLibrary_Announcement_Audience_Contract::SCHEMA_VERSION,
             'definitionHash' => $hash,
             'generatedAt' => gmdate('c'),
             'afterUserId' => $after_user_id,
@@ -84,13 +84,13 @@ class TSOL_Library_Announcement_Audience_Resolver {
         $content_ids = array();
         foreach (array_keys($content_uuids) as $uuid) {
             $posts = get_posts(array(
-                'post_type' => array(TSOL_Library_Content_Model::COURSE_POST_TYPE, TSOL_Library_Content_Model::SERIES_POST_TYPE),
+                'post_type' => array(MemberLibrary_Content_Model::COURSE_POST_TYPE, MemberLibrary_Content_Model::SERIES_POST_TYPE),
                 'post_status' => 'publish',
                 'posts_per_page' => 2,
                 'fields' => 'ids',
                 'no_found_rows' => true,
                 'suppress_filters' => true,
-                'meta_key' => TSOL_Library_Content_Model::META_UUID,
+                'meta_key' => MemberLibrary_Content_Model::META_UUID,
                 'meta_value' => $uuid,
             ));
             if (1 !== count($posts)) {
@@ -158,7 +158,7 @@ class TSOL_Library_Announcement_Audience_Resolver {
                 }
                 return !empty(array_intersect($condition['membershipIds'], $memberships));
             case 'CAN_ACCESS_CONTENT':
-                $result = TSOL_Library_Auth_Entitlements::for_content($user_id, $context['content_ids'][$condition['contentUuid']]);
+                $result = MemberLibrary_Auth_Entitlements::for_content($user_id, $context['content_ids'][$condition['contentUuid']]);
                 return is_wp_error($result) ? $result : !empty($result['can_access']);
         }
         return new WP_Error('audience_condition_unsupported');

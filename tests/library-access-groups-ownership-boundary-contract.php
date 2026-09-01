@@ -5,9 +5,9 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this contract through WP-CLI.');
 }
 
-$service = new TSOL_Library_Access_Groups();
+$service = new MemberLibrary_Access_Groups();
 $before_configuration = $service->configuration();
-$before_stage = get_option(TSOL_Library_Access_Groups::STAGE_OPTION, null);
+$before_stage = get_option(MemberLibrary_Access_Groups::STAGE_OPTION, null);
 if (!$service->is_bootstrapped() || !empty($before_stage)) {
     WP_CLI::error('Run this contract against a bootstrapped draft with no staged rules.');
 }
@@ -19,7 +19,7 @@ if (count($source_rule_ids) < 2) {
 
 $test_configuration = $before_configuration;
 $unmanaged_rule_id = (int) array_pop($test_configuration['source_rule_ids']);
-update_option(TSOL_Library_Access_Groups::OPTION_NAME, $test_configuration, false);
+update_option(MemberLibrary_Access_Groups::OPTION_NAME, $test_configuration, false);
 
 try {
     $preview = $service->preview();
@@ -36,7 +36,7 @@ try {
     if (!$blocked) {
         throw new RuntimeException('Staging was not blocked by the unmanaged Library rule.');
     }
-    if (!empty(get_option(TSOL_Library_Access_Groups::STAGE_OPTION, array()))) {
+    if (!empty(get_option(MemberLibrary_Access_Groups::STAGE_OPTION, array()))) {
         throw new RuntimeException('A failed ownership check left staged rule state behind.');
     }
 
@@ -46,11 +46,11 @@ try {
         'detected_rule_id' => $unmanaged_rule_id,
     ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 } finally {
-    update_option(TSOL_Library_Access_Groups::OPTION_NAME, $before_configuration, false);
+    update_option(MemberLibrary_Access_Groups::OPTION_NAME, $before_configuration, false);
     if (null === $before_stage) {
-        delete_option(TSOL_Library_Access_Groups::STAGE_OPTION);
+        delete_option(MemberLibrary_Access_Groups::STAGE_OPTION);
     } else {
-        update_option(TSOL_Library_Access_Groups::STAGE_OPTION, $before_stage, false);
+        update_option(MemberLibrary_Access_Groups::STAGE_OPTION, $before_stage, false);
     }
 }
 

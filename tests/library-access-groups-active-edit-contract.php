@@ -5,9 +5,9 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this contract through WP-CLI.');
 }
 
-$service = new TSOL_Library_Access_Groups();
-$before_configuration = get_option(TSOL_Library_Access_Groups::OPTION_NAME);
-$before_stage = get_option(TSOL_Library_Access_Groups::STAGE_OPTION, null);
+$service = new MemberLibrary_Access_Groups();
+$before_configuration = get_option(MemberLibrary_Access_Groups::OPTION_NAME);
+$before_stage = get_option(MemberLibrary_Access_Groups::STAGE_OPTION, null);
 
 if (!is_array($before_configuration) || !$service->is_bootstrapped()) {
     WP_CLI::error('Access Groups must be bootstrapped before running this contract.');
@@ -29,7 +29,7 @@ if (empty($source_rules)) {
 ksort($source_rules, SORT_STRING);
 
 $synthetic_active_stage = array(
-    'schema_version' => TSOL_Library_Access_Groups::SCHEMA_VERSION,
+    'schema_version' => MemberLibrary_Access_Groups::SCHEMA_VERSION,
     'phase' => 'active',
     'revision' => (string) $before_configuration['revision'],
     'source_rule_ids' => array_values(array_map('intval', $source_rules)),
@@ -38,7 +38,7 @@ $synthetic_active_stage = array(
     'activated_at' => gmdate('Y-m-d H:i:s'),
 );
 
-update_option(TSOL_Library_Access_Groups::STAGE_OPTION, $synthetic_active_stage, false);
+update_option(MemberLibrary_Access_Groups::STAGE_OPTION, $synthetic_active_stage, false);
 
 try {
     $result = $service->save_groups(
@@ -47,7 +47,7 @@ try {
     );
     $after_configuration = $service->configuration();
 
-    if (null !== get_option(TSOL_Library_Access_Groups::STAGE_OPTION, null)) {
+    if (null !== get_option(MemberLibrary_Access_Groups::STAGE_OPTION, null)) {
         throw new RuntimeException('Saving did not clear the prior active stage.');
     }
     if ('draft' !== (string) ($after_configuration['status'] ?? '')) {
@@ -73,11 +73,11 @@ try {
         'history_entries' => count((array) $after_configuration['history']),
     ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 } finally {
-    update_option(TSOL_Library_Access_Groups::OPTION_NAME, $before_configuration, false);
+    update_option(MemberLibrary_Access_Groups::OPTION_NAME, $before_configuration, false);
     if (null === $before_stage) {
-        delete_option(TSOL_Library_Access_Groups::STAGE_OPTION);
+        delete_option(MemberLibrary_Access_Groups::STAGE_OPTION);
     } else {
-        update_option(TSOL_Library_Access_Groups::STAGE_OPTION, $before_stage, false);
+        update_option(MemberLibrary_Access_Groups::STAGE_OPTION, $before_stage, false);
     }
 }
 

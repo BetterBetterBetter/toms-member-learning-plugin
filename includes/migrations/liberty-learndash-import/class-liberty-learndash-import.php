@@ -68,8 +68,8 @@ class Liberty_Classroom_LearnDash_Import {
             if (!empty($this->all_library_post_ids())) {
                 throw new RuntimeException('Library records already exist outside this migration; no content was changed.');
             }
-            if (null !== get_option(TSOL_Library_Access_Groups::OPTION_NAME, null)
-                || null !== get_option(TSOL_Library_Access_Groups::STAGE_OPTION, null)
+            if (null !== get_option(MemberLibrary_Access_Groups::OPTION_NAME, null)
+                || null !== get_option(MemberLibrary_Access_Groups::STAGE_OPTION, null)
             ) {
                 throw new RuntimeException('Access Groups already contain configuration or a staged rule set; no content was changed.');
             }
@@ -142,29 +142,29 @@ class Liberty_Classroom_LearnDash_Import {
 
         $media = array('video_primary' => 0, 'audio_primary' => 0, 'items_with_audio' => 0);
         foreach ($manifest['courses'] as $course) {
-            $course_id = $this->target_id($course['migration_key'], TSOL_Library_Content_Model::COURSE_POST_TYPE);
+            $course_id = $this->target_id($course['migration_key'], MemberLibrary_Content_Model::COURSE_POST_TYPE);
             $this->verify_target($course_id, $course, $target_status);
             if ((int) get_post_thumbnail_id($course_id) !== (int) $course['thumbnail_id']) {
                 throw new RuntimeException(sprintf('Course %s no longer has the source artwork.', $course['title']));
             }
-            if ((int) get_post_meta($course_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true) !== (int) $course['source_id']) {
+            if ((int) get_post_meta($course_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true) !== (int) $course['source_id']) {
                 throw new RuntimeException(sprintf('Course %s lost its transition authorization.', $course['title']));
             }
-            if (count(TSOL_Library_Content_Model::direct_speaker_ids($course_id)) !== count($course['speaker_slugs'])) {
+            if (count(MemberLibrary_Content_Model::direct_speaker_ids($course_id)) !== count($course['speaker_slugs'])) {
                 throw new RuntimeException(sprintf('Course %s has the wrong Speaker count.', $course['title']));
             }
             $items = get_posts(array(
-                'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+                'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
                 'post_status' => $target_status,
                 'posts_per_page' => -1,
                 'fields' => 'ids',
-                'meta_key' => TSOL_Library_Content_Model::META_COURSE_ID,
+                'meta_key' => MemberLibrary_Content_Model::META_COURSE_ID,
                 'meta_value' => $course_id,
                 'suppress_filters' => true,
             ));
             usort($items, static function ($left_id, $right_id) {
-                return (int) get_post_meta($left_id, TSOL_Library_Content_Model::META_POSITION, true)
-                    <=> (int) get_post_meta($right_id, TSOL_Library_Content_Model::META_POSITION, true);
+                return (int) get_post_meta($left_id, MemberLibrary_Content_Model::META_POSITION, true)
+                    <=> (int) get_post_meta($right_id, MemberLibrary_Content_Model::META_POSITION, true);
             });
             if (count($items) !== count($course['lessons'])) {
                 throw new RuntimeException(sprintf('Course %s has the wrong lesson count.', $course['title']));
@@ -172,13 +172,13 @@ class Liberty_Classroom_LearnDash_Import {
             foreach ($course['lessons'] as $index => $lesson) {
                 $item_id = (int) $items[$index];
                 $this->verify_target($item_id, $lesson, $target_status);
-                if ((int) get_post_meta($item_id, TSOL_Library_Content_Model::META_POSITION, true) !== (int) $lesson['position']
-                    || (int) get_post_meta($item_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true) !== (int) $course['source_id']
+                if ((int) get_post_meta($item_id, MemberLibrary_Content_Model::META_POSITION, true) !== (int) $lesson['position']
+                    || (int) get_post_meta($item_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true) !== (int) $course['source_id']
                 ) {
                     throw new RuntimeException(sprintf('Lesson %s lost its order or Course authorization.', $lesson['title']));
                 }
-                $assets = TSOL_Library_Content_Model::sanitize_media_assets(
-                    get_post_meta($item_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true)
+                $assets = MemberLibrary_Content_Model::sanitize_media_assets(
+                    get_post_meta($item_id, MemberLibrary_Content_Model::META_MEDIA_ASSETS, true)
                 );
                 if (empty($assets) && empty($lesson['resource_only'])) {
                     throw new RuntimeException(sprintf('Lesson %s has no normalized media.', $lesson['title']));
@@ -192,7 +192,7 @@ class Liberty_Classroom_LearnDash_Import {
                 if (preg_match('/<(?:video|audio)\b/i', (string) get_post_field('post_content', $item_id))) {
                     throw new RuntimeException(sprintf('Lesson %s retained duplicate legacy player markup.', $lesson['title']));
                 }
-                $catalogue_record = TSOL_Library_Content_Catalogue::record($item_id);
+                $catalogue_record = MemberLibrary_Content_Catalogue::record($item_id);
                 if (is_wp_error($catalogue_record)
                     || '' === trim((string) ($catalogue_record['course']['section']['title'] ?? ''))
                 ) {
@@ -201,7 +201,7 @@ class Liberty_Classroom_LearnDash_Import {
             }
         }
 
-        $access = new TSOL_Library_Access_Groups();
+        $access = new MemberLibrary_Access_Groups();
         if (!$access->is_bootstrapped()) {
             throw new RuntimeException('The imported Access Groups draft is missing.');
         }
@@ -257,10 +257,10 @@ class Liberty_Classroom_LearnDash_Import {
             $post_ids = $this->migration_post_ids();
             usort($post_ids, static function ($left_id, $right_id) {
                 $priority = array(
-                    TSOL_Library_Content_Model::SPEAKER_POST_TYPE => 0,
-                    TSOL_Library_Content_Model::COURSE_POST_TYPE => 1,
-                    TSOL_Library_Content_Model::SERIES_POST_TYPE => 2,
-                    TSOL_Library_Content_Model::ITEM_POST_TYPE => 3,
+                    MemberLibrary_Content_Model::SPEAKER_POST_TYPE => 0,
+                    MemberLibrary_Content_Model::COURSE_POST_TYPE => 1,
+                    MemberLibrary_Content_Model::SERIES_POST_TYPE => 2,
+                    MemberLibrary_Content_Model::ITEM_POST_TYPE => 3,
                 );
                 $left_priority = (int) ($priority[get_post_type($left_id)] ?? 99);
                 $right_priority = (int) ($priority[get_post_type($right_id)] ?? 99);
@@ -300,7 +300,7 @@ class Liberty_Classroom_LearnDash_Import {
             foreach ($post_ids as $post_id) {
                 $post = get_post($post_id);
                 if ($post instanceof WP_Post && ('draft' !== $post->post_status
-                    || self::VERSION !== (string) get_post_meta($post_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, true))) {
+                    || self::VERSION !== (string) get_post_meta($post_id, MemberLibrary_Content_Model::META_MIGRATION_VERSION, true))) {
                     throw new RuntimeException(sprintf('Target %d was edited or published; rollback stopped.', $post_id));
                 }
             }
@@ -312,16 +312,16 @@ class Liberty_Classroom_LearnDash_Import {
                 }
             }
             foreach (array_reverse(array_map('intval', (array) ($state['created_term_ids'] ?? array()))) as $term_id) {
-                $term = get_term($term_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
+                $term = get_term($term_id, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY);
                 if ($term instanceof WP_Term) {
-                    $deleted = wp_delete_term($term_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
+                    $deleted = wp_delete_term($term_id, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY);
                     if (is_wp_error($deleted) || false === $deleted) {
                         throw new RuntimeException(sprintf('Could not remove Collection %d.', $term_id));
                     }
                 }
             }
-            delete_option(TSOL_Library_Access_Groups::OPTION_NAME);
-            delete_option(TSOL_Library_Access_Groups::STAGE_OPTION);
+            delete_option(MemberLibrary_Access_Groups::OPTION_NAME);
+            delete_option(MemberLibrary_Access_Groups::STAGE_OPTION);
             $state['phase'] = 'rolled_back';
             $state['created_post_ids'] = array();
             $state['created_term_ids'] = array();
@@ -334,10 +334,10 @@ class Liberty_Classroom_LearnDash_Import {
     private function create_collections($manifest, &$state) {
         $term_ids = array();
         foreach ($manifest['collections'] as $slug => $collection) {
-            if (get_term_by('slug', $slug, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY) instanceof WP_Term) {
+            if (get_term_by('slug', $slug, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY) instanceof WP_Term) {
                 throw new RuntimeException(sprintf('Collection %s already exists outside this migration.', $slug));
             }
-            $created = wp_insert_term($collection['name'], TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, array(
+            $created = wp_insert_term($collection['name'], MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY, array(
                 'slug' => $slug,
                 'description' => $collection['description'],
             ));
@@ -355,18 +355,18 @@ class Liberty_Classroom_LearnDash_Import {
         $ids = array();
         foreach ($manifest['speakers'] as $slug => $speaker) {
             $ids[$slug] = $this->create_post(array(
-                'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+                'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
                 'post_status' => 'draft',
                 'post_title' => $speaker['name'],
                 'post_name' => $speaker['slug'],
                 'post_content' => '',
                 'post_excerpt' => '',
             ), array(
-                TSOL_Library_Content_Model::META_MIGRATION_KEY => $speaker['migration_key'],
-                TSOL_Library_Content_Model::META_MIGRATION_VERSION => self::VERSION,
-                TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID => (int) $speaker['source_id'],
-                TSOL_Library_Content_Model::META_LEGACY_SOURCE_TYPE => 'ld_course_tag',
-                TSOL_Library_Content_Model::SPEAKER_META_UUID => $this->uuid($speaker['migration_key']),
+                MemberLibrary_Content_Model::META_MIGRATION_KEY => $speaker['migration_key'],
+                MemberLibrary_Content_Model::META_MIGRATION_VERSION => self::VERSION,
+                MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID => (int) $speaker['source_id'],
+                MemberLibrary_Content_Model::META_LEGACY_SOURCE_TYPE => 'ld_course_tag',
+                MemberLibrary_Content_Model::SPEAKER_META_UUID => $this->uuid($speaker['migration_key']),
             ), $state);
         }
         return $ids;
@@ -374,17 +374,17 @@ class Liberty_Classroom_LearnDash_Import {
 
     private function create_course($course, $speaker_ids, $term_ids, &$state) {
         $meta = $this->base_meta($course, (int) $course['source_id'], 'course');
-        $meta[TSOL_Library_Content_Model::META_POSITION] = (int) $course['position'];
-        $meta[TSOL_Library_Content_Model::META_SPEAKER_MODE] = TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT;
-        $meta[TSOL_Library_Content_Model::META_COURSE_SECTIONS] = array();
-        $meta[TSOL_Library_Content_Model::META_AI_ASSISTANT_ENABLED] = false;
-        $course_id = $this->create_post($this->post_data($course, TSOL_Library_Content_Model::COURSE_POST_TYPE), $meta, $state);
+        $meta[MemberLibrary_Content_Model::META_POSITION] = (int) $course['position'];
+        $meta[MemberLibrary_Content_Model::META_SPEAKER_MODE] = MemberLibrary_Content_Model::SPEAKER_MODE_DIRECT;
+        $meta[MemberLibrary_Content_Model::META_COURSE_SECTIONS] = array();
+        $meta[MemberLibrary_Content_Model::META_AI_ASSISTANT_ENABLED] = false;
+        $course_id = $this->create_post($this->post_data($course, MemberLibrary_Content_Model::COURSE_POST_TYPE), $meta, $state);
         $this->copy_thumbnail($course['thumbnail_id'], $course_id);
         foreach ($course['speaker_slugs'] as $speaker_slug) {
-            add_post_meta($course_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, (int) $speaker_ids[$speaker_slug], false);
+            add_post_meta($course_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, (int) $speaker_ids[$speaker_slug], false);
         }
         $term_id = (int) ($term_ids[$course['collection_slug']] ?? 0);
-        $assigned = wp_set_object_terms($course_id, array($term_id), TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, false);
+        $assigned = wp_set_object_terms($course_id, array($term_id), MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY, false);
         if (!$term_id || is_wp_error($assigned)) {
             throw new RuntimeException(sprintf('Could not assign Course %s to its Collection.', $course['title']));
         }
@@ -393,13 +393,13 @@ class Liberty_Classroom_LearnDash_Import {
 
     private function create_lesson($lesson, $course, $course_id, &$state) {
         $meta = $this->base_meta($lesson, (int) $course['source_id'], 'lesson');
-        $meta[TSOL_Library_Content_Model::META_POSITION] = (int) $lesson['position'];
-        $meta[TSOL_Library_Content_Model::META_COURSE_ID] = (int) $course_id;
-        $meta[TSOL_Library_Content_Model::META_SPEAKER_MODE] = TSOL_Library_Content_Model::SPEAKER_MODE_INHERIT;
-        $meta[TSOL_Library_Content_Model::META_MEDIA_ASSETS] = $lesson['media_assets'];
-        $meta[TSOL_Library_Content_Model::META_RESOURCES] = $lesson['resources'];
-        $meta[TSOL_Library_Content_Model::META_AVAILABILITY] = TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE;
-        $item_id = $this->create_post($this->post_data($lesson, TSOL_Library_Content_Model::ITEM_POST_TYPE), $meta, $state);
+        $meta[MemberLibrary_Content_Model::META_POSITION] = (int) $lesson['position'];
+        $meta[MemberLibrary_Content_Model::META_COURSE_ID] = (int) $course_id;
+        $meta[MemberLibrary_Content_Model::META_SPEAKER_MODE] = MemberLibrary_Content_Model::SPEAKER_MODE_INHERIT;
+        $meta[MemberLibrary_Content_Model::META_MEDIA_ASSETS] = $lesson['media_assets'];
+        $meta[MemberLibrary_Content_Model::META_RESOURCES] = $lesson['resources'];
+        $meta[MemberLibrary_Content_Model::META_AVAILABILITY] = MemberLibrary_Content_Model::AVAILABILITY_AVAILABLE;
+        $item_id = $this->create_post($this->post_data($lesson, MemberLibrary_Content_Model::ITEM_POST_TYPE), $meta, $state);
         $this->copy_thumbnail($lesson['thumbnail_id'], $item_id);
         return $item_id;
     }
@@ -411,7 +411,7 @@ class Liberty_Classroom_LearnDash_Import {
             $scopes = array();
             foreach ($group['source_course_ids'] as $source_id) {
                 $target_id = (int) ($course_ids[(int) $source_id] ?? 0);
-                $uuid = (string) get_post_meta($target_id, TSOL_Library_Content_Model::META_UUID, true);
+                $uuid = (string) get_post_meta($target_id, MemberLibrary_Content_Model::META_UUID, true);
                 if (!$target_id || '' === $uuid) {
                     throw new RuntimeException(sprintf('Access Group %s references a missing migrated Course.', $group['name']));
                 }
@@ -421,30 +421,30 @@ class Liberty_Classroom_LearnDash_Import {
             $groups[] = array('id' => $group_id, 'name' => $group['name'], 'description' => $group['description'], 'scopes' => $scopes);
             $assignments[$group['membership_slug']] = array($group_id);
         }
-        (new TSOL_Library_Access_Groups())->import_portable_configuration($groups, $assignments, array(), $transition);
+        (new MemberLibrary_Access_Groups())->import_portable_configuration($groups, $assignments, array(), $transition);
     }
 
     private function base_meta($entry, $authorization_id, $content_type) {
         return array(
-            TSOL_Library_Content_Model::META_INCLUDE => true,
-            TSOL_Library_Content_Model::META_CONTENT_TYPE => $content_type,
-            TSOL_Library_Content_Model::META_POSITION => 0,
-            TSOL_Library_Content_Model::META_FEATURED => false,
-            TSOL_Library_Content_Model::META_MEDIA_ASSETS => array(),
-            TSOL_Library_Content_Model::META_RESOURCES => array(),
-            TSOL_Library_Content_Model::META_MIGRATION_KEY => $entry['migration_key'],
-            TSOL_Library_Content_Model::META_MIGRATION_VERSION => self::VERSION,
-            TSOL_Library_Content_Model::META_UUID => $this->uuid($entry['migration_key']),
-            TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID => (int) $entry['source_id'],
-            TSOL_Library_Content_Model::META_LEGACY_SOURCE_TYPE => $entry['source_type'],
-            TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID => $authorization_id,
-            TSOL_Library_Content_Model::META_SOURCE_MODIFIED_GMT => $entry['post_modified_gmt'],
-            TSOL_Library_Content_Model::META_CONTENT_FINGERPRINT => $entry['source_fingerprint'],
-            TSOL_Library_Content_Model::META_COURSE_ID => 0,
-            TSOL_Library_Content_Model::META_SERIES_ID => 0,
-            TSOL_Library_Content_Model::META_SECTION_KEY => '',
-            TSOL_Library_Content_Model::META_SECTION_TITLE => '',
-            TSOL_Library_Content_Model::META_SECTION_POSITION => 0,
+            MemberLibrary_Content_Model::META_INCLUDE => true,
+            MemberLibrary_Content_Model::META_CONTENT_TYPE => $content_type,
+            MemberLibrary_Content_Model::META_POSITION => 0,
+            MemberLibrary_Content_Model::META_FEATURED => false,
+            MemberLibrary_Content_Model::META_MEDIA_ASSETS => array(),
+            MemberLibrary_Content_Model::META_RESOURCES => array(),
+            MemberLibrary_Content_Model::META_MIGRATION_KEY => $entry['migration_key'],
+            MemberLibrary_Content_Model::META_MIGRATION_VERSION => self::VERSION,
+            MemberLibrary_Content_Model::META_UUID => $this->uuid($entry['migration_key']),
+            MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID => (int) $entry['source_id'],
+            MemberLibrary_Content_Model::META_LEGACY_SOURCE_TYPE => $entry['source_type'],
+            MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID => $authorization_id,
+            MemberLibrary_Content_Model::META_SOURCE_MODIFIED_GMT => $entry['post_modified_gmt'],
+            MemberLibrary_Content_Model::META_CONTENT_FINGERPRINT => $entry['source_fingerprint'],
+            MemberLibrary_Content_Model::META_COURSE_ID => 0,
+            MemberLibrary_Content_Model::META_SERIES_ID => 0,
+            MemberLibrary_Content_Model::META_SECTION_KEY => '',
+            MemberLibrary_Content_Model::META_SECTION_TITLE => '',
+            MemberLibrary_Content_Model::META_SECTION_POSITION => 0,
         );
     }
 
@@ -479,9 +479,9 @@ class Liberty_Classroom_LearnDash_Import {
     private function verify_target($target_id, $entry, $target_status) {
         $post = get_post($target_id);
         if (!$post instanceof WP_Post || (string) $target_status !== $post->post_status
-            || self::VERSION !== (string) get_post_meta($target_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, true)
-            || (int) $entry['source_id'] !== (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true)
-            || (string) $entry['source_fingerprint'] !== (string) get_post_meta($target_id, TSOL_Library_Content_Model::META_CONTENT_FINGERPRINT, true)
+            || self::VERSION !== (string) get_post_meta($target_id, MemberLibrary_Content_Model::META_MIGRATION_VERSION, true)
+            || (int) $entry['source_id'] !== (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID, true)
+            || (string) $entry['source_fingerprint'] !== (string) get_post_meta($target_id, MemberLibrary_Content_Model::META_CONTENT_FINGERPRINT, true)
         ) {
             throw new RuntimeException(sprintf('Target %s lost its source identity.', $entry['migration_key']));
         }
@@ -505,7 +505,7 @@ class Liberty_Classroom_LearnDash_Import {
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',
-            'meta_key' => TSOL_Library_Content_Model::META_MIGRATION_KEY,
+            'meta_key' => MemberLibrary_Content_Model::META_MIGRATION_KEY,
             'meta_value' => $migration_key,
             'suppress_filters' => true,
         ));
@@ -519,13 +519,13 @@ class Liberty_Classroom_LearnDash_Import {
         $counts = array('courses' => 0, 'content' => 0, 'speakers' => 0, 'series' => 0);
         foreach ($this->migration_post_ids() as $post_id) {
             $type = get_post_type($post_id);
-            if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $type) {
+            if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $type) {
                 $counts['courses']++;
-            } elseif (TSOL_Library_Content_Model::ITEM_POST_TYPE === $type) {
+            } elseif (MemberLibrary_Content_Model::ITEM_POST_TYPE === $type) {
                 $counts['content']++;
-            } elseif (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $type) {
+            } elseif (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $type) {
                 $counts['speakers']++;
-            } elseif (TSOL_Library_Content_Model::SERIES_POST_TYPE === $type) {
+            } elseif (MemberLibrary_Content_Model::SERIES_POST_TYPE === $type) {
                 $counts['series']++;
             }
         }
@@ -534,11 +534,11 @@ class Liberty_Classroom_LearnDash_Import {
 
     private function migration_post_ids() {
         return array_map('intval', get_posts(array(
-            'post_type' => array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)),
+            'post_type' => array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)),
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',
-            'meta_key' => TSOL_Library_Content_Model::META_MIGRATION_VERSION,
+            'meta_key' => MemberLibrary_Content_Model::META_MIGRATION_VERSION,
             'meta_value' => self::VERSION,
             'suppress_filters' => true,
         )));
@@ -546,7 +546,7 @@ class Liberty_Classroom_LearnDash_Import {
 
     private function all_library_post_ids() {
         return array_map('intval', get_posts(array(
-            'post_type' => array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)),
+            'post_type' => array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)),
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',
@@ -583,7 +583,7 @@ class Liberty_Classroom_LearnDash_Import {
         if (self::WORKING_HOST !== $host) {
             throw new RuntimeException(sprintf('Migration writes are allowed only on %s.', self::WORKING_HOST));
         }
-        foreach (array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)) as $post_type) {
+        foreach (array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)) as $post_type) {
             if (!post_type_exists($post_type)) {
                 throw new RuntimeException(sprintf('Required Library post type %s is unavailable.', $post_type));
             }

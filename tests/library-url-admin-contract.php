@@ -12,7 +12,7 @@ $created_post_ids = array();
 $original_user_id = get_current_user_id();
 $original_post = $_POST;
 $original_get = $_GET;
-$url_admin = new TSOL_Library_URL_Admin();
+$url_admin = new MemberLibrary_URL_Admin();
 
 $assert = static function ($condition, $message) use (&$failures) {
     if (!$condition) {
@@ -35,7 +35,7 @@ $create_post = static function ($post_type, $title, $slug, $status = 'draft') us
 };
 
 try {
-    TSOL_Library_Content_Model::register();
+    MemberLibrary_Content_Model::register();
     $administrator_ids = get_users(array(
         'role' => 'administrator',
         'fields' => 'ids',
@@ -49,77 +49,77 @@ try {
     wp_set_current_user((int) $administrator_ids[0]);
     $suffix = strtolower(wp_generate_password(8, false, false));
     $course_id = $create_post(
-        TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'URL contract course',
         'url-contract-course-' . $suffix
     );
     $series_id = $create_post(
-        TSOL_Library_Content_Model::SERIES_POST_TYPE,
+        MemberLibrary_Content_Model::SERIES_POST_TYPE,
         'URL contract series',
         'url-contract-series-' . $suffix
     );
     $item_id = $create_post(
-        TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'URL contract lesson',
         'url-contract-lesson-' . $suffix
     );
     $speaker_id = $create_post(
-        TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+        MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         'URL contract speaker',
         'url-contract-speaker-' . $suffix
     );
     $unsaved_parent_id = $create_post(
-        TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'Unsaved Parent Slug ' . $suffix,
         ''
     );
 
     $assert(
         array(
-            TSOL_Library_Content_Model::COURSE_POST_TYPE,
-            TSOL_Library_Content_Model::SERIES_POST_TYPE,
-            TSOL_Library_Content_Model::ITEM_POST_TYPE,
-            TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
-        ) === TSOL_Library_URL_Admin::supported_post_types(),
+            MemberLibrary_Content_Model::COURSE_POST_TYPE,
+            MemberLibrary_Content_Model::SERIES_POST_TYPE,
+            MemberLibrary_Content_Model::ITEM_POST_TYPE,
+            MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
+        ) === MemberLibrary_URL_Admin::supported_post_types(),
         'The URL editor does not cover every Library-owned public slug.'
     );
-    $assert(!TSOL_Library_URL_Admin::supports_post_type('post'), 'The Library URL editor leaked onto native Posts.');
+    $assert(!MemberLibrary_URL_Admin::supports_post_type('post'), 'The Library URL editor leaked onto native Posts.');
 
     $course = get_post($course_id);
     $series = get_post($series_id);
     $item = get_post($item_id);
     $speaker = get_post($speaker_id);
-    $assert('/courses/' . $course->post_name === TSOL_Library_URL_Admin::public_path($course), 'Course URL mapping is incorrect.');
-    $assert('/series/' . $series->post_name === TSOL_Library_URL_Admin::public_path($series), 'Series URL mapping is incorrect.');
-    $assert('/speakers/' . $speaker->post_name === TSOL_Library_URL_Admin::public_path($speaker), 'Speaker URL mapping is incorrect.');
-    $assert('/recordings/' . $item->post_name === TSOL_Library_URL_Admin::public_path($item), 'Standalone Content URL mapping is incorrect.');
+    $assert('/courses/' . $course->post_name === MemberLibrary_URL_Admin::public_path($course), 'Course URL mapping is incorrect.');
+    $assert('/series/' . $series->post_name === MemberLibrary_URL_Admin::public_path($series), 'Series URL mapping is incorrect.');
+    $assert('/speakers/' . $speaker->post_name === MemberLibrary_URL_Admin::public_path($speaker), 'Speaker URL mapping is incorrect.');
+    $assert('/recordings/' . $item->post_name === MemberLibrary_URL_Admin::public_path($item), 'Standalone Content URL mapping is incorrect.');
 
-    update_post_meta($item_id, TSOL_Library_Content_Model::META_COURSE_ID, $course_id);
+    update_post_meta($item_id, MemberLibrary_Content_Model::META_COURSE_ID, $course_id);
     $assert(
-        '/courses/' . $course->post_name . '/' . $item->post_name === TSOL_Library_URL_Admin::public_path($item),
+        '/courses/' . $course->post_name . '/' . $item->post_name === MemberLibrary_URL_Admin::public_path($item),
         'Course lesson URL mapping is incorrect.'
     );
-    delete_post_meta($item_id, TSOL_Library_Content_Model::META_COURSE_ID);
-    update_post_meta($item_id, TSOL_Library_Content_Model::META_SERIES_ID, $series_id);
+    delete_post_meta($item_id, MemberLibrary_Content_Model::META_COURSE_ID);
+    update_post_meta($item_id, MemberLibrary_Content_Model::META_SERIES_ID, $series_id);
     $assert(
-        '/series/' . $series->post_name . '/' . $item->post_name === TSOL_Library_URL_Admin::public_path($item),
+        '/series/' . $series->post_name . '/' . $item->post_name === MemberLibrary_URL_Admin::public_path($item),
         'Series episode URL mapping is incorrect.'
     );
-    delete_post_meta($item_id, TSOL_Library_Content_Model::META_SERIES_ID);
-    update_post_meta($item_id, TSOL_Library_Content_Model::META_COURSE_ID, $unsaved_parent_id);
+    delete_post_meta($item_id, MemberLibrary_Content_Model::META_SERIES_ID);
+    update_post_meta($item_id, MemberLibrary_Content_Model::META_COURSE_ID, $unsaved_parent_id);
     $assert(
-        '/courses/unsaved-parent-slug-' . $suffix . '/' . $item->post_name === TSOL_Library_URL_Admin::public_path($item),
+        '/courses/unsaved-parent-slug-' . $suffix . '/' . $item->post_name === MemberLibrary_URL_Admin::public_path($item),
         'A parent without a stored slug did not receive a safe title-derived path preview.'
     );
-    delete_post_meta($item_id, TSOL_Library_Content_Model::META_COURSE_ID);
+    delete_post_meta($item_id, MemberLibrary_Content_Model::META_COURSE_ID);
     $_GET['tsol_course_id'] = (string) $course_id;
     $assert(
-        '/courses/' . $course->post_name . '/' . $item->post_name === TSOL_Library_URL_Admin::public_path($item),
+        '/courses/' . $course->post_name . '/' . $item->post_name === MemberLibrary_URL_Admin::public_path($item),
         'A new lesson did not inherit its requested Course path preview.'
     );
     $_GET = $original_get;
 
-    $content_admin = new TSOL_Library_Content_Admin();
+    $content_admin = new MemberLibrary_Content_Admin();
     ob_start();
     $content_admin->render_details_meta_box($item);
     $placement_html = ob_get_clean();
@@ -143,7 +143,7 @@ try {
         '>OK<',
         'data-library-slug-cancel',
         '>Cancel<',
-        'name="' . TSOL_Library_URL_Admin::SLUG_FIELD . '"',
+        'name="' . MemberLibrary_URL_Admin::SLUG_FIELD . '"',
         '/courses/',
         'data-library-slug-text>' . $course->post_name,
         'Only the final path segment is editable',
@@ -156,7 +156,7 @@ try {
     $assert(false === strpos($editor_html, 'Existing links will not redirect automatically.'), 'Draft content received a published-link warning.');
 
     $published_id = $create_post(
-        TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'Published URL contract item',
         'published-url-contract-' . $suffix,
         'publish'
@@ -168,43 +168,43 @@ try {
 
     $url_admin->init();
     $_POST = array(
-        TSOL_Library_URL_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_URL_Admin::NONCE_ACTION),
-        TSOL_Library_URL_Admin::SLUG_FIELD => 'A Better / Sharing Slug!',
+        MemberLibrary_URL_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_URL_Admin::NONCE_ACTION),
+        MemberLibrary_URL_Admin::SLUG_FIELD => 'A Better / Sharing Slug!',
     );
     wp_update_post(array('ID' => $item_id, 'post_title' => 'A renamed lesson'));
     $assert('a-better-sharing-slug' === get_post_field('post_name', $item_id), 'The URL editor did not normalize and save an explicit slug.');
 
-    $_POST[TSOL_Library_URL_Admin::SLUG_FIELD] = '';
+    $_POST[MemberLibrary_URL_Admin::SLUG_FIELD] = '';
     wp_update_post(array('ID' => $item_id, 'post_title' => 'Generated From This Title'));
     $assert('generated-from-this-title' === get_post_field('post_name', $item_id), 'Clearing the slug did not regenerate it from the title.');
 
-    $_POST[TSOL_Library_URL_Admin::SLUG_FIELD] = 'generated-from-this-title';
+    $_POST[MemberLibrary_URL_Admin::SLUG_FIELD] = 'generated-from-this-title';
     wp_update_post(array('ID' => $item_id, 'post_title' => 'Title Changes Must Not Rewrite URLs'));
     $assert('generated-from-this-title' === get_post_field('post_name', $item_id), 'Changing a title unexpectedly rewrote an established slug.');
 
     $_POST = array(
-        TSOL_Library_URL_Admin::NONCE_NAME => 'invalid',
-        TSOL_Library_URL_Admin::SLUG_FIELD => 'must-not-save',
+        MemberLibrary_URL_Admin::NONCE_NAME => 'invalid',
+        MemberLibrary_URL_Admin::SLUG_FIELD => 'must-not-save',
     );
     wp_update_post(array('ID' => $item_id, 'post_excerpt' => 'Nonce regression check'));
     $assert('generated-from-this-title' === get_post_field('post_name', $item_id), 'An invalid nonce changed a Library slug.');
 
     $collision_slug = 'url-collision-' . $suffix;
     $collision_owner_id = $create_post(
-        TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'Collision owner',
         $collision_slug,
         'publish'
     );
     $collision_target_id = $create_post(
-        TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'Collision target',
         'collision-target-' . $suffix,
         'publish'
     );
     $_POST = array(
-        TSOL_Library_URL_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_URL_Admin::NONCE_ACTION),
-        TSOL_Library_URL_Admin::SLUG_FIELD => $collision_slug,
+        MemberLibrary_URL_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_URL_Admin::NONCE_ACTION),
+        MemberLibrary_URL_Admin::SLUG_FIELD => $collision_slug,
     );
     wp_update_post(array('ID' => $collision_target_id, 'post_excerpt' => 'Collision regression check'));
     $resolved_collision_slug = (string) get_post_field('post_name', $collision_target_id);
@@ -212,7 +212,7 @@ try {
     $assert(str_starts_with($resolved_collision_slug, $collision_slug . '-'), 'The duplicate slug did not receive a readable WordPress suffix.');
     $assert($collision_slug === get_post_field('post_name', $collision_owner_id), 'Resolving a collision changed the existing URL owner.');
 
-    foreach (TSOL_Library_URL_Admin::supported_post_types() as $post_type) {
+    foreach (MemberLibrary_URL_Admin::supported_post_types() as $post_type) {
         $post_type_object = get_post_type_object($post_type);
         $assert(
             $post_type_object instanceof WP_Post_Type

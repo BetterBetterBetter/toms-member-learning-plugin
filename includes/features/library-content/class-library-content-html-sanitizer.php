@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Content_HTML_Sanitizer {
+class MemberLibrary_Content_HTML_Sanitizer {
 
     const MAX_EMPTY_ELEMENT_PASSES = 10;
 
@@ -113,8 +113,8 @@ class TSOL_Library_Content_HTML_Sanitizer {
     public static function sanitize_post_data($data, $postarr) {
         $post_type = isset($data['post_type']) ? (string) $data['post_type'] : '';
         $supported_post_types = array_merge(
-            TSOL_Library_Content_Model::post_types(),
-            array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)
+            MemberLibrary_Content_Model::post_types(),
+            array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)
         );
         if (!in_array($post_type, $supported_post_types, true)) {
             return $data;
@@ -127,7 +127,7 @@ class TSOL_Library_Content_HTML_Sanitizer {
         if (array_key_exists('post_content', $data)) {
             $data['post_content'] = wp_slash(self::sanitize(wp_unslash($data['post_content'])));
         }
-        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post_type && array_key_exists('post_excerpt', $data)) {
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post_type && array_key_exists('post_excerpt', $data)) {
             $data['post_excerpt'] = wp_slash(self::sanitize_plain_text_summary(wp_unslash($data['post_excerpt'])));
         }
         return $data;

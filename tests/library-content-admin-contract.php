@@ -57,8 +57,8 @@ $get_meta_box = static function ($post_type, $box_id) use (&$wp_meta_boxes) {
 };
 
 try {
-    $assert(class_exists('TSOL_Library_Content_Admin'), 'Library content admin class is unavailable.');
-    TSOL_Library_Content_Model::register();
+    $assert(class_exists('MemberLibrary_Content_Admin'), 'Library content admin class is unavailable.');
+    MemberLibrary_Content_Model::register();
 
     $administrator_ids = get_users(array(
         'role' => 'administrator',
@@ -72,23 +72,23 @@ try {
     }
     wp_set_current_user((int) $administrator_ids[0]);
 
-    $editor = new TSOL_Library_Content_Admin();
+    $editor = new MemberLibrary_Content_Admin();
     $memberpress_course_post = new WP_Post((object) array(
         'ID' => 999999,
         'post_type' => 'mpcs-course',
     ));
     $library_course_post = new WP_Post((object) array(
         'ID' => 999998,
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
     ));
     $library_series_post = new WP_Post((object) array(
         'ID' => 999997,
-        'post_type' => TSOL_Library_Content_Model::SERIES_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::SERIES_POST_TYPE,
     ));
     $assert(!method_exists($editor, 'use_memberpress_course_editor'), 'TSOL still contains a MemberPress editor override.');
-    $assert(!TSOL_Library_Content_Admin::supports_post_type($memberpress_course_post->post_type), 'The TSOL editor still supports native MemberPress Courses.');
-    $assert(TSOL_Library_Content_Admin::supports_post_type($library_course_post->post_type), 'The TSOL editor does not support Library Courses.');
-    $assert(TSOL_Library_Content_Admin::supports_post_type($library_series_post->post_type), 'The TSOL editor does not support Library Series.');
+    $assert(!MemberLibrary_Content_Admin::supports_post_type($memberpress_course_post->post_type), 'The TSOL editor still supports native MemberPress Courses.');
+    $assert(MemberLibrary_Content_Admin::supports_post_type($library_course_post->post_type), 'The TSOL editor does not support Library Courses.');
+    $assert(MemberLibrary_Content_Admin::supports_post_type($library_series_post->post_type), 'The TSOL editor does not support Library Series.');
 
     $assert(class_exists('LeadpagesWP\\Admin\\TinyMCE\\LeadboxTinyMCE'), 'The LeadPages TinyMCE integration is unavailable for the editor-isolation contract.');
     if (class_exists('LeadpagesWP\\Admin\\TinyMCE\\LeadboxTinyMCE')) {
@@ -110,7 +110,7 @@ try {
             remove_filter($hook_name, $callback, 998);
         }
 
-        set_current_screen(TSOL_Library_Content_Model::ITEM_POST_TYPE);
+        set_current_screen(MemberLibrary_Content_Model::ITEM_POST_TYPE);
         foreach ($leadbox_callbacks as $hook_name => $callback) {
             add_filter($hook_name, $callback, 998);
         }
@@ -119,7 +119,7 @@ try {
             $assert(false === has_filter($hook_name, $callback), 'A LeadPages editor callback leaked onto the private TSOL Library editor.');
         }
     }
-    foreach (array_merge(TSOL_Library_Content_Model::post_types(), array(TSOL_Library_Content_Model::SPEAKER_POST_TYPE)) as $library_post_type) {
+    foreach (array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)) as $library_post_type) {
         $assert(!post_type_supports($library_post_type, 'author'), sprintf('Library post type %s still exposes WordPress authorship.', $library_post_type));
     }
     $list_columns = $editor->add_course_column(array(
@@ -128,33 +128,33 @@ try {
         'date' => 'Date',
     ));
     $column_keys = array_keys($list_columns);
-    $assert(isset($list_columns[TSOL_Library_Content_Admin::COURSE_COLUMN]), 'The Library Content list did not receive a Course column.');
+    $assert(isset($list_columns[MemberLibrary_Content_Admin::COURSE_COLUMN]), 'The Library Content list did not receive a Course column.');
     $assert(
-        array_search(TSOL_Library_Content_Admin::COURSE_COLUMN, $column_keys, true) === array_search('title', $column_keys, true) + 1,
+        array_search(MemberLibrary_Content_Admin::COURSE_COLUMN, $column_keys, true) === array_search('title', $column_keys, true) + 1,
         'The Course column was not placed immediately after Title.'
     );
     $list_columns = $editor->add_series_column($list_columns);
-    $assert(isset($list_columns[TSOL_Library_Content_Admin::SERIES_COLUMN]), 'The Library Content list did not receive a Series column.');
+    $assert(isset($list_columns[MemberLibrary_Content_Admin::SERIES_COLUMN]), 'The Library Content list did not receive a Series column.');
     $list_columns = $editor->add_availability_column($list_columns);
-    $assert(isset($list_columns[TSOL_Library_Content_Admin::AVAILABILITY_COLUMN]), 'The Library Content list did not receive an Availability column.');
+    $assert(isset($list_columns[MemberLibrary_Content_Admin::AVAILABILITY_COLUMN]), 'The Library Content list did not receive an Availability column.');
     $list_columns = $editor->add_speakers_column($list_columns);
-    $assert(isset($list_columns[TSOL_Library_Content_Admin::SPEAKERS_COLUMN]), 'The Library Content list did not receive a Speakers column.');
+    $assert(isset($list_columns[MemberLibrary_Content_Admin::SPEAKERS_COLUMN]), 'The Library Content list did not receive a Speakers column.');
     $parent_columns = $editor->add_content_count_column(array('cb' => 'Select', 'title' => 'Title', 'date' => 'Date'));
-    $assert(isset($parent_columns[TSOL_Library_Content_Admin::CONTENT_COUNT_COLUMN]), 'Course and Series lists did not receive a Content count column.');
+    $assert(isset($parent_columns[MemberLibrary_Content_Admin::CONTENT_COUNT_COLUMN]), 'Course and Series lists did not receive a Content count column.');
     $assert(
-        TSOL_Library_Content_Admin::CONTENT_COUNT_COLUMN === array_key_last($parent_columns),
+        MemberLibrary_Content_Admin::CONTENT_COUNT_COLUMN === array_key_last($parent_columns),
         'The Content count column is not the final parent-list column.'
     );
     $taxonomy_columns = $editor->shorten_taxonomy_column_labels(array(
-        'taxonomy-' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY => 'Collections',
-        'taxonomy-' . TSOL_Library_Content_Model::TOPIC_TAXONOMY => 'Library Topics',
+        'taxonomy-' . MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY => 'Collections',
+        'taxonomy-' . MemberLibrary_Content_Model::TOPIC_TAXONOMY => 'Library Topics',
     ));
-    $assert('Collections' === $taxonomy_columns['taxonomy-' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY], 'The Collections list heading is incorrect.');
-    $assert('Topics' === $taxonomy_columns['taxonomy-' . TSOL_Library_Content_Model::TOPIC_TAXONOMY], 'The Topics list heading still repeats Library.');
+    $assert('Collections' === $taxonomy_columns['taxonomy-' . MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY], 'The Collections list heading is incorrect.');
+    $assert('Topics' === $taxonomy_columns['taxonomy-' . MemberLibrary_Content_Model::TOPIC_TAXONOMY], 'The Topics list heading still repeats Library.');
 
     $library_hidden = $editor->default_hidden_columns(array(), (object) array(
         'base' => 'edit',
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
     ));
     $assert(!in_array('author', $library_hidden, true), 'The obsolete Author column is still being managed as a Library screen option.');
     $assert(in_array('date', $library_hidden, true), 'Date is not hidden by default on the Library Content list.');
@@ -164,7 +164,7 @@ try {
     ));
     $assert(!in_array('author', $native_hidden, true) && !in_array('date', $native_hidden, true), 'TSOL default-hidden columns leaked onto native MemberPress Courses.');
     $fixture_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'TSOL Library editor contract fixture',
         'post_content' => '',
@@ -176,7 +176,7 @@ try {
     $created_post_ids[] = $fixture_id;
 
     $speaker_fixture_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'Zulu TSOL Library speaker relationship contract fixture',
     ), true);
@@ -185,11 +185,11 @@ try {
     }
     $speaker_fixture_id = (int) $speaker_fixture_id;
     $created_post_ids[] = $speaker_fixture_id;
-    update_post_meta($speaker_fixture_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, 'Contract researcher');
-    update_post_meta($speaker_fixture_id, TSOL_Library_Content_Model::SPEAKER_META_ORGANIZATION, 'TSOL Contract Institute');
+    update_post_meta($speaker_fixture_id, MemberLibrary_Content_Model::SPEAKER_META_JOB_TITLE, 'Contract researcher');
+    update_post_meta($speaker_fixture_id, MemberLibrary_Content_Model::SPEAKER_META_ORGANIZATION, 'TSOL Contract Institute');
 
     $second_speaker_fixture_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         'post_status' => 'publish',
         'post_title' => 'Alpha TSOL Library speaker relationship contract fixture',
     ), true);
@@ -200,14 +200,14 @@ try {
     $created_post_ids[] = $second_speaker_fixture_id;
 
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             // These retired raw fields are deliberately submitted to prove
             // that editor classification and homepage order cannot be forged.
             'content_type' => 'webinar',
             'position' => '7',
             'featured' => '1',
-            'speaker_mode' => TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT,
+            'speaker_mode' => MemberLibrary_Content_Model::SPEAKER_MODE_DIRECT,
             'speaker_ids' => array((string) $speaker_fixture_id, (string) $second_speaker_fixture_id),
             'media_assets' => array(
                 array(
@@ -234,24 +234,24 @@ try {
     );
     $editor->save_post($fixture_id, get_post($fixture_id));
 
-    $assert(!metadata_exists('post', $fixture_id, TSOL_Library_Content_Model::META_INCLUDE), 'A manual Library save created the retired inclusion flag.');
-    $assert('recording' === get_post_meta($fixture_id, TSOL_Library_Content_Model::META_CONTENT_TYPE, true), 'Standalone Content classification was not derived.');
-    $assert(0 === (int) get_post_meta($fixture_id, TSOL_Library_Content_Model::META_POSITION, true), 'Structure-managed position accepted a retired raw position value.');
-    $assert(!metadata_exists('post', $fixture_id, TSOL_Library_Content_Model::META_FEATURED), 'A manual Library save created the retired Featured flag.');
-    $assert(0 === strpos((string) get_post_meta($fixture_id, TSOL_Library_Content_Model::META_MIGRATION_KEY, true), 'manual-tsol_library_item-'), 'A manual Library save did not create a stable projection key.');
-    $assert(64 === strlen((string) get_post_meta($fixture_id, TSOL_Library_Content_Model::META_CONTENT_FINGERPRINT, true)), 'A manual Library save did not create a stable content fingerprint.');
+    $assert(!metadata_exists('post', $fixture_id, MemberLibrary_Content_Model::META_INCLUDE), 'A manual Library save created the retired inclusion flag.');
+    $assert('recording' === get_post_meta($fixture_id, MemberLibrary_Content_Model::META_CONTENT_TYPE, true), 'Standalone Content classification was not derived.');
+    $assert(0 === (int) get_post_meta($fixture_id, MemberLibrary_Content_Model::META_POSITION, true), 'Structure-managed position accepted a retired raw position value.');
+    $assert(!metadata_exists('post', $fixture_id, MemberLibrary_Content_Model::META_FEATURED), 'A manual Library save created the retired Featured flag.');
+    $assert(0 === strpos((string) get_post_meta($fixture_id, MemberLibrary_Content_Model::META_MIGRATION_KEY, true), 'manual-tsol_library_item-'), 'A manual Library save did not create a stable projection key.');
+    $assert(64 === strlen((string) get_post_meta($fixture_id, MemberLibrary_Content_Model::META_CONTENT_FINGERPRINT, true)), 'A manual Library save did not create a stable content fingerprint.');
     $assert(!metadata_exists('post', $fixture_id, '_tsol_library_current'), 'A manual Library save created the retired version-state metadata.');
     $assert(
-        array($speaker_fixture_id, $second_speaker_fixture_id) === array_map('intval', get_post_meta($fixture_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, false)),
+        array($speaker_fixture_id, $second_speaker_fixture_id) === array_map('intval', get_post_meta($fixture_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, false)),
         'Speaker relationships were not saved as ordered Speaker post IDs.'
     );
     $assert(
-        TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT === get_post_meta($fixture_id, TSOL_Library_Content_Model::META_SPEAKER_MODE, true),
+        MemberLibrary_Content_Model::SPEAKER_MODE_DIRECT === get_post_meta($fixture_id, MemberLibrary_Content_Model::META_SPEAKER_MODE, true),
         'A direct Content Speaker choice did not persist its attribution mode.'
     );
-    $assert($fixture_id === (int) get_post_meta($fixture_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true), 'Authorization post ID was not derived from the canonical post.');
+    $assert($fixture_id === (int) get_post_meta($fixture_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true), 'Authorization post ID was not derived from the canonical post.');
 
-    $media = get_post_meta($fixture_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
+    $media = get_post_meta($fixture_id, MemberLibrary_Content_Model::META_MEDIA_ASSETS, true);
     $assert(is_array($media) && 2 === count($media), 'Repeatable media assets were not saved.');
     if (is_array($media) && 2 === count($media)) {
         $assert('vimeo' === $media[0]['provider'], 'Vimeo provider was not inferred during save.');
@@ -261,7 +261,7 @@ try {
         $assert('youtube' === $media[1]['provider'], 'YouTube provider was not inferred during save.');
     }
 
-    $resources = get_post_meta($fixture_id, TSOL_Library_Content_Model::META_RESOURCES, true);
+    $resources = get_post_meta($fixture_id, MemberLibrary_Content_Model::META_RESOURCES, true);
     $assert(is_array($resources) && 1 === count($resources), 'Library resource was not saved.');
     if (is_array($resources) && 1 === count($resources)) {
         $assert('download' === $resources[0]['type'], 'Resource type was not saved.');
@@ -269,13 +269,13 @@ try {
     }
 
     ob_start();
-    $editor->render_course_column(TSOL_Library_Content_Admin::COURSE_COLUMN, $fixture_id);
+    $editor->render_course_column(MemberLibrary_Content_Admin::COURSE_COLUMN, $fixture_id);
     $standalone_column = ob_get_clean();
     $assert(false !== strpos($standalone_column, '&#8212;'), 'Unassigned Library Content did not use the standard empty-column mark.');
     $assert(false !== strpos($standalone_column, 'No course'), 'The empty Course value is missing accessible text.');
 
     $course_fixture_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'TSOL Library course-column contract fixture',
         'post_content' => '',
@@ -285,11 +285,11 @@ try {
     }
     $course_fixture_id = (int) $course_fixture_id;
     $created_post_ids[] = $course_fixture_id;
-    add_post_meta($course_fixture_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, $speaker_fixture_id, false);
-    add_post_meta($course_fixture_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, $second_speaker_fixture_id, false);
+    add_post_meta($course_fixture_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, $speaker_fixture_id, false);
+    add_post_meta($course_fixture_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, $second_speaker_fixture_id, false);
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'course_learning_outcomes_present' => '1',
             'learning_outcomes' => array(
                 array('text' => 'Build an independent training plan.'),
@@ -303,7 +303,7 @@ try {
     $editor->save_post($course_fixture_id, get_post($course_fixture_id));
     $course_learning_outcomes = get_post_meta(
         $course_fixture_id,
-        TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+        MemberLibrary_Content_Model::META_COURSE_LEARNING_OUTCOMES,
         true
     );
     $assert(
@@ -311,8 +311,8 @@ try {
         'Course learning outcomes were not cleaned, de-duplicated, and saved in editorial order.'
     );
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'speaker_ids' => array((string) $speaker_fixture_id, (string) $second_speaker_fixture_id),
         ),
     );
@@ -320,15 +320,15 @@ try {
     $assert(
         $course_learning_outcomes === get_post_meta(
             $course_fixture_id,
-            TSOL_Library_Content_Model::META_COURSE_LEARNING_OUTCOMES,
+            MemberLibrary_Content_Model::META_COURSE_LEARNING_OUTCOMES,
             true
         ),
         'A Course save from a stale or partial form cleared the learning outcomes.'
     );
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $fixture_id);
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $fixture_id);
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'content_type' => 'webinar',
             'course_id' => (string) $course_fixture_id,
             'section_title' => 'Course content',
@@ -337,16 +337,16 @@ try {
         ),
     );
     $editor->save_post($fixture_id, get_post($fixture_id));
-    $assert($course_fixture_id === (int) get_post_meta($fixture_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true), 'A new Content item did not update its authorization source when assigned to a Course.');
+    $assert($course_fixture_id === (int) get_post_meta($fixture_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true), 'A new Content item did not update its authorization source when assigned to a Course.');
     $assert(
-        TSOL_Library_Content_Model::SPEAKER_MODE_INHERIT === get_post_meta($fixture_id, TSOL_Library_Content_Model::META_SPEAKER_MODE, true),
+        MemberLibrary_Content_Model::SPEAKER_MODE_INHERIT === get_post_meta($fixture_id, MemberLibrary_Content_Model::META_SPEAKER_MODE, true),
         'A new parented lesson did not default to inherited Speaker mode.'
     );
     $assert(
-        array() === get_post_meta($fixture_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, false),
+        array() === get_post_meta($fixture_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, false),
         'Inherited Speaker mode copied the parent relationship onto the lesson.'
     );
-    $inherited_context = TSOL_Library_Content_Model::effective_speaker_context($fixture_id);
+    $inherited_context = MemberLibrary_Content_Model::effective_speaker_context($fixture_id);
     $assert('course' === ($inherited_context['source'] ?? ''), 'A lesson did not identify its Course as the effective Speaker source.');
     $assert($course_fixture_id === (int) ($inherited_context['parent_id'] ?? 0), 'A lesson did not preserve its effective Speaker parent identity.');
     $assert(
@@ -366,31 +366,31 @@ try {
     $assert(false !== strpos($inherited_picker_html, 'Zulu TSOL Library speaker relationship contract fixture'), 'The inherited Speaker panel omitted an effective Speaker card.');
 
     ob_start();
-    $editor->render_speakers_column(TSOL_Library_Content_Admin::SPEAKERS_COLUMN, $fixture_id);
+    $editor->render_speakers_column(MemberLibrary_Content_Admin::SPEAKERS_COLUMN, $fixture_id);
     $inherited_column_html = ob_get_clean();
     $assert(false !== strpos($inherited_column_html, 'Alpha TSOL Library speaker relationship contract fixture'), 'The Content list omitted an inherited Speaker.');
     $assert(false !== strpos($inherited_column_html, '>Inherited</span>'), 'The Content list did not distinguish inherited Speakers from direct assignments.');
 
-    $speaker_admin = new TSOL_Library_Speaker_Admin();
+    $speaker_admin = new MemberLibrary_Speaker_Admin();
     ob_start();
-    $speaker_admin->render_column(TSOL_Library_Speaker_Admin::CONTENT_COLUMN, $speaker_fixture_id);
+    $speaker_admin->render_column(MemberLibrary_Speaker_Admin::CONTENT_COLUMN, $speaker_fixture_id);
     $speaker_content_count = trim(ob_get_clean());
     $assert('2' === $speaker_content_count, 'The Speaker list Content count did not include the parent and its inheriting lesson.');
 
-    $change_cursor = TSOL_Library_Content_Changes::current_cursor();
-    update_post_meta($speaker_fixture_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, 'Inherited contract researcher');
-    $speaker_changes = TSOL_Library_Content_Changes::after($change_cursor, 100);
+    $change_cursor = MemberLibrary_Content_Changes::current_cursor();
+    update_post_meta($speaker_fixture_id, MemberLibrary_Content_Model::SPEAKER_META_JOB_TITLE, 'Inherited contract researcher');
+    $speaker_changes = MemberLibrary_Content_Changes::after($change_cursor, 100);
     $assert(
         count(array_filter($speaker_changes, static function ($change) use ($fixture_id) {
             return (int) $change['post_id'] === $fixture_id && 'upsert' === (string) $change['action'];
         })) > 0,
         'Updating a parent Course Speaker did not enqueue its inheriting lesson.'
     );
-    update_post_meta($speaker_fixture_id, TSOL_Library_Content_Model::SPEAKER_META_JOB_TITLE, 'Contract researcher');
+    update_post_meta($speaker_fixture_id, MemberLibrary_Content_Model::SPEAKER_META_JOB_TITLE, 'Contract researcher');
 
     $collection_fixture = wp_insert_term(
         'TSOL Library course-collection contract fixture',
-        TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
+        MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
         array('slug' => 'tsol-library-course-collection-contract-' . strtolower(wp_generate_password(8, false, false)))
     );
     if (is_wp_error($collection_fixture)) {
@@ -398,25 +398,25 @@ try {
     }
     $collection_fixture_id = (int) $collection_fixture['term_id'];
     $created_term_ids[] = $collection_fixture_id;
-    wp_set_object_terms($course_fixture_id, array($collection_fixture_id), TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
-    $assert(has_term($collection_fixture_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, $course_fixture_id), 'Collection was not assigned to the Library Course.');
-    $assert(!is_object_in_taxonomy(TSOL_Library_Content_Model::ITEM_POST_TYPE, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY), 'Collections leaked onto Library Content items.');
+    wp_set_object_terms($course_fixture_id, array($collection_fixture_id), MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY);
+    $assert(has_term($collection_fixture_id, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY, $course_fixture_id), 'Collection was not assigned to the Library Course.');
+    $assert(!is_object_in_taxonomy(MemberLibrary_Content_Model::ITEM_POST_TYPE, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY), 'Collections leaked onto Library Content items.');
 
     ob_start();
-    $editor->render_course_column(TSOL_Library_Content_Admin::COURSE_COLUMN, $fixture_id);
+    $editor->render_course_column(MemberLibrary_Content_Admin::COURSE_COLUMN, $fixture_id);
     $lesson_column = ob_get_clean();
     $assert(false !== strpos($lesson_column, 'TSOL Library course-column contract fixture'), 'A course lesson did not show its Course title.');
     $assert(false !== strpos($lesson_column, 'post.php?post=' . $course_fixture_id), 'The Course column did not link to the Library Course editor.');
 
     ob_start();
-    $editor->render_content_count_column(TSOL_Library_Content_Admin::CONTENT_COUNT_COLUMN, $course_fixture_id);
+    $editor->render_content_count_column(MemberLibrary_Content_Admin::CONTENT_COUNT_COLUMN, $course_fixture_id);
     $course_content_count = ob_get_clean();
     $assert(false !== strpos($course_content_count, '>1</a>'), 'The Course list Content column did not count its lesson.');
     $assert(false !== strpos($course_content_count, 'tsol_content_scope=course'), 'The Course Content count does not link to the course-lesson scope.');
     $assert(false !== strpos($course_content_count, 'tsol_library_parent=' . $course_fixture_id), 'The Course Content count does not filter by its exact parent.');
 
     $series_fixture_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::SERIES_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::SERIES_POST_TYPE,
         'post_status' => 'draft',
         'post_title' => 'TSOL Library series-count contract fixture',
     ), true);
@@ -425,10 +425,10 @@ try {
     }
     $series_fixture_id = (int) $series_fixture_id;
     $created_post_ids[] = $series_fixture_id;
-    delete_post_meta($fixture_id, TSOL_Library_Content_Model::META_COURSE_ID);
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_SERIES_ID, $series_fixture_id);
+    delete_post_meta($fixture_id, MemberLibrary_Content_Model::META_COURSE_ID);
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_SERIES_ID, $series_fixture_id);
     ob_start();
-    $editor->render_content_count_column(TSOL_Library_Content_Admin::CONTENT_COUNT_COLUMN, $series_fixture_id);
+    $editor->render_content_count_column(MemberLibrary_Content_Admin::CONTENT_COUNT_COLUMN, $series_fixture_id);
     $series_content_count = ob_get_clean();
     $assert(false !== strpos($series_content_count, '>1</a>'), 'The Series list Content column did not count its item.');
     $assert(false !== strpos($series_content_count, 'tsol_content_scope=series'), 'The Series Content count does not link to the Series scope.');
@@ -436,7 +436,7 @@ try {
 
     $_GET = array();
     ob_start();
-    $editor->render_content_scope_filter(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'top');
+    $editor->render_content_scope_filter(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'top');
     $scope_filter_html = ob_get_clean();
     $assert(false !== strpos($scope_filter_html, 'Standalone content'), 'The default standalone Content scope is missing.');
     $assert(false !== strpos($scope_filter_html, 'Course lessons'), 'The Course lessons Content scope is missing.');
@@ -445,59 +445,59 @@ try {
     $assert(1 === preg_match('/value=["\']all["\'][^>]*selected=/', $scope_filter_html), 'All content is not the default Content scope.');
 
     $wp_meta_boxes = array();
-    $editor->add_meta_boxes(TSOL_Library_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance'), 'A manually created Library Item displayed the Legacy import source box.');
+    $editor->add_meta_boxes(MemberLibrary_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance'), 'A manually created Library Item displayed the Legacy import source box.');
 
     $wp_meta_boxes = array();
-    foreach (TSOL_Library_Content_Model::post_types() as $library_post_type) {
+    foreach (MemberLibrary_Content_Model::post_types() as $library_post_type) {
         add_meta_box('leadbox-select', 'Page Specific Pop-up', '__return_empty_string', $library_post_type, 'side', 'low');
     }
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, $fixture_id);
-    $editor->add_meta_boxes(TSOL_Library_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance'), 'A partial provenance marker displayed the Legacy import source box.');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID, $fixture_id);
+    $editor->add_meta_boxes(MemberLibrary_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance'), 'A partial provenance marker displayed the Legacy import source box.');
 
     $wp_meta_boxes = array();
-    foreach (TSOL_Library_Content_Model::post_types() as $library_post_type) {
+    foreach (MemberLibrary_Content_Model::post_types() as $library_post_type) {
         add_meta_box('leadbox-select', 'Page Specific Pop-up', '__return_empty_string', $library_post_type, 'side', 'low');
     }
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_TYPE, 'contract-fixture');
-    update_post_meta($fixture_id, TSOL_Library_Content_Model::META_MIGRATION_VERSION, 'contract');
-    $editor->add_meta_boxes(TSOL_Library_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
-    $assert($has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-placement'), 'Library Item placement box was not registered.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-details'), 'Library Item retained the generic details box.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-media'), 'Library Item media box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-resources'), 'Library Item resources box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-protection'), 'Library Item access box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-speakers'), 'Library Item Speakers box was not registered.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Item editor.');
-    $provenance_box = $get_meta_box(TSOL_Library_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_TYPE, 'contract-fixture');
+    update_post_meta($fixture_id, MemberLibrary_Content_Model::META_MIGRATION_VERSION, 'contract');
+    $editor->add_meta_boxes(MemberLibrary_Content_Model::ITEM_POST_TYPE, get_post($fixture_id));
+    $assert($has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-placement'), 'Library Item placement box was not registered.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-details'), 'Library Item retained the generic details box.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-media'), 'Library Item media box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-resources'), 'Library Item resources box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-protection'), 'Library Item access box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-speakers'), 'Library Item Speakers box was not registered.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Item editor.');
+    $provenance_box = $get_meta_box(MemberLibrary_Content_Model::ITEM_POST_TYPE, 'tsol-library-provenance');
     $assert(is_array($provenance_box), 'Imported Library Item provenance box was not registered.');
     $assert(is_array($provenance_box) && 'Legacy import source' === (string) $provenance_box['title'], 'Imported provenance does not use the administrator-facing Legacy import source label.');
     $assert(in_array('closed', $editor->collapse_provenance_box(array('')), true), 'Legacy import source is not collapsed by default.');
 
-    $editor->add_meta_boxes(TSOL_Library_Content_Model::COURSE_POST_TYPE, $library_course_post);
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-details'), 'Library Course retained the generic details box.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-placement'), 'Library Course displayed item placement controls.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-course-page-content'), 'Library Course landing-page fields were not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-curriculum'), 'Library Course curriculum box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-protection'), 'Library Course access box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Course AI assistant box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-speakers'), 'Library Course Speakers box was not registered.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Course editor.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-media'), 'Library Course duplicated lesson media controls.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::COURSE_POST_TYPE, 'tsol-library-resources'), 'Library Course duplicated lesson resource controls.');
+    $editor->add_meta_boxes(MemberLibrary_Content_Model::COURSE_POST_TYPE, $library_course_post);
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-details'), 'Library Course retained the generic details box.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-placement'), 'Library Course displayed item placement controls.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-course-page-content'), 'Library Course landing-page fields were not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-curriculum'), 'Library Course curriculum box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-protection'), 'Library Course access box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Course AI assistant box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-speakers'), 'Library Course Speakers box was not registered.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Course editor.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-media'), 'Library Course duplicated lesson media controls.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-resources'), 'Library Course duplicated lesson resource controls.');
 
-    $editor->add_meta_boxes(TSOL_Library_Content_Model::SERIES_POST_TYPE, $library_series_post);
-    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-settings'), 'Library Series settings box was not registered.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-details'), 'Library Series retained the generic details box.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-episodes'), 'Library Series episodes box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-protection'), 'Library Series access box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Series AI assistant box was not registered.');
-    $assert($has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-speakers'), 'Library Series Speakers box was not registered.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Series editor.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-media'), 'Library Series duplicated episode media controls.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-resources'), 'Library Series duplicated episode resource controls.');
-    $assert(!$has_meta_box(TSOL_Library_Content_Model::SERIES_POST_TYPE, 'tsol-library-course-page-content'), 'Public Course landing-page fields leaked onto a Library Series.');
+    $editor->add_meta_boxes(MemberLibrary_Content_Model::SERIES_POST_TYPE, $library_series_post);
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-settings'), 'Library Series settings box was not registered.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-details'), 'Library Series retained the generic details box.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-episodes'), 'Library Series episodes box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-protection'), 'Library Series access box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Series AI assistant box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-speakers'), 'Library Series Speakers box was not registered.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'leadbox-select'), 'LeadPages Page Specific Pop-up leaked onto the private Library Series editor.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-media'), 'Library Series duplicated episode media controls.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-resources'), 'Library Series duplicated episode resource controls.');
+    $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-course-page-content'), 'Public Course landing-page fields leaked onto a Library Series.');
 
     $editor->add_meta_boxes('mpcs-course', $memberpress_course_post);
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-details'), 'TSOL details leaked onto the native MemberPress Course editor.');
@@ -520,7 +520,7 @@ try {
     $assert(false !== strpos($course_page_content_html, 'data-outcome-handle'), 'The Course landing-page editor omitted its functional outcome-order handle.');
     $assert(false !== strpos($course_page_content_html, 'Build an independent training plan.'), 'The Course landing-page editor did not render a stored learning outcome.');
 
-    $structured_outcomes = TSOL_Library_Content_Model::sanitize_course_learning_outcomes(array(
+    $structured_outcomes = MemberLibrary_Content_Model::sanitize_course_learning_outcomes(array(
         array(
             'title' => 'Choose the right weight',
             'description' => 'Calculate a safe starting weight.',
@@ -559,10 +559,10 @@ try {
     $assert(false !== strpos($details_html, 'Open parent structure builder'), 'The Content editor omitted its parent Structure Builder link.');
 
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'content_type' => 'webinar',
-            'speaker_mode' => TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT,
+            'speaker_mode' => MemberLibrary_Content_Model::SPEAKER_MODE_DIRECT,
             'speaker_ids' => array((string) $speaker_fixture_id, (string) $second_speaker_fixture_id),
             'media_assets' => array(array('source_url' => 'https://vimeo.com/123456789/abcdef12')),
             'resources' => array(),
@@ -606,7 +606,7 @@ try {
     $assert(false === strpos($media_html, 'type="datetime-local"'), 'The media editor still asks administrators for a release time.');
     $assert(false !== strpos($media_html, 'data-library-transcript-editor'), 'The transcript upload is not integrated with the media editor.');
     $assert(false !== strpos($media_html, 'Primary video transcript'), 'The media editor does not identify which source owns the transcript.');
-    $assert(false !== strpos($media_html, 'name="' . TSOL_Library_Content_Transcripts::FILE_NAME . '"'), 'The media editor omitted the WebVTT upload control.');
+    $assert(false !== strpos($media_html, 'name="' . MemberLibrary_Content_Transcripts::FILE_NAME . '"'), 'The media editor omitted the WebVTT upload control.');
 
     ob_start();
     $editor->render_protection_meta_box(get_post($fixture_id));
@@ -615,24 +615,24 @@ try {
     $assert(false === strpos($protection_html, 'type="checkbox"'), 'Access summary rendered a second permission checklist.');
 
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'content_type' => 'webinar',
             'series_id' => (string) $series_fixture_id,
-            'speaker_mode' => TSOL_Library_Content_Model::SPEAKER_MODE_NONE,
+            'speaker_mode' => MemberLibrary_Content_Model::SPEAKER_MODE_NONE,
             'media_assets' => array(array('source_url' => 'https://vimeo.com/123456789/abcdef12')),
             'resources' => array(),
         ),
     );
     $editor->save_post($fixture_id, get_post($fixture_id));
-    $no_presenter_context = TSOL_Library_Content_Model::effective_speaker_context($fixture_id);
+    $no_presenter_context = MemberLibrary_Content_Model::effective_speaker_context($fixture_id);
     $assert('none' === ($no_presenter_context['source'] ?? ''), 'Explicit no-presenter mode still exposed a parent Speaker source.');
     $assert($series_fixture_id === (int) ($no_presenter_context['parent_id'] ?? 0), 'Explicit no-presenter mode lost its Series parent context.');
     $assert(array() === ($no_presenter_context['speaker_ids'] ?? null), 'Explicit no-presenter mode still exposed Speakers.');
-    $assert(array() === get_post_meta($fixture_id, TSOL_Library_Content_Model::META_SPEAKER_IDS, false), 'Explicit no-presenter mode retained direct Speaker relationships.');
+    $assert(array() === get_post_meta($fixture_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, false), 'Explicit no-presenter mode retained direct Speaker relationships.');
 
     $invalid_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'publish',
         'post_title' => 'TSOL Library invalid publish contract fixture',
         'post_content' => '',
@@ -644,8 +644,8 @@ try {
     $created_post_ids[] = $invalid_id;
 
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'content_type' => 'recording',
             'media_assets' => array(array('source_url' => '')),
             'resources' => array(),
@@ -657,7 +657,7 @@ try {
     $rule = new MeprRule();
     $rule->post_title = 'TSOL Library availability contract rule';
     $rule->post_status = 'publish';
-    $rule->mepr_type = 'single_' . TSOL_Library_Content_Model::COURSE_POST_TYPE;
+    $rule->mepr_type = 'single_' . MemberLibrary_Content_Model::COURSE_POST_TYPE;
     $rule->mepr_content = (string) $course_fixture_id;
     $rule->auto_gen_title = false;
     $rule_id = (int) $rule->store();
@@ -678,7 +678,7 @@ try {
     delete_transient('mepr_all_models_for_class_meprrule');
 
     $coming_soon_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'publish',
         'post_title' => 'TSOL Library coming-soon contract fixture',
         'post_content' => '',
@@ -689,9 +689,9 @@ try {
     $coming_soon_id = (int) $coming_soon_id;
     $created_post_ids[] = $coming_soon_id;
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
-            'availability' => TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON,
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
+            'availability' => MemberLibrary_Content_Model::AVAILABILITY_COMING_SOON,
             'release_date_local' => '2026-08-18',
             'placement_type' => 'course',
             'course_id' => (string) $course_fixture_id,
@@ -702,15 +702,15 @@ try {
     );
     $editor->save_post($coming_soon_id, get_post($coming_soon_id));
     $assert('publish' === get_post_status($coming_soon_id), 'A protected coming-soon Content item without media was forced back to draft.');
-    $assert(TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === TSOL_Library_Content_Model::availability($coming_soon_id), 'Coming-soon availability was not saved.');
-    $assert('2026-08-18 04:00:00' === TSOL_Library_Content_Model::release_at_gmt($coming_soon_id), 'The Eastern release date was not stored canonically in UTC.');
-    $assert(array() === get_post_meta($coming_soon_id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true), 'A coming-soon fixture unexpectedly gained playable media.');
-    $coming_soon_record = TSOL_Library_Content_Catalogue::record($coming_soon_id);
+    $assert(MemberLibrary_Content_Model::AVAILABILITY_COMING_SOON === MemberLibrary_Content_Model::availability($coming_soon_id), 'Coming-soon availability was not saved.');
+    $assert('2026-08-18 04:00:00' === MemberLibrary_Content_Model::release_at_gmt($coming_soon_id), 'The Eastern release date was not stored canonically in UTC.');
+    $assert(array() === get_post_meta($coming_soon_id, MemberLibrary_Content_Model::META_MEDIA_ASSETS, true), 'A coming-soon fixture unexpectedly gained playable media.');
+    $coming_soon_record = MemberLibrary_Content_Catalogue::record($coming_soon_id);
     $assert(!is_wp_error($coming_soon_record) && 'coming_soon' === ($coming_soon_record['availability'] ?? ''), 'The catalogue omitted coming-soon availability.');
     $assert(!is_wp_error($coming_soon_record) && '2026-08-18T04:00:00+00:00' === ($coming_soon_record['release_at'] ?? ''), 'The catalogue omitted the canonical release date.');
 
     $unprotected_course_id = wp_insert_post(array(
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => 'publish',
         'post_title' => 'TSOL Library unprotected publish contract fixture',
     ), true);
@@ -720,8 +720,8 @@ try {
     $unprotected_course_id = (int) $unprotected_course_id;
     $created_post_ids[] = $unprotected_course_id;
     $_POST = array(
-        TSOL_Library_Content_Admin::NONCE_NAME => wp_create_nonce(TSOL_Library_Content_Admin::NONCE_ACTION),
-        TSOL_Library_Content_Admin::PAYLOAD_NAME => array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'content_type' => 'course',
             'media_assets' => array(),
             'resources' => array(),
@@ -734,11 +734,11 @@ try {
     $_GET = $original_get;
     $wp_meta_boxes = $original_meta_boxes;
     foreach ($created_post_ids as $created_post_id) {
-        delete_transient(TSOL_Library_Content_Admin::NOTICE_PREFIX . get_current_user_id() . '_' . $created_post_id);
+        delete_transient(MemberLibrary_Content_Admin::NOTICE_PREFIX . get_current_user_id() . '_' . $created_post_id);
         wp_delete_post($created_post_id, true);
     }
     foreach ($created_term_ids as $created_term_id) {
-        wp_delete_term($created_term_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
+        wp_delete_term($created_term_id, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY);
     }
     global $wpdb;
     foreach ($created_rule_ids as $created_rule_id) {

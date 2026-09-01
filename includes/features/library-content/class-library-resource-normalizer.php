@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Resource_Normalizer {
+class MemberLibrary_Resource_Normalizer {
 
     const SUPPORTED_EXTENSIONS = array('pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip');
 
@@ -45,13 +45,13 @@ class TSOL_Library_Resource_Normalizer {
         $is_email = 'mailto' === $scheme && is_email((string) substr($url, strlen('mailto:')));
         $is_web = in_array($scheme, array('http', 'https'), true) && '' !== $host;
         if ('' === $url || (!$is_web && !$is_email)) {
-            return new WP_Error('invalid_resource_url', __('Resource URL must be a web or email link.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_resource_url', __('Resource URL must be a web or email link.', 'member-library'));
         }
 
-        if ($is_web && class_exists('TSOL_Library_Media_Normalizer')) {
-            $media = TSOL_Library_Media_Normalizer::from_url($url);
+        if ($is_web && class_exists('MemberLibrary_Media_Normalizer')) {
+            $media = MemberLibrary_Media_Normalizer::from_url($url);
             if (!is_wp_error($media)) {
-                return new WP_Error('playable_media_url', __('Playable media is stored separately from lesson resources.', 'tomschooloflife-plugin'));
+                return new WP_Error('playable_media_url', __('Playable media is stored separately from lesson resources.', 'member-library'));
             }
         }
 
@@ -167,7 +167,7 @@ class TSOL_Library_Resource_Normalizer {
         }
 
         $host = preg_replace('/^www\./i', '', (string) wp_parse_url($url, PHP_URL_HOST));
-        return '' !== $host ? $host : sprintf(__('Resource %d', 'tomschooloflife-plugin'), $position);
+        return '' !== $host ? $host : sprintf(__('Resource %d', 'member-library'), $position);
     }
 
     private static function clean_label($label) {

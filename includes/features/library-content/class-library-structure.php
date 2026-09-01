@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Structure {
+class MemberLibrary_Structure {
 
     const MIGRATION_OPTION = 'tsol_library_structure_registry_version';
     const MIGRATION_VERSION = '20260812.1';
@@ -19,7 +19,7 @@ class TSOL_Library_Structure {
             return;
         }
 
-        foreach (array(TSOL_Library_Content_Model::COURSE_POST_TYPE, TSOL_Library_Content_Model::SERIES_POST_TYPE) as $post_type) {
+        foreach (array(MemberLibrary_Content_Model::COURSE_POST_TYPE, MemberLibrary_Content_Model::SERIES_POST_TYPE) as $post_type) {
             $parent_ids = get_posts(array(
                 'post_type' => $post_type,
                 'post_status' => 'any',
@@ -45,39 +45,39 @@ class TSOL_Library_Structure {
     }
 
     public static function registry_meta_key($post_type) {
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
-            return TSOL_Library_Content_Model::META_COURSE_SECTIONS;
+        if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $post_type) {
+            return MemberLibrary_Content_Model::META_COURSE_SECTIONS;
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
-            return TSOL_Library_Content_Model::META_SERIES_GROUPS;
+        if (MemberLibrary_Content_Model::SERIES_POST_TYPE === $post_type) {
+            return MemberLibrary_Content_Model::META_SERIES_GROUPS;
         }
         return '';
     }
 
     public static function group_meta_keys($post_type) {
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
+        if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $post_type) {
             return array(
-                'key' => TSOL_Library_Content_Model::META_SECTION_KEY,
-                'title' => TSOL_Library_Content_Model::META_SECTION_TITLE,
-                'position' => TSOL_Library_Content_Model::META_SECTION_POSITION,
+                'key' => MemberLibrary_Content_Model::META_SECTION_KEY,
+                'title' => MemberLibrary_Content_Model::META_SECTION_TITLE,
+                'position' => MemberLibrary_Content_Model::META_SECTION_POSITION,
             );
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
+        if (MemberLibrary_Content_Model::SERIES_POST_TYPE === $post_type) {
             return array(
-                'key' => TSOL_Library_Content_Model::META_SERIES_GROUP_KEY,
-                'title' => TSOL_Library_Content_Model::META_SERIES_GROUP_TITLE,
-                'position' => TSOL_Library_Content_Model::META_SERIES_GROUP_POSITION,
+                'key' => MemberLibrary_Content_Model::META_SERIES_GROUP_KEY,
+                'title' => MemberLibrary_Content_Model::META_SERIES_GROUP_TITLE,
+                'position' => MemberLibrary_Content_Model::META_SERIES_GROUP_POSITION,
             );
         }
         return array();
     }
 
     public static function child_parent_meta_key($post_type) {
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
-            return TSOL_Library_Content_Model::META_COURSE_ID;
+        if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $post_type) {
+            return MemberLibrary_Content_Model::META_COURSE_ID;
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
-            return TSOL_Library_Content_Model::META_SERIES_ID;
+        if (MemberLibrary_Content_Model::SERIES_POST_TYPE === $post_type) {
+            return MemberLibrary_Content_Model::META_SERIES_ID;
         }
         return '';
     }
@@ -89,7 +89,7 @@ class TSOL_Library_Structure {
             return null;
         }
 
-        return TSOL_Library_Content_Model::sanitize_structure_registry(
+        return MemberLibrary_Content_Model::sanitize_structure_registry(
             get_post_meta((int) $parent_id, $meta_key, true)
         );
     }
@@ -113,7 +113,7 @@ class TSOL_Library_Structure {
             }
         }
 
-        return TSOL_Library_Content_Model::sanitize_structure_registry($registry);
+        return MemberLibrary_Content_Model::sanitize_structure_registry($registry);
     }
 
     public static function derive_registry($parent_id) {
@@ -134,7 +134,7 @@ class TSOL_Library_Structure {
                 $key = self::new_group_key('group', $child->ID);
             }
             if ('' === $title) {
-                $title = __('Ungrouped', 'tomschooloflife-plugin');
+                $title = __('Ungrouped', 'member-library');
             }
 
             if (!isset($groups[$key]) || $position < (int) $groups[$key]['position']) {
@@ -146,7 +146,7 @@ class TSOL_Library_Structure {
             }
         }
 
-        return TSOL_Library_Content_Model::sanitize_structure_registry(array_values($groups));
+        return MemberLibrary_Content_Model::sanitize_structure_registry(array_values($groups));
     }
 
     public static function children($parent_id) {
@@ -158,14 +158,14 @@ class TSOL_Library_Structure {
         }
 
         return get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
+            'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
             'post_status' => 'any',
             'posts_per_page' => -1,
             'orderby' => array(
                 'meta_value_num' => 'ASC',
                 'ID' => 'ASC',
             ),
-            'meta_key' => TSOL_Library_Content_Model::META_POSITION,
+            'meta_key' => MemberLibrary_Content_Model::META_POSITION,
             'meta_query' => array(
                 array(
                     'key' => $parent_meta_key,
@@ -203,10 +203,10 @@ class TSOL_Library_Structure {
         $parent_id = (int) $parent_id;
         $post = get_post($parent_id);
         if (!$post || !in_array($post->post_type, array(
-            TSOL_Library_Content_Model::COURSE_POST_TYPE,
-            TSOL_Library_Content_Model::SERIES_POST_TYPE,
+            MemberLibrary_Content_Model::COURSE_POST_TYPE,
+            MemberLibrary_Content_Model::SERIES_POST_TYPE,
         ), true)) {
-            return new WP_Error('invalid_structure_parent', __('The requested Library structure does not exist.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_structure_parent', __('The requested Library structure does not exist.', 'member-library'));
         }
 
         $group_keys = self::group_meta_keys($post->post_type);
@@ -230,7 +230,7 @@ class TSOL_Library_Structure {
             if (!isset($groups[$key])) {
                 $groups[$key] = array(
                     'key' => $key,
-                    'title' => sanitize_text_field((string) get_post_meta($child->ID, $group_keys['title'], true)) ?: __('Ungrouped', 'tomschooloflife-plugin'),
+                    'title' => sanitize_text_field((string) get_post_meta($child->ID, $group_keys['title'], true)) ?: __('Ungrouped', 'member-library'),
                     'position' => max(1, (int) get_post_meta($child->ID, $group_keys['position'], true)),
                     'items' => array(),
                 );
@@ -241,9 +241,9 @@ class TSOL_Library_Structure {
                 'title' => get_the_title($child),
                 'status' => (string) $child->post_status,
                 'statusLabel' => get_post_status_object($child->post_status) ? get_post_status_object($child->post_status)->label : $child->post_status,
-                'availability' => TSOL_Library_Content_Model::availability($child->ID),
-                'releaseAt' => TSOL_Library_Content_Model::release_at_gmt($child->ID),
-                'position' => (int) get_post_meta($child->ID, TSOL_Library_Content_Model::META_POSITION, true),
+                'availability' => MemberLibrary_Content_Model::availability($child->ID),
+                'releaseAt' => MemberLibrary_Content_Model::release_at_gmt($child->ID),
+                'position' => (int) get_post_meta($child->ID, MemberLibrary_Content_Model::META_POSITION, true),
                 'editUrl' => get_edit_post_link($child->ID, 'raw'),
             );
         }
@@ -280,12 +280,12 @@ class TSOL_Library_Structure {
             'parentType' => $post->post_type,
             'parentTitle' => get_the_title($post),
             'parentEditUrl' => get_edit_post_link($parent_id, 'raw'),
-            'itemLabel' => TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
-                ? __('lesson', 'tomschooloflife-plugin')
+            'itemLabel' => MemberLibrary_Content_Model::COURSE_POST_TYPE === $post->post_type
+                ? __('lesson', 'member-library')
                 : self::series_item_label($parent_id),
-            'groupLabel' => TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
-                ? __('section', 'tomschooloflife-plugin')
-                : __('group', 'tomschooloflife-plugin'),
+            'groupLabel' => MemberLibrary_Content_Model::COURSE_POST_TYPE === $post->post_type
+                ? __('section', 'member-library')
+                : __('group', 'member-library'),
             'descending' => self::is_descending_series($parent_id),
             'groups' => $groups,
             'groupCount' => count($groups),
@@ -303,16 +303,16 @@ class TSOL_Library_Structure {
         if (!hash_equals((string) $snapshot['revision'], (string) $revision)) {
             return new WP_Error(
                 'structure_conflict',
-                __('This structure changed in another tab or by another administrator. Reload before saving so no work is overwritten.', 'tomschooloflife-plugin')
+                __('This structure changed in another tab or by another administrator. Reload before saving so no work is overwritten.', 'member-library')
             );
         }
         if (!is_array($payload) || !isset($payload['groups']) || !is_array($payload['groups'])) {
-            return new WP_Error('invalid_structure', __('The submitted structure is invalid.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_structure', __('The submitted structure is invalid.', 'member-library'));
         }
 
         $submitted = $payload['groups'];
         if (count($submitted) > self::MAX_GROUPS) {
-            return new WP_Error('too_many_groups', __('The submitted structure contains too many groups.', 'tomschooloflife-plugin'));
+            return new WP_Error('too_many_groups', __('The submitted structure contains too many groups.', 'member-library'));
         }
 
         $expected_items = array_map(static function ($child) {
@@ -325,20 +325,20 @@ class TSOL_Library_Structure {
         $normalized = array();
         foreach ($submitted as $group) {
             if (!is_array($group)) {
-                return new WP_Error('invalid_group', __('One of the submitted groups is invalid.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_group', __('One of the submitted groups is invalid.', 'member-library'));
             }
 
             $key = sanitize_key(isset($group['key']) ? (string) $group['key'] : '');
             $title = sanitize_text_field(isset($group['title']) ? (string) $group['title'] : '');
             if ('' === $key || '' === $title || isset($seen_groups[$key])) {
-                return new WP_Error('invalid_group', __('Every group needs a unique key and a title.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_group', __('Every group needs a unique key and a title.', 'member-library'));
             }
             $seen_groups[$key] = true;
 
             $items = isset($group['items']) && is_array($group['items']) ? array_map('absint', $group['items']) : array();
             foreach ($items as $item_id) {
                 if ($item_id <= 0 || isset($seen_items[$item_id])) {
-                    return new WP_Error('invalid_items', __('Every item must appear exactly once.', 'tomschooloflife-plugin'));
+                    return new WP_Error('invalid_items', __('Every item must appear exactly once.', 'member-library'));
                 }
                 $seen_items[$item_id] = true;
             }
@@ -351,7 +351,7 @@ class TSOL_Library_Structure {
         }
 
         if (count($seen_items) > self::MAX_ITEMS) {
-            return new WP_Error('too_many_items', __('The submitted structure contains too many items.', 'tomschooloflife-plugin'));
+            return new WP_Error('too_many_items', __('The submitted structure contains too many items.', 'member-library'));
         }
 
         $submitted_items = array_keys($seen_items);
@@ -359,17 +359,17 @@ class TSOL_Library_Structure {
         if ($expected_items !== $submitted_items) {
             return new WP_Error(
                 'structure_membership_changed',
-                __('The content in this structure changed while you were editing. Reload before saving.', 'tomschooloflife-plugin')
+                __('The content in this structure changed while you were editing. Reload before saving.', 'member-library')
             );
         }
 
         $post_type = (string) $snapshot['parentType'];
         $parent_meta_key = self::child_parent_meta_key($post_type);
         foreach ($submitted_items as $item_id) {
-            if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== get_post_type($item_id)
+            if (MemberLibrary_Content_Model::ITEM_POST_TYPE !== get_post_type($item_id)
                 || $parent_id !== (int) get_post_meta($item_id, $parent_meta_key, true)
             ) {
-                return new WP_Error('invalid_parent', __('An item no longer belongs to this structure. Reload before saving.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_parent', __('An item no longer belongs to this structure. Reload before saving.', 'member-library'));
             }
         }
 
@@ -396,13 +396,13 @@ class TSOL_Library_Structure {
             );
 
             foreach ($group['items'] as $item_index => $item_id) {
-                $item_position = TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type
+                $item_position = MemberLibrary_Content_Model::SERIES_POST_TYPE === $post_type
                     ? ++$series_position
                     : $item_index + 1;
                 self::queue_meta_operation($operations, $item_id, $group_meta['key'], $group['key']);
                 self::queue_meta_operation($operations, $item_id, $group_meta['title'], $group['title']);
                 self::queue_meta_operation($operations, $item_id, $group_meta['position'], $group_position);
-                self::queue_meta_operation($operations, $item_id, TSOL_Library_Content_Model::META_POSITION, $item_position);
+                self::queue_meta_operation($operations, $item_id, MemberLibrary_Content_Model::META_POSITION, $item_position);
             }
         }
         self::queue_meta_operation($operations, $parent_id, self::registry_meta_key($post_type), $registry);
@@ -415,7 +415,7 @@ class TSOL_Library_Structure {
                 $operation['new']
             )) {
                 self::rollback_operations($applied);
-                return new WP_Error('structure_save_failed', __('WordPress could not save the complete structure. No intentional changes were kept.', 'tomschooloflife-plugin'));
+                return new WP_Error('structure_save_failed', __('WordPress could not save the complete structure. No intentional changes were kept.', 'member-library'));
             }
             if (false !== $result) {
                 $applied[] = $operation;
@@ -426,13 +426,13 @@ class TSOL_Library_Structure {
     }
 
     public static function is_descending_series($parent_id) {
-        return TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type((int) $parent_id)
-            && 'desc' === strtolower((string) get_post_meta((int) $parent_id, TSOL_Library_Content_Model::META_SERIES_SORT, true));
+        return MemberLibrary_Content_Model::SERIES_POST_TYPE === get_post_type((int) $parent_id)
+            && 'desc' === strtolower((string) get_post_meta((int) $parent_id, MemberLibrary_Content_Model::META_SERIES_SORT, true));
     }
 
     private static function series_item_label($parent_id) {
-        $label = sanitize_text_field((string) get_post_meta((int) $parent_id, TSOL_Library_Content_Model::META_SERIES_ITEM_LABEL, true));
-        return '' !== $label ? strtolower($label) : __('episode', 'tomschooloflife-plugin');
+        $label = sanitize_text_field((string) get_post_meta((int) $parent_id, MemberLibrary_Content_Model::META_SERIES_ITEM_LABEL, true));
+        return '' !== $label ? strtolower($label) : __('episode', 'member-library');
     }
 
     private static function revision_from_groups($parent_id, $groups) {

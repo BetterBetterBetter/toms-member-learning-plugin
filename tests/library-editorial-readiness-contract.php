@@ -18,9 +18,9 @@ $assert = static function ($condition, $message) use (&$failures) {
 };
 
 $types = array(
-    TSOL_Library_Content_Model::COURSE_POST_TYPE,
-    TSOL_Library_Content_Model::SERIES_POST_TYPE,
-    TSOL_Library_Content_Model::ITEM_POST_TYPE,
+    MemberLibrary_Content_Model::COURSE_POST_TYPE,
+    MemberLibrary_Content_Model::SERIES_POST_TYPE,
+    MemberLibrary_Content_Model::ITEM_POST_TYPE,
 );
 $ids = array_map('intval', get_posts(array(
     'post_type' => $types,
@@ -29,7 +29,7 @@ $ids = array_map('intval', get_posts(array(
     'fields' => 'ids',
     'suppress_filters' => true,
     'meta_query' => array(array(
-        'key' => TSOL_Library_Content_Model::META_MIGRATION_KEY,
+        'key' => MemberLibrary_Content_Model::META_MIGRATION_KEY,
         'compare' => 'EXISTS',
     )),
 )));
@@ -65,16 +65,16 @@ foreach ($ids as $id) {
     $assert(!in_array($post->post_status, array('trash', 'auto-draft'), true), sprintf('Library record %d is not reviewable.', $id));
     $assert('' !== trim(wp_strip_all_tags((string) $post->post_title)), sprintf('Library record %d has no title.', $id));
     $assert('' !== (string) $post->post_name, sprintf('Library record %d has no slug.', $id));
-    $migration_key = (string) get_post_meta($id, TSOL_Library_Content_Model::META_MIGRATION_KEY, true);
+    $migration_key = (string) get_post_meta($id, MemberLibrary_Content_Model::META_MIGRATION_KEY, true);
     $assert('' !== $migration_key, sprintf('Library record %d has no stable editorial identity.', $id));
     if (0 === strpos($migration_key, 'manual-')) {
         $manual_records++;
-        $assert(0 === (int) get_post_meta($id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true), sprintf('WordPress-native Library record %d claims false legacy provenance.', $id));
+        $assert(0 === (int) get_post_meta($id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID, true), sprintf('WordPress-native Library record %d claims false legacy provenance.', $id));
     } else {
-        $assert((int) get_post_meta($id, TSOL_Library_Content_Model::META_LEGACY_SOURCE_ID, true) > 0, sprintf('Imported Library record %d has no legacy provenance.', $id));
+        $assert((int) get_post_meta($id, MemberLibrary_Content_Model::META_LEGACY_SOURCE_ID, true) > 0, sprintf('Imported Library record %d has no legacy provenance.', $id));
     }
 
-    $uuid = (string) get_post_meta($id, TSOL_Library_Content_Model::META_UUID, true);
+    $uuid = (string) get_post_meta($id, MemberLibrary_Content_Model::META_UUID, true);
     $assert((bool) wp_is_uuid($uuid), sprintf('Library record %d has an invalid UUID.', $id));
     $assert(!isset($uuids[$uuid]), sprintf('Library record %d duplicates a UUID.', $id));
     $uuids[$uuid] = $id;
@@ -82,7 +82,7 @@ foreach ($ids as $id) {
     $assert(!isset($slugs[$slug_key]), sprintf('Library record %d duplicates a slug in its content type.', $id));
     $slugs[$slug_key] = $id;
 
-    $authorization_id = (int) get_post_meta($id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+    $authorization_id = (int) get_post_meta($id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
     $authorization_post = get_post($authorization_id);
     $assert($authorization_post instanceof WP_Post, sprintf('Library record %d has no authorization source.', $id));
     if ($authorization_post instanceof WP_Post) {
@@ -98,53 +98,53 @@ foreach ($ids as $id) {
     if (!has_post_thumbnail($id)) {
         $warnings['missing_cover_art']++;
     }
-    $topics = wp_get_object_terms($id, TSOL_Library_Content_Model::TOPIC_TAXONOMY, array('fields' => 'ids'));
+    $topics = wp_get_object_terms($id, MemberLibrary_Content_Model::TOPIC_TAXONOMY, array('fields' => 'ids'));
     if (is_wp_error($topics) || empty($topics)) {
         $warnings['records_without_topics']++;
     }
-    $speaker_context = TSOL_Library_Content_Model::effective_speaker_context($id);
+    $speaker_context = MemberLibrary_Content_Model::effective_speaker_context($id);
     if (empty($speaker_context['speaker_ids'])) {
         $warnings['records_without_speakers']++;
     }
 
-    if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== $post->post_type) {
+    if (MemberLibrary_Content_Model::ITEM_POST_TYPE !== $post->post_type) {
         continue;
     }
 
-    $course_id = (int) get_post_meta($id, TSOL_Library_Content_Model::META_COURSE_ID, true);
-    $series_id = (int) get_post_meta($id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+    $course_id = (int) get_post_meta($id, MemberLibrary_Content_Model::META_COURSE_ID, true);
+    $series_id = (int) get_post_meta($id, MemberLibrary_Content_Model::META_SERIES_ID, true);
     $assert(($course_id > 0) xor ($series_id > 0), sprintf('Library content %d must belong to exactly one Course or Series.', $id));
     if ($course_id > 0) {
-        $assert(TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($course_id), sprintf('Library content %d has an invalid Course.', $id));
-        $assert('' !== (string) get_post_meta($id, TSOL_Library_Content_Model::META_SECTION_KEY, true), sprintf('Course lesson %d has no section.', $id));
-        $assert((int) get_post_meta($id, TSOL_Library_Content_Model::META_POSITION, true) > 0, sprintf('Course lesson %d has no position.', $id));
+        $assert(MemberLibrary_Content_Model::COURSE_POST_TYPE === get_post_type($course_id), sprintf('Library content %d has an invalid Course.', $id));
+        $assert('' !== (string) get_post_meta($id, MemberLibrary_Content_Model::META_SECTION_KEY, true), sprintf('Course lesson %d has no section.', $id));
+        $assert((int) get_post_meta($id, MemberLibrary_Content_Model::META_POSITION, true) > 0, sprintf('Course lesson %d has no position.', $id));
         $course_items++;
         $course_item_counts[$course_id] = ($course_item_counts[$course_id] ?? 0) + 1;
     }
     if ($series_id > 0) {
-        $assert(TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type($series_id), sprintf('Library content %d has an invalid Series.', $id));
-        $assert('' !== (string) get_post_meta($id, TSOL_Library_Content_Model::META_SERIES_GROUP_KEY, true), sprintf('Series item %d has no group.', $id));
-        $assert((int) get_post_meta($id, TSOL_Library_Content_Model::META_POSITION, true) > 0, sprintf('Series item %d has no position.', $id));
+        $assert(MemberLibrary_Content_Model::SERIES_POST_TYPE === get_post_type($series_id), sprintf('Library content %d has an invalid Series.', $id));
+        $assert('' !== (string) get_post_meta($id, MemberLibrary_Content_Model::META_SERIES_GROUP_KEY, true), sprintf('Series item %d has no group.', $id));
+        $assert((int) get_post_meta($id, MemberLibrary_Content_Model::META_POSITION, true) > 0, sprintf('Series item %d has no position.', $id));
         $series_items++;
         $series_item_counts[$series_id] = ($series_item_counts[$series_id] ?? 0) + 1;
     }
 
-    $availability = TSOL_Library_Content_Model::availability($id);
-    $release_at_gmt = TSOL_Library_Content_Model::release_at_gmt($id);
-    $assert(in_array($availability, array(TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE, TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON), true), sprintf('Library content %d has an invalid availability state.', $id));
-    if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability) {
+    $availability = MemberLibrary_Content_Model::availability($id);
+    $release_at_gmt = MemberLibrary_Content_Model::release_at_gmt($id);
+    $assert(in_array($availability, array(MemberLibrary_Content_Model::AVAILABILITY_AVAILABLE, MemberLibrary_Content_Model::AVAILABILITY_COMING_SOON), true), sprintf('Library content %d has an invalid availability state.', $id));
+    if (MemberLibrary_Content_Model::AVAILABILITY_COMING_SOON === $availability) {
         $coming_soon_items++;
     } else {
         $assert('' === $release_at_gmt, sprintf('Available Library content %d retained a coming-soon release time.', $id));
     }
 
-    $assets = get_post_meta($id, TSOL_Library_Content_Model::META_MEDIA_ASSETS, true);
+    $assets = get_post_meta($id, MemberLibrary_Content_Model::META_MEDIA_ASSETS, true);
     $assets = is_array($assets) ? $assets : array();
-    if (TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE === $availability) {
+    if (MemberLibrary_Content_Model::AVAILABILITY_AVAILABLE === $availability) {
         $assert(!empty($assets), sprintf('Available Library content %d has no playable media.', $id));
     }
     foreach ($assets as $index => $asset) {
-        $normalized = TSOL_Library_Media_Normalizer::normalize_asset($asset, $index + 1);
+        $normalized = MemberLibrary_Media_Normalizer::normalize_asset($asset, $index + 1);
         $assert(!is_wp_error($normalized), sprintf('Library content %d has invalid media.', $id));
         if (is_wp_error($normalized)) {
             continue;
@@ -157,7 +157,7 @@ foreach ($ids as $id) {
         }
     }
 
-    $resources = get_post_meta($id, TSOL_Library_Content_Model::META_RESOURCES, true);
+    $resources = get_post_meta($id, MemberLibrary_Content_Model::META_RESOURCES, true);
     $resources = is_array($resources) ? $resources : array();
     foreach ($resources as $resource) {
         $resource_count++;
@@ -169,9 +169,9 @@ foreach ($ids as $id) {
     }
 }
 
-$assert(7 === $counts[TSOL_Library_Content_Model::COURSE_POST_TYPE], 'The catalogue does not contain seven Courses.');
-$assert(6 === $counts[TSOL_Library_Content_Model::SERIES_POST_TYPE], 'The catalogue does not contain six Series.');
-$assert(196 === $counts[TSOL_Library_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 196 reviewable Content records.');
+$assert(7 === $counts[MemberLibrary_Content_Model::COURSE_POST_TYPE], 'The catalogue does not contain seven Courses.');
+$assert(6 === $counts[MemberLibrary_Content_Model::SERIES_POST_TYPE], 'The catalogue does not contain six Series.');
+$assert(196 === $counts[MemberLibrary_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 196 reviewable Content records.');
 $assert(75 === $course_items, 'The catalogue does not contain 75 Course lessons.');
 $assert(121 === $series_items, 'The catalogue does not contain 121 Series items.');
 $assert(0 === $manual_records, 'Published Medicine Cabinet sessions were unexpectedly retained as WordPress-native placeholders.');
@@ -184,7 +184,7 @@ ksort($provider_counts, SORT_STRING);
 $assert(array('vimeo' => 197, 'wordpress' => 1, 'youtube' => 3) === $provider_counts, 'The media provider inventory changed.');
 
 $published_speaker_ids = get_posts(array(
-    'post_type' => TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+    'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
     'post_status' => 'publish',
     'posts_per_page' => -1,
     'fields' => 'ids',
@@ -204,8 +204,8 @@ WP_CLI::line(wp_json_encode(array(
     'scope' => 'tsol-library-editorial-readiness',
     'hard_gates' => 'passed',
     'records_checked' => count($ids),
-    'courses' => $counts[TSOL_Library_Content_Model::COURSE_POST_TYPE],
-    'series' => $counts[TSOL_Library_Content_Model::SERIES_POST_TYPE],
+    'courses' => $counts[MemberLibrary_Content_Model::COURSE_POST_TYPE],
+    'series' => $counts[MemberLibrary_Content_Model::SERIES_POST_TYPE],
     'course_lessons' => $course_items,
     'series_items' => $series_items,
     'wordpress_native_records' => $manual_records,

@@ -12,7 +12,7 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$service = new TSOL_Library_Access_Groups();
+$service = new MemberLibrary_Access_Groups();
 $configuration = $service->configuration();
 $preview = $service->preview();
 $definitions = $service->definitions();
@@ -20,7 +20,7 @@ $groups = $service->groups();
 $memberships = $service->memberships();
 
 $assert($service->is_bootstrapped(), 'Access Groups were not bootstrapped.');
-$assert(TSOL_Library_Access_Groups::SCHEMA_VERSION === (int) ($configuration['schema_version'] ?? 0), 'The Access Groups schema version changed.');
+$assert(MemberLibrary_Access_Groups::SCHEMA_VERSION === (int) ($configuration['schema_version'] ?? 0), 'The Access Groups schema version changed.');
 $assert(isset($definitions['library:all']), 'The Entire Library group is missing.');
 $assert(isset($definitions['collection:masterclasses']), 'The All Masterclasses group is missing.');
 $assert(isset($definitions['series:all']), 'The All Series group is missing.');

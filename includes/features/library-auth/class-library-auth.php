@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Auth {
+class MemberLibrary_Auth {
 
     private const TOKEN_TTL = 300;
     private const LOGOUT_TTL = 60;
@@ -18,17 +18,17 @@ class TSOL_Library_Auth {
     private $suppress_logout_propagation = false;
 
     public function __construct() {
-        $this->settings = new TSOL_Library_Auth_Settings();
+        $this->settings = new MemberLibrary_Auth_Settings();
     }
 
     public function init() {
         $this->settings->init();
-        TSOL_Library_Auth_Revocation::register_hooks();
-        TSOL_Library_Account_Security::register_hooks();
+        MemberLibrary_Auth_Revocation::register_hooks();
+        MemberLibrary_Account_Security::register_hooks();
         add_action('init', array($this, 'mark_auth_request_uncacheable'), 0);
         add_action('init', array($this, 'maybe_install'));
         add_filter('rocket_cache_reject_uri', array($this, 'exclude_auth_routes_from_wp_rocket'), 10, 2);
-        add_action(self::CLEANUP_HOOK, array('TSOL_Library_Auth_Repository', 'cleanup'));
+        add_action(self::CLEANUP_HOOK, array('MemberLibrary_Auth_Repository', 'cleanup'));
         add_action('admin_post_tsol_library_authorize', array($this, 'authorize'));
         add_action('admin_post_nopriv_tsol_library_authorize', array($this, 'authorize'));
         add_action('admin_post_tsol_library_logout', array($this, 'logout_from_library'));
@@ -69,23 +69,23 @@ class TSOL_Library_Auth {
     }
 
     public static function activate() {
-        TSOL_Library_Auth_Repository::install();
-        TSOL_Library_Auth_Revocation::install();
-        update_option('tsol_library_auth_schema_version', TSOL_Library_Auth_Repository::SCHEMA_VERSION, false);
+        MemberLibrary_Auth_Repository::install();
+        MemberLibrary_Auth_Revocation::install();
+        update_option('tsol_library_auth_schema_version', MemberLibrary_Auth_Repository::SCHEMA_VERSION, false);
         self::schedule_cleanup();
     }
 
     public static function deactivate() {
         wp_clear_scheduled_hook(self::CLEANUP_HOOK);
-        TSOL_Library_Auth_Revocation::deactivate();
+        MemberLibrary_Auth_Revocation::deactivate();
     }
 
     public function maybe_install() {
-        if (get_option('tsol_library_auth_schema_version') !== TSOL_Library_Auth_Repository::SCHEMA_VERSION) {
-            TSOL_Library_Auth_Repository::install();
-            update_option('tsol_library_auth_schema_version', TSOL_Library_Auth_Repository::SCHEMA_VERSION, false);
+        if (get_option('tsol_library_auth_schema_version') !== MemberLibrary_Auth_Repository::SCHEMA_VERSION) {
+            MemberLibrary_Auth_Repository::install();
+            update_option('tsol_library_auth_schema_version', MemberLibrary_Auth_Repository::SCHEMA_VERSION, false);
         }
-        TSOL_Library_Auth_Revocation::maybe_install();
+        MemberLibrary_Auth_Revocation::maybe_install();
         self::schedule_cleanup();
     }
 
@@ -174,11 +174,11 @@ class TSOL_Library_Auth {
     public function register_navigation_locations() {
         register_nav_menu(
             self::HEADER_MENU_LOCATION,
-            __('TSOL Library Header', 'tomschooloflife-plugin')
+            __('TSOL Library Header', 'member-library')
         );
         register_nav_menu(
             self::FOOTER_MENU_LOCATION,
-            __('TSOL Library Footer', 'tomschooloflife-plugin')
+            __('TSOL Library Footer', 'member-library')
         );
     }
 
@@ -201,11 +201,11 @@ class TSOL_Library_Auth {
 
         $valid_client = $this->valid_client($client_id, $redirect_uri);
         $rate_subject = $valid_client
-            ? $client_id . "\n" . (is_user_logged_in() ? 'user:' . get_current_user_id() : 'address:' . TSOL_Library_Auth_Rate_Limiter::client_address())
+            ? $client_id . "\n" . (is_user_logged_in() ? 'user:' . get_current_user_id() : 'address:' . MemberLibrary_Auth_Rate_Limiter::client_address())
             : '';
-        $rate = TSOL_Library_Auth_Rate_Limiter::check('authorize', 30, MINUTE_IN_SECONDS, $rate_subject);
+        $rate = MemberLibrary_Auth_Rate_Limiter::check('authorize', 30, MINUTE_IN_SECONDS, $rate_subject);
         if (is_wp_error($rate)) {
-            TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'rate_limited', 'endpoint' => 'authorize'));
+            MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'rate_limited', 'endpoint' => 'authorize'));
             if ($rate->get_error_code() === 'rate_limit_unavailable') {
                 $this->oauth_error('temporarily_unavailable', $client_id, $state, $redirect_uri, 503);
             }
@@ -215,12 +215,12 @@ class TSOL_Library_Auth {
             $this->oauth_error('temporarily_unavailable', $client_id, $state, $redirect_uri, 429);
         }
 
-        if (!TSOL_Library_Auth_Settings::configured()) {
-            TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'not_ready', 'endpoint' => 'authorize'));
+        if (!MemberLibrary_Auth_Settings::configured()) {
+            MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'not_ready', 'endpoint' => 'authorize'));
             $this->oauth_error('temporarily_unavailable', $client_id, $state, $redirect_uri, 503);
         }
         if (!$valid_client) {
-            TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'invalid_client', 'endpoint' => 'authorize'));
+            MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'invalid_client', 'endpoint' => 'authorize'));
             $this->oauth_error('invalid_request', '', '', '', 400);
         }
         if (
@@ -231,7 +231,7 @@ class TSOL_Library_Auth {
             || $method !== 'S256'
             || !$this->valid_pkce_value($challenge)
         ) {
-            TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'invalid_request', 'endpoint' => 'authorize', 'client_id' => $client_id));
+            MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => 'invalid_request', 'endpoint' => 'authorize', 'client_id' => $client_id));
             $this->oauth_error('invalid_request', $client_id, $state, $redirect_uri, 400);
         }
 
@@ -250,13 +250,13 @@ class TSOL_Library_Auth {
 
         $user_id = get_current_user_id();
 
-        $code = TSOL_Library_Auth_Repository::create($user_id, $client_id, $redirect_uri, $challenge);
+        $code = MemberLibrary_Auth_Repository::create($user_id, $client_id, $redirect_uri, $challenge);
         if (is_wp_error($code)) {
-            TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => $code->get_error_code(), 'endpoint' => 'authorize', 'user_id' => $user_id, 'client_id' => $client_id));
+            MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'failure', 'error' => $code->get_error_code(), 'endpoint' => 'authorize', 'user_id' => $user_id, 'client_id' => $client_id));
             $this->oauth_error('server_error', $client_id, $state, $redirect_uri, 500);
         }
 
-        TSOL_Library_Auth_Logger::event('authorize', array('outcome' => 'success', 'endpoint' => 'authorize', 'user_id' => $user_id, 'client_id' => $client_id));
+        MemberLibrary_Auth_Logger::event('authorize', array('outcome' => 'success', 'endpoint' => 'authorize', 'user_id' => $user_id, 'client_id' => $client_id));
         wp_redirect(add_query_arg(array('code' => $code, 'state' => $state), $redirect_uri)); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Exact configured callback.
         exit;
     }
@@ -265,21 +265,21 @@ class TSOL_Library_Auth {
         $started_at = microtime(true);
         $server_only = $this->require_server_request($request);
         if (is_wp_error($server_only)) {
-            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'), 403);
+            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'member-library'), 403);
         }
-        if (!TSOL_Library_Auth_Settings::configured()) {
+        if (!MemberLibrary_Auth_Settings::configured()) {
             return $this->logged_rest_error('token', 'not_ready', 503, $started_at);
         }
 
         list($client_id, $client_secret) = $this->client_credentials($request);
         if (!$this->valid_secret($client_id, $client_secret)) {
-            $invalid_rate = TSOL_Library_Auth_Rate_Limiter::check('token_invalid_client', 30, MINUTE_IN_SECONDS);
+            $invalid_rate = MemberLibrary_Auth_Rate_Limiter::check('token_invalid_client', 30, MINUTE_IN_SECONDS);
             if (is_wp_error($invalid_rate)) {
                 return $this->rate_error($invalid_rate, 'token');
             }
             return $this->logged_rest_error('token', 'invalid_client', 401, $started_at, 0, $client_id);
         }
-        $rate = TSOL_Library_Auth_Rate_Limiter::check('token', 60, MINUTE_IN_SECONDS, $client_id);
+        $rate = MemberLibrary_Auth_Rate_Limiter::check('token', 60, MINUTE_IN_SECONDS, $client_id);
         if (is_wp_error($rate)) {
             return $this->rate_error($rate, 'token');
         }
@@ -294,7 +294,7 @@ class TSOL_Library_Auth {
             return $this->logged_rest_error('token', 'invalid_request', 400, $started_at, 0, $client_id);
         }
 
-        $user_id = TSOL_Library_Auth_Repository::consume($code, $client_id, $redirect_uri, $verifier);
+        $user_id = MemberLibrary_Auth_Repository::consume($code, $client_id, $redirect_uri, $verifier);
         if (is_wp_error($user_id)) {
             return $this->logged_rest_error('token', 'invalid_grant', 400, $started_at, 0, $client_id);
         }
@@ -309,7 +309,7 @@ class TSOL_Library_Auth {
             'issued_at' => time(),
         ), self::TOKEN_TTL);
 
-        TSOL_Library_Auth_Logger::event('token', array('outcome' => 'success', 'endpoint' => 'token', 'user_id' => $user_id, 'client_id' => $client_id, 'duration_ms' => $this->duration_ms($started_at)));
+        MemberLibrary_Auth_Logger::event('token', array('outcome' => 'success', 'endpoint' => 'token', 'user_id' => $user_id, 'client_id' => $client_id, 'duration_ms' => $this->duration_ms($started_at)));
         return $this->rest_response(array(
             'access_token' => $access_token,
             'token_type' => 'Bearer',
@@ -320,22 +320,22 @@ class TSOL_Library_Auth {
     public function userinfo(WP_REST_Request $request) {
         $started_at = microtime(true);
         if (is_wp_error($this->require_server_request($request))) {
-            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'), 403);
+            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'member-library'), 403);
         }
-        if (!TSOL_Library_Auth_Settings::configured()) {
+        if (!MemberLibrary_Auth_Settings::configured()) {
             return $this->logged_rest_error('userinfo', 'not_ready', 503, $started_at);
         }
 
         $token_data = $this->bearer_token_data($request);
         if (is_wp_error($token_data)) {
-            $invalid_rate = TSOL_Library_Auth_Rate_Limiter::check('userinfo_invalid_token', 60, MINUTE_IN_SECONDS);
+            $invalid_rate = MemberLibrary_Auth_Rate_Limiter::check('userinfo_invalid_token', 60, MINUTE_IN_SECONDS);
             if (is_wp_error($invalid_rate)) {
                 return $this->rate_error($invalid_rate, 'userinfo');
             }
             return $this->logged_rest_error('userinfo', 'invalid_token', 401, $started_at);
         }
         $user_id = (int) $token_data['user_id'];
-        $rate = TSOL_Library_Auth_Rate_Limiter::check(
+        $rate = MemberLibrary_Auth_Rate_Limiter::check(
             'userinfo',
             120,
             MINUTE_IN_SECONDS,
@@ -352,7 +352,7 @@ class TSOL_Library_Auth {
         // WordPress accounts do not universally prove ownership of their email
         // address. Sites with an audited verification source may opt in here.
         $email_verified = (bool) apply_filters('tsol_library_auth_email_verified', false, $user);
-        TSOL_Library_Auth_Logger::event('userinfo', array('outcome' => 'success', 'endpoint' => 'userinfo', 'user_id' => $user_id, 'client_id' => (string) $token_data['client_id'], 'duration_ms' => $this->duration_ms($started_at)));
+        MemberLibrary_Auth_Logger::event('userinfo', array('outcome' => 'success', 'endpoint' => 'userinfo', 'user_id' => $user_id, 'client_id' => (string) $token_data['client_id'], 'duration_ms' => $this->duration_ms($started_at)));
         return $this->rest_response(array(
             'sub' => (string) $user->ID,
             'id' => (string) $user->ID,
@@ -372,13 +372,13 @@ class TSOL_Library_Auth {
         }
 
         $user_id = absint($request['user_id']);
-        $result = TSOL_Library_Auth_Entitlements::for_content($user_id, absint($request['post_id']));
+        $result = MemberLibrary_Auth_Entitlements::for_content($user_id, absint($request['post_id']));
         if (is_wp_error($result)) {
             $status = in_array($result->get_error_code(), array('unknown_user', 'unknown_content'), true) ? 404 : 503;
             return $this->logged_rest_error('content_access', $result->get_error_code(), $status, $started_at, $user_id, $auth_error);
         }
 
-        TSOL_Library_Auth_Logger::event('content_access', array('outcome' => 'success', 'endpoint' => 'content_access', 'user_id' => $user_id, 'client_id' => $auth_error, 'duration_ms' => $this->duration_ms($started_at)));
+        MemberLibrary_Auth_Logger::event('content_access', array('outcome' => 'success', 'endpoint' => 'content_access', 'user_id' => $user_id, 'client_id' => $auth_error, 'duration_ms' => $this->duration_ms($started_at)));
         return $this->rest_response($result);
     }
 
@@ -412,7 +412,7 @@ class TSOL_Library_Auth {
         $user_id = absint($request['user_id']);
         $items = array();
         foreach (array_values($normalized_ids) as $post_id) {
-            $result = TSOL_Library_Auth_Entitlements::for_content($user_id, $post_id);
+            $result = MemberLibrary_Auth_Entitlements::for_content($user_id, $post_id);
             if (is_wp_error($result)) {
                 if ('memberpress_unavailable' === $result->get_error_code()) {
                     return $this->logged_rest_error('content_access_batch', 'memberpress_unavailable', 503, $started_at, $user_id, $auth_error);
@@ -429,7 +429,7 @@ class TSOL_Library_Auth {
             $items[] = $result;
         }
 
-        TSOL_Library_Auth_Logger::event('content_access_batch', array(
+        MemberLibrary_Auth_Logger::event('content_access_batch', array(
             'outcome' => 'success',
             'endpoint' => 'content_access_batch',
             'user_id' => $user_id,
@@ -461,13 +461,13 @@ class TSOL_Library_Auth {
         if (!is_int($body['afterUserId']) || !is_int($body['perPage'])) {
             return $this->logged_rest_error('announcement_audience', 'invalid_request', 400, $started_at, 0, $auth_error);
         }
-        $result = TSOL_Library_Announcement_Audience_Resolver::page($body['definition'], $body['afterUserId'], $body['perPage']);
+        $result = MemberLibrary_Announcement_Audience_Resolver::page($body['definition'], $body['afterUserId'], $body['perPage']);
         if (is_wp_error($result)) {
             $code = $result->get_error_code();
             $status = 'memberpress_unavailable' === $code ? 503 : 400;
             return $this->logged_rest_error('announcement_audience', $code, $status, $started_at, 0, $auth_error);
         }
-        TSOL_Library_Auth_Logger::event('announcement_audience', array(
+        MemberLibrary_Auth_Logger::event('announcement_audience', array(
             'outcome' => 'success',
             'endpoint' => 'announcement_audience',
             'client_id' => $auth_error,
@@ -485,11 +485,11 @@ class TSOL_Library_Auth {
             return $this->server_auth_error($auth_error, 'catalogue', $started_at);
         }
 
-        $payload = TSOL_Library_Content_Catalogue::snapshot(
+        $payload = MemberLibrary_Content_Catalogue::snapshot(
             absint($request->get_param('after_id')),
             absint($request->get_param('per_page'))
         );
-        TSOL_Library_Auth_Logger::event('catalogue', array(
+        MemberLibrary_Auth_Logger::event('catalogue', array(
             'outcome' => 'success',
             'endpoint' => 'catalogue',
             'client_id' => $auth_error,
@@ -506,12 +506,12 @@ class TSOL_Library_Auth {
             return $this->server_auth_error($auth_error, 'catalogue_item', $started_at);
         }
 
-        $record = TSOL_Library_Content_Catalogue::record(absint($request['post_id']));
+        $record = MemberLibrary_Content_Catalogue::record(absint($request['post_id']));
         if (is_wp_error($record)) {
             return $this->logged_rest_error('catalogue_item', 'unknown_catalogue_content', 404, $started_at, 0, $auth_error);
         }
         return $this->rest_response(array(
-            'schema_version' => TSOL_Library_Content_Catalogue::SCHEMA_VERSION,
+            'schema_version' => MemberLibrary_Content_Catalogue::SCHEMA_VERSION,
             'generated_at' => gmdate('c'),
             'item' => $record,
         ));
@@ -524,11 +524,11 @@ class TSOL_Library_Auth {
             return $this->server_auth_error($auth_error, 'catalogue_changes', $started_at);
         }
 
-        $payload = TSOL_Library_Content_Catalogue::changes(
+        $payload = MemberLibrary_Content_Catalogue::changes(
             absint($request->get_param('after')),
             absint($request->get_param('per_page'))
         );
-        TSOL_Library_Auth_Logger::event('catalogue_changes', array(
+        MemberLibrary_Auth_Logger::event('catalogue_changes', array(
             'outcome' => 'success',
             'endpoint' => 'catalogue_changes',
             'client_id' => $auth_error,
@@ -545,7 +545,7 @@ class TSOL_Library_Auth {
             return $this->server_auth_error($auth_error, 'readiness', $started_at);
         }
 
-        $error = TSOL_Library_Auth_Settings::readiness_error();
+        $error = MemberLibrary_Auth_Settings::readiness_error();
         $configured = $error === '';
         $memberpress_ready = class_exists('MeprUser') && class_exists('MeprRule');
         $ready = $configured && $memberpress_ready;
@@ -592,7 +592,7 @@ class TSOL_Library_Auth {
             }
         }
 
-        TSOL_Library_Auth_Logger::event('footer_navigation', array(
+        MemberLibrary_Auth_Logger::event('footer_navigation', array(
             'outcome' => 'success',
             'endpoint' => 'footer_navigation',
             'client_id' => $auth_error,
@@ -654,7 +654,7 @@ class TSOL_Library_Auth {
             wp_set_current_user($previous_user_id);
         }
 
-        TSOL_Library_Auth_Logger::event('header_navigation', array(
+        MemberLibrary_Auth_Logger::event('header_navigation', array(
             'outcome' => 'success',
             'endpoint' => 'header_navigation',
             'client_id' => $auth_error,
@@ -679,18 +679,18 @@ class TSOL_Library_Auth {
         );
         $user_id = get_current_user_id();
         if (!$this->valid_logout_message($message, $user_id)) {
-            TSOL_Library_Auth_Logger::event('logout', array('outcome' => 'failure', 'error' => 'invalid_signature', 'endpoint' => 'wordpress_logout'));
+            MemberLibrary_Auth_Logger::event('logout', array('outcome' => 'failure', 'error' => 'invalid_signature', 'endpoint' => 'wordpress_logout'));
             $this->redirect_to_library_error('invalid_sign_out');
             $this->render_browser_error('invalid_sign_out', 400);
         }
 
-        $consumed = TSOL_Library_Auth_Repository::consume_message(
+        $consumed = MemberLibrary_Auth_Repository::consume_message(
             $message['jti'],
             self::LOGOUT_EVENT,
             (int) $message['issued_at'] + self::LOGOUT_TTL
         );
         if (is_wp_error($consumed)) {
-            TSOL_Library_Auth_Logger::event('logout', array('outcome' => 'failure', 'error' => $consumed->get_error_code(), 'endpoint' => 'wordpress_logout'));
+            MemberLibrary_Auth_Logger::event('logout', array('outcome' => 'failure', 'error' => $consumed->get_error_code(), 'endpoint' => 'wordpress_logout'));
             $this->redirect_to_library_error('invalid_sign_out');
             $this->render_browser_error('invalid_sign_out', 400);
         }
@@ -702,7 +702,7 @@ class TSOL_Library_Auth {
     }
 
     public function propagate_wordpress_logout($user_id) {
-        if ($this->suppress_logout_propagation || !$user_id || !TSOL_Library_Auth_Settings::configured() || !$this->is_browser_request() || headers_sent()) {
+        if ($this->suppress_logout_propagation || !$user_id || !MemberLibrary_Auth_Settings::configured() || !$this->is_browser_request() || headers_sent()) {
             return;
         }
 
@@ -710,7 +710,7 @@ class TSOL_Library_Auth {
         $timestamp = time();
         $jti = wp_generate_uuid4();
         $message = $this->logout_message('tsol-library', $jti, $timestamp, $return_to, (int) $user_id);
-        $url = add_query_arg($message, TSOL_Library_Auth_Settings::app_url() . '/auth/wordpress-logout');
+        $url = add_query_arg($message, MemberLibrary_Auth_Settings::app_url() . '/auth/wordpress-logout');
 
         wp_redirect($url); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Fixed configured Library origin with HMAC payload.
         exit;
@@ -718,27 +718,27 @@ class TSOL_Library_Auth {
 
     private function server_client_auth(WP_REST_Request $request, $scope, $limit, $require_ready = true) {
         if (is_wp_error($this->require_server_request($request))) {
-            return new WP_Error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'member-library'));
         }
         list($client_id, $client_secret) = $this->client_credentials($request);
         if (!$this->valid_secret($client_id, $client_secret)) {
-            $invalid_rate = TSOL_Library_Auth_Rate_Limiter::check($scope . '_invalid_client', 60, MINUTE_IN_SECONDS);
+            $invalid_rate = MemberLibrary_Auth_Rate_Limiter::check($scope . '_invalid_client', 60, MINUTE_IN_SECONDS);
             if (is_wp_error($invalid_rate)) {
                 return $invalid_rate;
             }
-            return new WP_Error('invalid_client', __('Client authentication failed.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_client', __('Client authentication failed.', 'member-library'));
         }
         $rate_subject = $client_id;
         $user_id = absint($request->get_param('user_id'));
         if ($user_id > 0) {
             $rate_subject .= "\nuser:" . $user_id;
         }
-        $rate = TSOL_Library_Auth_Rate_Limiter::check($scope, $limit, MINUTE_IN_SECONDS, $rate_subject);
+        $rate = MemberLibrary_Auth_Rate_Limiter::check($scope, $limit, MINUTE_IN_SECONDS, $rate_subject);
         if (is_wp_error($rate)) {
             return $rate;
         }
-        if ($require_ready && !TSOL_Library_Auth_Settings::configured()) {
-            return new WP_Error('not_ready', __('Library authentication is not configured.', 'tomschooloflife-plugin'));
+        if ($require_ready && !MemberLibrary_Auth_Settings::configured()) {
+            return new WP_Error('not_ready', __('Library authentication is not configured.', 'member-library'));
         }
 
         return $client_id;
@@ -755,11 +755,11 @@ class TSOL_Library_Auth {
     private function bearer_token_data(WP_REST_Request $request) {
         $header = (string) $request->get_header('authorization');
         if (!preg_match('/^Bearer\s+([A-Za-z0-9_-]{43,128})$/i', $header, $matches)) {
-            return new WP_Error('invalid_token', __('A valid bearer token is required.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_token', __('A valid bearer token is required.', 'member-library'));
         }
         $data = get_transient('tsol_library_token_' . hash('sha256', $matches[1]));
         if (!is_array($data) || empty($data['user_id']) || empty($data['client_id'])) {
-            return new WP_Error('invalid_token', __('The bearer token is invalid or expired.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_token', __('The bearer token is invalid or expired.', 'member-library'));
         }
         return $data;
     }
@@ -778,14 +778,14 @@ class TSOL_Library_Auth {
     }
 
     private function valid_secret($client_id, $client_secret) {
-        $expected_id = TSOL_Library_Auth_Settings::client_id();
-        $expected_secret = TSOL_Library_Auth_Settings::client_secret();
+        $expected_id = MemberLibrary_Auth_Settings::client_id();
+        $expected_secret = MemberLibrary_Auth_Settings::client_secret();
         return $expected_id !== '' && strlen($expected_secret) >= 32 && $client_id !== '' && $client_secret !== '' && hash_equals($expected_id, (string) $client_id) && hash_equals($expected_secret, (string) $client_secret);
     }
 
     private function valid_client($client_id, $redirect_uri) {
-        $expected_id = TSOL_Library_Auth_Settings::client_id();
-        $expected_callback = TSOL_Library_Auth_Settings::callback_url();
+        $expected_id = MemberLibrary_Auth_Settings::client_id();
+        $expected_callback = MemberLibrary_Auth_Settings::callback_url();
         return $expected_id !== '' && $expected_callback !== '' && hash_equals($expected_id, (string) $client_id) && hash_equals($expected_callback, (string) $redirect_uri);
     }
 
@@ -857,7 +857,7 @@ class TSOL_Library_Auth {
     }
 
     private function redirect_to_library_error($code) {
-        $app_url = TSOL_Library_Auth_Settings::app_url();
+        $app_url = MemberLibrary_Auth_Settings::app_url();
         if ($app_url === '') {
             return;
         }
@@ -875,28 +875,28 @@ class TSOL_Library_Auth {
         }
 
         $copy = array(
-            'eyebrow' => __('Sign-in interrupted', 'tomschooloflife-plugin'),
-            'title' => __('School sign-in unavailable', 'tomschooloflife-plugin'),
-            'description' => __('We could not complete School sign-in. Return to TSOL and start again.', 'tomschooloflife-plugin'),
+            'eyebrow' => __('Sign-in interrupted', 'member-library'),
+            'title' => __('School sign-in unavailable', 'member-library'),
+            'description' => __('We could not complete School sign-in. Return to TSOL and start again.', 'member-library'),
         );
 
         if ($code === 'invalid_request') {
             $copy = array(
-                'eyebrow' => __('Sign-in expired', 'tomschooloflife-plugin'),
-                'title' => __('Let’s try that again', 'tomschooloflife-plugin'),
-                'description' => __('This sign-in request is invalid or has expired. Return to TSOL and start again.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Sign-in expired', 'member-library'),
+                'title' => __('Let’s try that again', 'member-library'),
+                'description' => __('This sign-in request is invalid or has expired. Return to TSOL and start again.', 'member-library'),
             );
         } elseif ($code === 'invalid_sign_out') {
             $copy = array(
-                'eyebrow' => __('Sign-out interrupted', 'tomschooloflife-plugin'),
-                'title' => __('Unable to complete sign-out', 'tomschooloflife-plugin'),
-                'description' => __('We could not verify that sign-out request. Return to TSOL to safely continue.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Sign-out interrupted', 'member-library'),
+                'title' => __('Unable to complete sign-out', 'member-library'),
+                'description' => __('We could not verify that sign-out request. Return to TSOL to safely continue.', 'member-library'),
             );
         } elseif (in_array($code, array('server_error', 'temporarily_unavailable'), true)) {
             $copy = array(
-                'eyebrow' => __('Service unavailable', 'tomschooloflife-plugin'),
-                'title' => __('School sign-in is temporarily unavailable', 'tomschooloflife-plugin'),
-                'description' => __('Your account has not been changed. Please wait a moment and try again.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Service unavailable', 'member-library'),
+                'title' => __('School sign-in is temporarily unavailable', 'member-library'),
+                'description' => __('Your account has not been changed. Please wait a moment and try again.', 'member-library'),
             );
         }
 
@@ -904,7 +904,7 @@ class TSOL_Library_Auth {
         status_header($status);
         if (!headers_sent()) {
             header('Content-Type: text/html; charset=' . get_option('blog_charset'), true);
-            header("Content-Security-Policy: default-src 'none'; img-src " . esc_attr(TSOL_Library_Brand::image_csp_src()) . "; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
+            header("Content-Security-Policy: default-src 'none'; img-src " . esc_attr(MemberLibrary_Brand::image_csp_src()) . "; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
             header('X-Frame-Options: DENY', true);
             header('X-Robots-Tag: noindex, nofollow, noarchive', true);
         }
@@ -938,12 +938,12 @@ class TSOL_Library_Auth {
         </head>
         <body>
             <main>
-                <img class="brand" src="<?php echo esc_url(TSOL_Library_Brand::logo_url()); ?>" alt="<?php echo esc_attr(TSOL_Library_Brand::name()); ?>" width="190" height="51">
+                <img class="brand" src="<?php echo esc_url(MemberLibrary_Brand::logo_url()); ?>" alt="<?php echo esc_attr(MemberLibrary_Brand::name()); ?>" width="190" height="51">
                 <section class="panel" aria-labelledby="library-error-title">
                     <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
                     <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>
                     <p class="description"><?php echo esc_html($copy['description']); ?></p>
-                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to TSOL', 'tomschooloflife-plugin'); ?></a>
+                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to TSOL', 'member-library'); ?></a>
                 </section>
             </main>
         </body>
@@ -961,7 +961,7 @@ class TSOL_Library_Auth {
     }
 
     private function logged_rest_error($endpoint, $code, $status, $started_at, $user_id = 0, $client_id = '') {
-        TSOL_Library_Auth_Logger::event($endpoint, array(
+        MemberLibrary_Auth_Logger::event($endpoint, array(
             'outcome' => 'failure',
             'error' => $code,
             'endpoint' => $endpoint,
@@ -970,23 +970,23 @@ class TSOL_Library_Auth {
             'duration_ms' => $this->duration_ms($started_at),
         ));
         $messages = array(
-            'not_ready' => __('Library authentication is not configured.', 'tomschooloflife-plugin'),
-            'invalid_client' => __('Client authentication failed.', 'tomschooloflife-plugin'),
-            'invalid_request' => __('The request is invalid.', 'tomschooloflife-plugin'),
-            'unsupported_grant_type' => __('Only the authorization_code grant is supported.', 'tomschooloflife-plugin'),
-            'invalid_grant' => __('The authorization code is invalid, expired, or already used.', 'tomschooloflife-plugin'),
-            'invalid_token' => __('The bearer token is invalid or expired.', 'tomschooloflife-plugin'),
-            'unknown_user' => __('The WordPress user does not exist.', 'tomschooloflife-plugin'),
-            'unknown_content' => __('The requested content does not exist.', 'tomschooloflife-plugin'),
-            'unknown_catalogue_content' => __('The requested Library catalogue record does not exist.', 'tomschooloflife-plugin'),
-            'memberpress_unavailable' => __('MemberPress is unavailable.', 'tomschooloflife-plugin'),
-            'audience_definition_invalid' => __('The announcement audience definition is invalid.', 'tomschooloflife-plugin'),
-            'audience_schema_unsupported' => __('The announcement audience schema is unsupported.', 'tomschooloflife-plugin'),
-            'audience_request_invalid' => __('The announcement audience request is invalid.', 'tomschooloflife-plugin'),
-            'audience_cursor_invalid' => __('The announcement audience cursor is invalid.', 'tomschooloflife-plugin'),
-            'unknown_audience_content' => __('The selected announcement content does not exist.', 'tomschooloflife-plugin'),
-            'unknown_audience_membership' => __('The selected announcement membership does not exist.', 'tomschooloflife-plugin'),
-            'server_error' => __('The authentication service encountered an error.', 'tomschooloflife-plugin'),
+            'not_ready' => __('Library authentication is not configured.', 'member-library'),
+            'invalid_client' => __('Client authentication failed.', 'member-library'),
+            'invalid_request' => __('The request is invalid.', 'member-library'),
+            'unsupported_grant_type' => __('Only the authorization_code grant is supported.', 'member-library'),
+            'invalid_grant' => __('The authorization code is invalid, expired, or already used.', 'member-library'),
+            'invalid_token' => __('The bearer token is invalid or expired.', 'member-library'),
+            'unknown_user' => __('The WordPress user does not exist.', 'member-library'),
+            'unknown_content' => __('The requested content does not exist.', 'member-library'),
+            'unknown_catalogue_content' => __('The requested Library catalogue record does not exist.', 'member-library'),
+            'memberpress_unavailable' => __('MemberPress is unavailable.', 'member-library'),
+            'audience_definition_invalid' => __('The announcement audience definition is invalid.', 'member-library'),
+            'audience_schema_unsupported' => __('The announcement audience schema is unsupported.', 'member-library'),
+            'audience_request_invalid' => __('The announcement audience request is invalid.', 'member-library'),
+            'audience_cursor_invalid' => __('The announcement audience cursor is invalid.', 'member-library'),
+            'unknown_audience_content' => __('The selected announcement content does not exist.', 'member-library'),
+            'unknown_audience_membership' => __('The selected announcement membership does not exist.', 'member-library'),
+            'server_error' => __('The authentication service encountered an error.', 'member-library'),
         );
         $headers = $code === 'invalid_token' ? array('WWW-Authenticate' => 'Bearer') : array();
         return $this->rest_error($code, $messages[$code] ?? $messages['server_error'], $status, $headers);
@@ -994,12 +994,12 @@ class TSOL_Library_Auth {
 
     private function rate_error(WP_Error $error, $endpoint) {
         if ($error->get_error_code() === 'rate_limit_unavailable') {
-            TSOL_Library_Auth_Logger::event($endpoint, array('outcome' => 'failure', 'error' => 'rate_limit_unavailable', 'endpoint' => $endpoint));
-            return $this->rest_error('temporarily_unavailable', __('The request limit service is unavailable.', 'tomschooloflife-plugin'), 503);
+            MemberLibrary_Auth_Logger::event($endpoint, array('outcome' => 'failure', 'error' => 'rate_limit_unavailable', 'endpoint' => $endpoint));
+            return $this->rest_error('temporarily_unavailable', __('The request limit service is unavailable.', 'member-library'), 503);
         }
         $data = $error->get_error_data();
         $retry_after = is_array($data) && isset($data['retry_after']) ? max(1, absint($data['retry_after'])) : MINUTE_IN_SECONDS;
-        TSOL_Library_Auth_Logger::event($endpoint, array('outcome' => 'failure', 'error' => 'rate_limited', 'endpoint' => $endpoint));
+        MemberLibrary_Auth_Logger::event($endpoint, array('outcome' => 'failure', 'error' => 'rate_limited', 'endpoint' => $endpoint));
         return $this->rest_error('rate_limited', $error->get_error_message(), 429, array('Retry-After' => (string) $retry_after));
     }
 
@@ -1043,7 +1043,7 @@ class TSOL_Library_Auth {
     private const LOGOUT_VERSION = '1';
 
     private function logout_subject($jti, $user_id) {
-        return hash_hmac('sha256', "logout-subject\n" . (string) $jti . "\n" . (string) $user_id, TSOL_Library_Auth_Settings::client_secret());
+        return hash_hmac('sha256', "logout-subject\n" . (string) $jti . "\n" . (string) $user_id, MemberLibrary_Auth_Settings::client_secret());
     }
 
     private function logout_signature($message) {
@@ -1056,7 +1056,7 @@ class TSOL_Library_Auth {
             $message['return_to'],
             $message['subject'],
         ));
-        return 'sha256=' . hash_hmac('sha256', $canonical, TSOL_Library_Auth_Settings::client_secret());
+        return 'sha256=' . hash_hmac('sha256', $canonical, MemberLibrary_Auth_Settings::client_secret());
     }
 
     private function logout_message($audience, $jti, $timestamp, $return_to, $user_id) {
@@ -1087,7 +1087,7 @@ class TSOL_Library_Auth {
             || !preg_match('/^[a-f0-9]{64}$/', $message['subject'])
             || !hash_equals($this->logout_subject($message['jti'], $user_id), $message['subject'])
             || !preg_match('/^sha256=[a-f0-9]{64}$/', $message['signature'])
-            || strlen(TSOL_Library_Auth_Settings::client_secret()) < 32
+            || strlen(MemberLibrary_Auth_Settings::client_secret()) < 32
         ) {
             return false;
         }
@@ -1154,7 +1154,7 @@ class TSOL_Library_Auth {
     }
 
     private function is_library_navigation_url($value) {
-        $app_url = TSOL_Library_Auth_Settings::app_url();
+        $app_url = MemberLibrary_Auth_Settings::app_url();
         if ($app_url === '') {
             return false;
         }

@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Access_Groups {
+class MemberLibrary_Access_Groups {
 
     const SCHEMA_VERSION = 2;
     const OPTION_NAME = 'tsol_library_access_groups_draft';
@@ -236,7 +236,7 @@ class TSOL_Library_Access_Groups {
         foreach ((array) $transition_authorization_ids as $target_id => $authorization_id) {
             $target_id = absint($target_id);
             $authorization_id = absint($authorization_id);
-            if (!in_array(get_post_type($target_id), TSOL_Library_Content_Model::post_types(), true)
+            if (!in_array(get_post_type($target_id), MemberLibrary_Content_Model::post_types(), true)
                 || !$authorization_id || !get_post($authorization_id)
             ) {
                 throw new RuntimeException('The legacy authorization transition contains a missing source or Library target.');
@@ -298,7 +298,7 @@ class TSOL_Library_Access_Groups {
                 $configuration['groups'][$group_id] = array(
                     'id' => $group_id,
                     'name' => $this->imported_group_name(array($scope_key), count($configuration['groups']) + 1),
-                    'description' => __('Imported from an existing plugin-owned Library rule.', 'tomschooloflife-plugin'),
+                    'description' => __('Imported from an existing plugin-owned Library rule.', 'member-library'),
                     'scopes' => array($scope_key),
                 );
             }
@@ -380,43 +380,43 @@ class TSOL_Library_Access_Groups {
         $definitions = array(
             'library:all' => array(
                 'key' => 'library:all',
-                'label' => __('Entire Library', 'tomschooloflife-plugin'),
-                'description' => __('Every current Course, Masterclass, and Series.', 'tomschooloflife-plugin'),
+                'label' => __('Entire Library', 'member-library'),
+                'description' => __('Every current Course, Masterclass, and Series.', 'member-library'),
                 'kind' => 'library',
                 'target_id' => 0,
             ),
             'collection:masterclasses' => array(
                 'key' => 'collection:masterclasses',
-                'label' => __('All Masterclasses', 'tomschooloflife-plugin'),
-                'description' => __('Every Course in the Masterclasses collection, including future additions.', 'tomschooloflife-plugin'),
+                'label' => __('All Masterclasses', 'member-library'),
+                'description' => __('Every Course in the Masterclasses collection, including future additions.', 'member-library'),
                 'kind' => 'collection',
                 'target_id' => $this->masterclasses_term_id(),
             ),
             'series:all' => array(
                 'key' => 'series:all',
-                'label' => __('All Series', 'tomschooloflife-plugin'),
-                'description' => __('Every current and future Library Series.', 'tomschooloflife-plugin'),
+                'label' => __('All Series', 'member-library'),
+                'description' => __('Every current and future Library Series.', 'member-library'),
                 'kind' => 'all_series',
                 'target_id' => 0,
             ),
         );
 
-        foreach ($this->library_posts(TSOL_Library_Content_Model::COURSE_POST_TYPE) as $post) {
+        foreach ($this->library_posts(MemberLibrary_Content_Model::COURSE_POST_TYPE) as $post) {
             $key = $this->post_group_key('course', $post->ID);
             $definitions[$key] = array(
                 'key' => $key,
-                'label' => sprintf(__('Course: %s', 'tomschooloflife-plugin'), $post->post_title),
-                'description' => __('This Course and all of its Library content.', 'tomschooloflife-plugin'),
+                'label' => sprintf(__('Course: %s', 'member-library'), $post->post_title),
+                'description' => __('This Course and all of its Library content.', 'member-library'),
                 'kind' => 'course',
                 'target_id' => (int) $post->ID,
             );
         }
-        foreach ($this->library_posts(TSOL_Library_Content_Model::SERIES_POST_TYPE) as $post) {
+        foreach ($this->library_posts(MemberLibrary_Content_Model::SERIES_POST_TYPE) as $post) {
             $key = $this->post_group_key('series', $post->ID);
             $definitions[$key] = array(
                 'key' => $key,
-                'label' => sprintf(__('Series: %s', 'tomschooloflife-plugin'), $post->post_title),
-                'description' => __('This Series and all of its Library content.', 'tomschooloflife-plugin'),
+                'label' => sprintf(__('Series: %s', 'member-library'), $post->post_title),
+                'description' => __('This Series and all of its Library content.', 'member-library'),
                 'kind' => 'series',
                 'target_id' => (int) $post->ID,
             );
@@ -439,17 +439,17 @@ class TSOL_Library_Access_Groups {
      */
     public function native_authorization_post_id($target_id) {
         $target_id = absint($target_id);
-        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== get_post_type($target_id)) {
+        if (MemberLibrary_Content_Model::ITEM_POST_TYPE !== get_post_type($target_id)) {
             return $target_id;
         }
 
-        $course_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
-        if ($course_id > 0 && TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($course_id)) {
+        $course_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_COURSE_ID, true);
+        if ($course_id > 0 && MemberLibrary_Content_Model::COURSE_POST_TYPE === get_post_type($course_id)) {
             return $course_id;
         }
 
-        $series_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
-        if ($series_id > 0 && TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type($series_id)) {
+        $series_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_SERIES_ID, true);
+        if ($series_id > 0 && MemberLibrary_Content_Model::SERIES_POST_TYPE === get_post_type($series_id)) {
             return $series_id;
         }
 
@@ -509,7 +509,7 @@ class TSOL_Library_Access_Groups {
             $unmanaged = $this->unmanaged_effective_rules($configuration);
             if (!empty($unmanaged) && empty($configuration['environment_migration'])) {
                 throw new RuntimeException(sprintf(
-                    _n('%d published MemberPress rule affecting the Library is outside Access Groups. Reconcile it before checking changes.', '%d published MemberPress rules affecting the Library are outside Access Groups. Reconcile them before checking changes.', count($unmanaged), 'tomschooloflife-plugin'),
+                    _n('%d published MemberPress rule affecting the Library is outside Access Groups. Reconcile it before checking changes.', '%d published MemberPress rules affecting the Library are outside Access Groups. Reconcile them before checking changes.', count($unmanaged), 'member-library'),
                     count($unmanaged)
                 ));
             }
@@ -599,7 +599,7 @@ class TSOL_Library_Access_Groups {
             $state = $this->stage_state();
             $configuration = $this->configuration();
             foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
-                if ((int) $authorization_id !== (int) get_post_meta((int) $target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true)) {
+                if ((int) $authorization_id !== (int) get_post_meta((int) $target_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true)) {
                     throw new RuntimeException('A legacy authorization reference changed after the access comparison. Activation stopped.');
                 }
             }
@@ -615,7 +615,7 @@ class TSOL_Library_Access_Groups {
                 $target_id = (int) $target_id;
                 update_post_meta(
                     $target_id,
-                    TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
+                    MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID,
                     $this->native_authorization_post_id($target_id)
                 );
             }
@@ -645,7 +645,7 @@ class TSOL_Library_Access_Groups {
                 $configuration = $this->configuration();
                 foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
                     if (get_post((int) $target_id) instanceof WP_Post && get_post((int) $authorization_id) instanceof WP_Post) {
-                        update_post_meta((int) $target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, (int) $authorization_id);
+                        update_post_meta((int) $target_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, (int) $authorization_id);
                     }
                 }
             }
@@ -747,22 +747,22 @@ class TSOL_Library_Access_Groups {
     private function rule_target($definition) {
         if ('collection' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Masterclasses', 'tomschooloflife-plugin'),
-                'type' => 'tax_' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY . '||cpt_' . TSOL_Library_Content_Model::COURSE_POST_TYPE,
+                'title' => __('TSOL Access Groups — All Masterclasses', 'member-library'),
+                'type' => 'tax_' . MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY . '||cpt_' . MemberLibrary_Content_Model::COURSE_POST_TYPE,
                 'content' => (string) $definition['target_id'],
             );
         }
         if ('all_series' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Series', 'tomschooloflife-plugin'),
-                'type' => 'all_' . TSOL_Library_Content_Model::SERIES_POST_TYPE,
+                'title' => __('TSOL Access Groups — All Series', 'member-library'),
+                'type' => 'all_' . MemberLibrary_Content_Model::SERIES_POST_TYPE,
                 'content' => '',
             );
         }
-        $noun = 'course' === $definition['kind'] ? __('Course', 'tomschooloflife-plugin') : __('Series', 'tomschooloflife-plugin');
-        $post_type = 'course' === $definition['kind'] ? TSOL_Library_Content_Model::COURSE_POST_TYPE : TSOL_Library_Content_Model::SERIES_POST_TYPE;
+        $noun = 'course' === $definition['kind'] ? __('Course', 'member-library') : __('Series', 'member-library');
+        $post_type = 'course' === $definition['kind'] ? MemberLibrary_Content_Model::COURSE_POST_TYPE : MemberLibrary_Content_Model::SERIES_POST_TYPE;
         return array(
-            'title' => sprintf(__('TSOL Access Groups — %1$s: %2$s', 'tomschooloflife-plugin'), $noun, get_the_title((int) $definition['target_id'])),
+            'title' => sprintf(__('TSOL Access Groups — %1$s: %2$s', 'member-library'), $noun, get_the_title((int) $definition['target_id'])),
             'type' => 'single_' . $post_type,
             'content' => (string) $definition['target_id'],
         );
@@ -829,7 +829,7 @@ class TSOL_Library_Access_Groups {
         $managed_ids = array_fill_keys(array_map('intval', (array) ($configuration['source_rule_ids'] ?? array())), true);
         $rules = array();
         foreach ($this->library_targets() as $target_id) {
-            $authorization_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+            $authorization_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_id = $authorization_id > 0 ? $authorization_id : $target_id;
             $is_transition_source = isset($configuration['transition_authorization_ids'][$target_id])
                 && (int) $configuration['transition_authorization_ids'][$target_id] === $authorization_id;
@@ -866,7 +866,7 @@ class TSOL_Library_Access_Groups {
                 $groups[$group_id] = array(
                     'id' => $group_id,
                     'name' => $this->imported_group_name($scope_keys, count($groups) + 1),
-                    'description' => __('Imported from the current MemberPress Library access policy.', 'tomschooloflife-plugin'),
+                    'description' => __('Imported from the current MemberPress Library access policy.', 'member-library'),
                     'scopes' => $scope_keys,
                 );
             }
@@ -882,13 +882,13 @@ class TSOL_Library_Access_Groups {
     private function imported_group_name($scope_keys, $ordinal) {
         $definitions = $this->definitions();
         if (array('library:all') === $scope_keys) {
-            return __('Complete Library', 'tomschooloflife-plugin');
+            return __('Complete Library', 'member-library');
         }
         if (array('collection:masterclasses') === $scope_keys) {
-            return __('Masterclasses', 'tomschooloflife-plugin');
+            return __('Masterclasses', 'member-library');
         }
         if (array('series:all') === $scope_keys) {
-            return __('All Series', 'tomschooloflife-plugin');
+            return __('All Series', 'member-library');
         }
         if (1 === count($scope_keys) && isset($definitions[$scope_keys[0]])) {
             return preg_replace('/^(Course|Series):\s*/', '', (string) $definitions[$scope_keys[0]]['label']);
@@ -901,7 +901,7 @@ class TSOL_Library_Access_Groups {
         }
         sort($core_scopes, SORT_STRING);
         if ($core_scopes === $scope_keys) {
-            return __('Complete Library', 'tomschooloflife-plugin');
+            return __('Complete Library', 'member-library');
         }
         // The production policy intentionally excludes newer separately sold
         // courses, so its historical all-access package is not called
@@ -909,9 +909,9 @@ class TSOL_Library_Access_Groups {
         if (in_array('collection:masterclasses', $scope_keys, true)
             && in_array('series:all', $scope_keys, true)
         ) {
-            return __('School of Life Core Library', 'tomschooloflife-plugin');
+            return __('School of Life Core Library', 'member-library');
         }
-        return sprintf(__('Imported Library Access %d', 'tomschooloflife-plugin'), (int) $ordinal);
+        return sprintf(__('Imported Library Access %d', 'member-library'), (int) $ordinal);
     }
 
     private function sanitize_groups($raw_groups) {
@@ -1046,13 +1046,13 @@ class TSOL_Library_Access_Groups {
             $rule = new MeprRule((int) $rule_id);
             $type = (string) $rule->mepr_type;
             $content_id = (int) $rule->mepr_content;
-            if ('single_' . TSOL_Library_Content_Model::COURSE_POST_TYPE === $type
-                && TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($content_id)
+            if ('single_' . MemberLibrary_Content_Model::COURSE_POST_TYPE === $type
+                && MemberLibrary_Content_Model::COURSE_POST_TYPE === get_post_type($content_id)
             ) {
                 return $this->post_group_key('course', $content_id);
             }
-            if ('single_' . TSOL_Library_Content_Model::SERIES_POST_TYPE === $type
-                && TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type($content_id)
+            if ('single_' . MemberLibrary_Content_Model::SERIES_POST_TYPE === $type
+                && MemberLibrary_Content_Model::SERIES_POST_TYPE === get_post_type($content_id)
             ) {
                 return $this->post_group_key('series', $content_id);
             }
@@ -1061,7 +1061,7 @@ class TSOL_Library_Access_Groups {
     }
 
     private function post_group_key($kind, $post_id) {
-        $uuid = sanitize_key((string) get_post_meta((int) $post_id, TSOL_Library_Content_Model::META_UUID, true));
+        $uuid = sanitize_key((string) get_post_meta((int) $post_id, MemberLibrary_Content_Model::META_UUID, true));
         return sanitize_key((string) $kind) . ':' . ('' !== $uuid ? $uuid : (string) (int) $post_id);
     }
 
@@ -1076,13 +1076,13 @@ class TSOL_Library_Access_Groups {
     }
 
     private function masterclasses_term_id() {
-        $term = get_term_by('slug', 'masterclasses', TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
+        $term = get_term_by('slug', 'masterclasses', MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY);
         return $term instanceof WP_Term ? (int) $term->term_id : 0;
     }
 
     private function course_is_masterclass($course_id) {
         $term_id = $this->masterclasses_term_id();
-        return $term_id > 0 && has_term($term_id, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, (int) $course_id);
+        return $term_id > 0 && has_term($term_id, MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY, (int) $course_id);
     }
 
     private function rule_conditions($rule_id) {
@@ -1199,7 +1199,7 @@ class TSOL_Library_Access_Groups {
         $replaced_rule_ids = array_fill_keys(array_map('intval', (array) ($configuration['source_rule_ids'] ?? array())), true);
         $pairs = array();
         foreach ($this->library_targets() as $target_id) {
-            $authorization_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+            $authorization_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_id = $authorization_id > 0 ? $authorization_id : $target_id;
             $is_transition_source = isset($configuration['transition_authorization_ids'][$target_id])
                 && (int) $configuration['transition_authorization_ids'][$target_id] === $authorization_id;
@@ -1231,19 +1231,19 @@ class TSOL_Library_Access_Groups {
 
     private function target_policy_keys($target_id) {
         $post_type = get_post_type((int) $target_id);
-        if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
-            $course_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
-            $series_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        if (MemberLibrary_Content_Model::ITEM_POST_TYPE === $post_type) {
+            $course_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_COURSE_ID, true);
+            $series_id = (int) get_post_meta($target_id, MemberLibrary_Content_Model::META_SERIES_ID, true);
             return $course_id > 0 ? $this->target_policy_keys($course_id) : $this->target_policy_keys($series_id);
         }
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
+        if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $post_type) {
             $keys = array($this->post_group_key('course', $target_id));
             if ($this->course_is_masterclass($target_id)) {
                 array_unshift($keys, 'collection:masterclasses');
             }
             return $keys;
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
+        if (MemberLibrary_Content_Model::SERIES_POST_TYPE === $post_type) {
             return array('series:all', $this->post_group_key('series', $target_id));
         }
         return array();
@@ -1251,7 +1251,7 @@ class TSOL_Library_Access_Groups {
 
     private function library_targets() {
         return array_map('intval', get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::post_types(),
+            'post_type' => MemberLibrary_Content_Model::post_types(),
             'post_status' => array_values(get_post_stati()),
             'posts_per_page' => -1,
             'fields' => 'ids',

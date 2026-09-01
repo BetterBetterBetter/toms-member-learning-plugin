@@ -30,7 +30,7 @@ $candidate_map = static function ($definition) use ($assert, $user_count) {
     $candidates = array();
     $scanned = 0;
     do {
-        $page = TSOL_Library_Announcement_Audience_Resolver::page($definition, $after_user_id, 200);
+        $page = MemberLibrary_Announcement_Audience_Resolver::page($definition, $after_user_id, 200);
         $assert(!is_wp_error($page), 'A resolver page failed during the full matrix.');
         if (is_wp_error($page)) {
             return array();
@@ -77,7 +77,7 @@ $assert($user_count === count($relationship_candidates), 'The relationship condi
 $decisions += $user_count;
 
 $content_posts = get_posts(array(
-    'post_type' => array(TSOL_Library_Content_Model::COURSE_POST_TYPE, TSOL_Library_Content_Model::SERIES_POST_TYPE),
+    'post_type' => array(MemberLibrary_Content_Model::COURSE_POST_TYPE, MemberLibrary_Content_Model::SERIES_POST_TYPE),
     'post_status' => 'publish',
     'posts_per_page' => -1,
     'orderby' => 'ID',
@@ -86,7 +86,7 @@ $content_posts = get_posts(array(
     'suppress_filters' => true,
 ));
 foreach ($content_posts as $content_post) {
-    $uuid = strtolower((string) get_post_meta($content_post->ID, TSOL_Library_Content_Model::META_UUID, true));
+    $uuid = strtolower((string) get_post_meta($content_post->ID, MemberLibrary_Content_Model::META_UUID, true));
     $assert((bool) preg_match('/^[0-9a-f-]{36}$/', $uuid), 'A published Course or Series is missing its audience UUID.');
     if (!preg_match('/^[0-9a-f-]{36}$/', $uuid)) {
         continue;
@@ -98,7 +98,7 @@ foreach ($content_posts as $content_post) {
     );
     $candidates = $candidate_map($definition);
     foreach ($user_ids as $user_id) {
-        $canonical = TSOL_Library_Auth_Entitlements::for_content($user_id, (int) $content_post->ID);
+        $canonical = MemberLibrary_Auth_Entitlements::for_content($user_id, (int) $content_post->ID);
         $assert(!is_wp_error($canonical), 'Canonical content access was unavailable during the audience matrix.');
         if (is_wp_error($canonical)) {
             continue;
@@ -125,7 +125,7 @@ $membership_ids = array_map('intval', get_posts(array(
     'no_found_rows' => true,
     'suppress_filters' => true,
 )));
-foreach (array_chunk($membership_ids, TSOL_Library_Announcement_Audience_Contract::MAX_MEMBERSHIPS) as $segment) {
+foreach (array_chunk($membership_ids, MemberLibrary_Announcement_Audience_Contract::MAX_MEMBERSHIPS) as $segment) {
     if (empty($segment)) {
         continue;
     }
@@ -164,12 +164,12 @@ if (!empty($unpublished_membership_ids)) {
         'exclude' => array(),
     );
     $assert(
-        is_wp_error(TSOL_Library_Announcement_Audience_Resolver::page($unpublished_definition, 0, 3)),
+        is_wp_error(MemberLibrary_Announcement_Audience_Resolver::page($unpublished_definition, 0, 3)),
         'An unpublished MemberPress membership remained eligible for announcement targeting.'
     );
 }
 
-$specific_ids = array_slice($user_ids, 0, min(TSOL_Library_Announcement_Audience_Contract::MAX_SPECIFIC_USERS, $user_count));
+$specific_ids = array_slice($user_ids, 0, min(MemberLibrary_Announcement_Audience_Contract::MAX_SPECIFIC_USERS, $user_count));
 $excluded_ids = array_slice($specific_ids, 0, min(10, count($specific_ids)));
 if (!empty($specific_ids)) {
     $definition = array(

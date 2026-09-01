@@ -17,21 +17,21 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$assert(has_action('created_term', array('TSOL_Library_Content_Changes', 'record_edited_term')) !== false, 'Created terms are not connected to the catalogue journal.');
-$assert(has_action('edited_term', array('TSOL_Library_Content_Changes', 'record_edited_term')) !== false, 'Renamed terms are not connected to the catalogue journal.');
-$assert(has_action('delete_term', array('TSOL_Library_Content_Changes', 'record_deleted_term')) !== false, 'Deleted terms are not connected to the catalogue journal.');
+$assert(has_action('created_term', array('MemberLibrary_Content_Changes', 'record_edited_term')) !== false, 'Created terms are not connected to the catalogue journal.');
+$assert(has_action('edited_term', array('MemberLibrary_Content_Changes', 'record_edited_term')) !== false, 'Renamed terms are not connected to the catalogue journal.');
+$assert(has_action('delete_term', array('MemberLibrary_Content_Changes', 'record_deleted_term')) !== false, 'Deleted terms are not connected to the catalogue journal.');
 
 global $wpdb;
-$changes_table = TSOL_Library_Content_Changes::table();
+$changes_table = MemberLibrary_Content_Changes::table();
 $fixtures = array(
     array(
-        'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
-        'taxonomy' => TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
+        'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
+        'taxonomy' => MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
         'title' => 'TSOL catalogue Collection event contract',
     ),
     array(
-        'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
-        'taxonomy' => TSOL_Library_Content_Model::TOPIC_TAXONOMY,
+        'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
+        'taxonomy' => MemberLibrary_Content_Model::TOPIC_TAXONOMY,
         'title' => 'TSOL catalogue Topic event contract',
     ),
 );
@@ -52,8 +52,8 @@ try {
         }
         $post_id = (int) $post_id;
         $created_post_ids[] = $post_id;
-        update_post_meta($post_id, TSOL_Library_Content_Model::META_UUID, wp_generate_uuid4());
-        update_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $post_id);
+        update_post_meta($post_id, MemberLibrary_Content_Model::META_UUID, wp_generate_uuid4());
+        update_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $post_id);
 
         $term = wp_insert_term(
             'TSOL catalogue event term ' . $index . ' ' . wp_generate_password(8, false, false),
@@ -66,9 +66,9 @@ try {
         $term_id = (int) $term['term_id'];
         $created_term_ids[] = array($term_id, $fixture['taxonomy']);
 
-        $before_assignment = TSOL_Library_Content_Changes::current_cursor();
+        $before_assignment = MemberLibrary_Content_Changes::current_cursor();
         wp_set_object_terms($post_id, array($term_id), $fixture['taxonomy'], false);
-        $after_assignment = TSOL_Library_Content_Changes::current_cursor();
+        $after_assignment = MemberLibrary_Content_Changes::current_cursor();
         $assert($after_assignment > $before_assignment, 'Assigning a projected taxonomy did not advance the catalogue cursor.');
 
         $before_rename = $after_assignment;
@@ -76,7 +76,7 @@ try {
             'name' => 'TSOL renamed catalogue event term ' . $index . ' ' . wp_generate_password(8, false, false),
         ));
         $assert(!is_wp_error($renamed), 'Could not rename the disposable projected taxonomy term.');
-        $after_rename = TSOL_Library_Content_Changes::current_cursor();
+        $after_rename = MemberLibrary_Content_Changes::current_cursor();
         $assert($after_rename > $before_rename, 'Renaming an assigned projected taxonomy did not advance the catalogue cursor.');
 
         $latest_rename = $wpdb->get_row(
@@ -92,7 +92,7 @@ try {
         $before_delete = $after_rename;
         $deleted = wp_delete_term($term_id, $fixture['taxonomy']);
         $assert(!is_wp_error($deleted) && false !== $deleted, 'Could not delete the disposable projected taxonomy term.');
-        $after_delete = TSOL_Library_Content_Changes::current_cursor();
+        $after_delete = MemberLibrary_Content_Changes::current_cursor();
         $assert($after_delete > $before_delete, 'Deleting an assigned projected taxonomy did not advance the catalogue cursor.');
         array_pop($created_term_ids);
 

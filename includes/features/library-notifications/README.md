@@ -51,7 +51,7 @@ The PHP and TypeScript implementations normalize and hash the same JSON object:
 WordPress evaluates only facts it owns:
 
 - `CAN_ACCESS_CONTENT` calls
-  `TSOL_Library_Auth_Entitlements::for_content()` for the selected native Course
+  `MemberLibrary_Auth_Entitlements::for_content()` for the selected native Course
   or Series, preserving administrator bypass and live MemberPress behavior.
 - `ACTIVE_MEMBERSHIP` calls `MeprUser::active_product_subscriptions()`.
 - `SPECIFIC_USERS` compares bounded numeric WordPress IDs.

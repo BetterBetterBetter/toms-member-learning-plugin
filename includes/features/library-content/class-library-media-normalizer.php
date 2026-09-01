@@ -7,17 +7,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Media_Normalizer {
+class MemberLibrary_Media_Normalizer {
 
     public static function from_url($url) {
         $url = self::clean_url($url);
         if ('' === $url) {
-            return new WP_Error('empty_media_url', __('Enter a media URL.', 'tomschooloflife-plugin'));
+            return new WP_Error('empty_media_url', __('Enter a media URL.', 'member-library'));
         }
 
         $parts = wp_parse_url($url);
         if (!is_array($parts) || empty($parts['host'])) {
-            return new WP_Error('invalid_media_url', __('Enter a valid absolute media URL.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_media_url', __('Enter a valid absolute media URL.', 'member-library'));
         }
 
         $host = strtolower(preg_replace('/^www\./', '', (string) $parts['host']));
@@ -36,7 +36,7 @@ class TSOL_Library_Media_Normalizer {
         if ($attachment_id > 0) {
             $mime_type = (string) get_post_mime_type($attachment_id);
             if (0 !== strpos($mime_type, 'video/') && 0 !== strpos($mime_type, 'audio/')) {
-                return new WP_Error('unsupported_media_attachment', __('Choose a WordPress audio or video attachment. Documents belong in Library resources.', 'tomschooloflife-plugin'));
+                return new WP_Error('unsupported_media_attachment', __('Choose a WordPress audio or video attachment. Documents belong in Library resources.', 'member-library'));
             }
             return array(
                 'kind' => 0 === strpos($mime_type, 'audio/') ? 'audio' : 'video',
@@ -49,7 +49,7 @@ class TSOL_Library_Media_Normalizer {
         }
 
         if (!self::is_direct_media_url($url)) {
-            return new WP_Error('unsupported_media_url', __('Use a Vimeo, YouTube, or direct audio/video URL.', 'tomschooloflife-plugin'));
+            return new WP_Error('unsupported_media_url', __('Use a Vimeo, YouTube, or direct audio/video URL.', 'member-library'));
         }
 
         return array(
@@ -66,7 +66,7 @@ class TSOL_Library_Media_Normalizer {
 
     public static function normalize_asset($asset, $position = 1) {
         if (!is_array($asset)) {
-            return new WP_Error('invalid_media_asset', __('Media assets must be arrays.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_media_asset', __('Media assets must be arrays.', 'member-library'));
         }
 
         $normalized = array();
@@ -78,7 +78,7 @@ class TSOL_Library_Media_Normalizer {
         } else {
             $provider = isset($asset['provider']) ? sanitize_key($asset['provider']) : '';
             if (!in_array($provider, array('vimeo', 'youtube', 'wordpress', 'external'), true)) {
-                return new WP_Error('invalid_media_provider', __('Choose a supported media provider.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_media_provider', __('Choose a supported media provider.', 'member-library'));
             }
 
             $normalized = array(
@@ -167,7 +167,7 @@ class TSOL_Library_Media_Normalizer {
         }
 
         if ('' === $video_id) {
-            return new WP_Error('invalid_vimeo_url', __('The Vimeo URL does not contain a video ID.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_vimeo_url', __('The Vimeo URL does not contain a video ID.', 'member-library'));
         }
 
         return array(
@@ -200,7 +200,7 @@ class TSOL_Library_Media_Normalizer {
 
         $video_id = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $video_id);
         if ('' === $video_id) {
-            return new WP_Error('invalid_youtube_url', __('The YouTube URL does not contain a video ID.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_youtube_url', __('The YouTube URL does not contain a video ID.', 'member-library'));
         }
 
         return array(

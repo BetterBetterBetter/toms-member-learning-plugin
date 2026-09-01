@@ -36,33 +36,33 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     delete_option('tsol_library_brand_name');
 
     $assert(
-        false !== strpos(TSOL_Library_Brand::logo_url(), 'tomschooloflife.com'),
+        false !== strpos(MemberLibrary_Brand::logo_url(), 'tomschooloflife.com'),
         'Default logo_url should preserve the TSOL logo when unconfigured.'
     );
     $assert(
-        'tsol-library' === TSOL_Library_Brand::client_id_default(),
+        'tsol-library' === MemberLibrary_Brand::client_id_default(),
         'Default client id should be tsol-library when unconfigured.'
     );
     $assert(
-        'https://tomschooloflife.com' === TSOL_Library_Brand::image_csp_src(),
+        'https://tomschooloflife.com' === MemberLibrary_Brand::image_csp_src(),
         'CSP img-src should derive from the default logo host.'
     );
 
     // Option override wins over default.
     update_option('tsol_library_brand_logo_url', 'https://cdn.example.test/liberty-logo.svg');
     $assert(
-        'https://cdn.example.test' === TSOL_Library_Brand::image_csp_src(),
+        'https://cdn.example.test' === MemberLibrary_Brand::image_csp_src(),
         'CSP img-src must follow the configured logo host (the Liberty regression).'
     );
     $assert(
-        'https://cdn.example.test/liberty-logo.svg' === TSOL_Library_Brand::logo_url(),
+        'https://cdn.example.test/liberty-logo.svg' === MemberLibrary_Brand::logo_url(),
         'Option override should win over the default logo.'
     );
 
     // Explicit CSP override wins over the derived host.
     update_option('tsol_library_brand_image_csp_src', "https://a.test https://b.test");
     $assert(
-        'https://a.test https://b.test' === TSOL_Library_Brand::image_csp_src(),
+        'https://a.test https://b.test' === MemberLibrary_Brand::image_csp_src(),
         'Explicit image_csp_src option should override the derived host.'
     );
 } else {
@@ -70,17 +70,17 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     // and (the Liberty regression) the CSP host must NOT be the TSOL default.
     if (defined('TSOL_LIBRARY_BRAND_LOGO_URL')) {
         $assert(
-            TSOL_LIBRARY_BRAND_LOGO_URL === TSOL_Library_Brand::logo_url(),
+            TSOL_LIBRARY_BRAND_LOGO_URL === MemberLibrary_Brand::logo_url(),
             'Constant TSOL_LIBRARY_BRAND_LOGO_URL must win.'
         );
         $assert(
-            'https://tomschooloflife.com' !== TSOL_Library_Brand::image_csp_src(),
+            'https://tomschooloflife.com' !== MemberLibrary_Brand::image_csp_src(),
             'A brand with its own logo must NOT emit the TSOL CSP host (Liberty regression).'
         );
     }
     if (defined('TSOL_LIBRARY_BRAND_CLIENT_ID')) {
         $assert(
-            TSOL_LIBRARY_BRAND_CLIENT_ID === TSOL_Library_Brand::client_id_default(),
+            TSOL_LIBRARY_BRAND_CLIENT_ID === MemberLibrary_Brand::client_id_default(),
             'Constant TSOL_LIBRARY_BRAND_CLIENT_ID must win.'
         );
     }
@@ -90,7 +90,7 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
 add_filter('tsol_library_brand_name', function () {
     return 'Filtered Brand';
 });
-$assert('Filtered Brand' === TSOL_Library_Brand::name(), 'Brand value filter should apply.');
+$assert('Filtered Brand' === MemberLibrary_Brand::name(), 'Brand value filter should apply.');
 
 // Cleanup.
 delete_option('tsol_library_brand_logo_url');

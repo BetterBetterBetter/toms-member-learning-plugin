@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_URL_Admin {
+class MemberLibrary_URL_Admin {
 
     const NONCE_ACTION = 'tsol_library_url_editor';
     const NONCE_NAME = 'tsol_library_url_nonce';
@@ -21,10 +21,10 @@ class TSOL_Library_URL_Admin {
 
     public static function supported_post_types() {
         return array(
-            TSOL_Library_Content_Model::COURSE_POST_TYPE,
-            TSOL_Library_Content_Model::SERIES_POST_TYPE,
-            TSOL_Library_Content_Model::ITEM_POST_TYPE,
-            TSOL_Library_Content_Model::SPEAKER_POST_TYPE,
+            MemberLibrary_Content_Model::COURSE_POST_TYPE,
+            MemberLibrary_Content_Model::SERIES_POST_TYPE,
+            MemberLibrary_Content_Model::ITEM_POST_TYPE,
+            MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         );
     }
 
@@ -44,15 +44,15 @@ class TSOL_Library_URL_Admin {
 
         wp_enqueue_style(
             'tsol-library-url-admin',
-            TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-url-admin.css',
+            MEMBER_LIBRARY_PLUGIN_URL . 'assets/features/library-content/library-url-admin.css',
             array(),
-            TSOL_SITE_PLUGIN_VERSION
+            MEMBER_LIBRARY_PLUGIN_VERSION
         );
         wp_enqueue_script(
             'tsol-library-url-admin',
-            TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-url-admin.js',
+            MEMBER_LIBRARY_PLUGIN_URL . 'assets/features/library-content/library-url-admin.js',
             array(),
-            TSOL_SITE_PLUGIN_VERSION,
+            MEMBER_LIBRARY_PLUGIN_VERSION,
             true
         );
     }
@@ -77,15 +77,15 @@ class TSOL_Library_URL_Admin {
             data-library-post-type="<?php echo esc_attr((string) $post->post_type); ?>"
             data-library-auto-slug="<?php echo '' === $stored_slug ? '1' : '0'; ?>"
         >
-            <strong><?php esc_html_e('Library path:', 'tomschooloflife-plugin'); ?></strong>
+            <strong><?php esc_html_e('Library path:', 'member-library'); ?></strong>
             <span class="tsol-library-url-editor__path" data-library-path>
                 <span data-library-url-prefix><?php echo esc_html(self::url_prefix($path, $display_slug)); ?></span><span data-library-slug-text><?php echo esc_html($display_slug); ?></span>
             </span>
             <span data-library-slug-view-controls>
-                <button type="button" class="edit-slug button button-small" data-library-slug-edit><?php esc_html_e('Edit', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="edit-slug button button-small" data-library-slug-edit><?php esc_html_e('Edit', 'member-library'); ?></button>
             </span>
             <span class="tsol-library-url-editor__edit-controls" data-library-slug-edit-controls hidden>
-                <label class="screen-reader-text" for="tsol-library-slug"><?php esc_html_e('Library slug', 'tomschooloflife-plugin'); ?></label>
+                <label class="screen-reader-text" for="tsol-library-slug"><?php esc_html_e('Library slug', 'member-library'); ?></label>
                 <input
                     type="text"
                     id="tsol-library-slug"
@@ -97,15 +97,15 @@ class TSOL_Library_URL_Admin {
                     aria-describedby="tsol-library-url-description"
                     data-library-slug
                 />
-                <button type="button" class="button button-small" data-library-slug-confirm><?php esc_html_e('OK', 'tomschooloflife-plugin'); ?></button>
-                <button type="button" class="button-link" data-library-slug-cancel><?php esc_html_e('Cancel', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-small" data-library-slug-confirm><?php esc_html_e('OK', 'member-library'); ?></button>
+                <button type="button" class="button-link" data-library-slug-cancel><?php esc_html_e('Cancel', 'member-library'); ?></button>
             </span>
             <span id="tsol-library-url-description" class="screen-reader-text">
-                <?php esc_html_e('Only the final path segment is editable. WordPress normalizes it when you save.', 'tomschooloflife-plugin'); ?>
+                <?php esc_html_e('Only the final path segment is editable. WordPress normalizes it when you save.', 'member-library'); ?>
             </span>
             <?php if ($is_published) : ?>
                 <span class="tsol-library-url-editor__warning" data-library-slug-warning hidden>
-                    <?php esc_html_e('Changing a published slug changes its sharing URL. Existing links will not redirect automatically.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('Changing a published slug changes its sharing URL. Existing links will not redirect automatically.', 'member-library'); ?>
                 </span>
             <?php endif; ?>
         </div>
@@ -163,16 +163,16 @@ class TSOL_Library_URL_Admin {
         if (!$post instanceof WP_Post) {
             return '';
         }
-        if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type) {
+        if (MemberLibrary_Content_Model::COURSE_POST_TYPE === $post->post_type) {
             return '/courses';
         }
-        if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type) {
+        if (MemberLibrary_Content_Model::SERIES_POST_TYPE === $post->post_type) {
             return '/series';
         }
-        if (TSOL_Library_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === $post->post_type) {
             return '/speakers';
         }
-        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== $post->post_type) {
+        if (MemberLibrary_Content_Model::ITEM_POST_TYPE !== $post->post_type) {
             return '';
         }
 
@@ -190,12 +190,12 @@ class TSOL_Library_URL_Admin {
     private static function item_parent($post, $kind) {
         $is_course = 'course' === $kind;
         $meta_key = $is_course
-            ? TSOL_Library_Content_Model::META_COURSE_ID
-            : TSOL_Library_Content_Model::META_SERIES_ID;
+            ? MemberLibrary_Content_Model::META_COURSE_ID
+            : MemberLibrary_Content_Model::META_SERIES_ID;
         $query_key = $is_course ? 'tsol_course_id' : 'tsol_series_id';
         $expected_type = $is_course
-            ? TSOL_Library_Content_Model::COURSE_POST_TYPE
-            : TSOL_Library_Content_Model::SERIES_POST_TYPE;
+            ? MemberLibrary_Content_Model::COURSE_POST_TYPE
+            : MemberLibrary_Content_Model::SERIES_POST_TYPE;
         $parent_id = (int) get_post_meta((int) $post->ID, $meta_key, true);
 
         if ($parent_id <= 0 && isset($_GET[$query_key])) {

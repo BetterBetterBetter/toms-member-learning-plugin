@@ -16,11 +16,11 @@ if (!defined('ABSPATH')) {
  * the constants in wp-config.php or the options via the admin.
  *
  * NOTE: machine identifiers (REST namespace tsol-library/v1, tsol_* options/
- * hooks/meta, CPTs, the text domain 'tomschooloflife-plugin') are a frozen
+ * hooks/meta, CPTs, the text domain 'member-library') are a frozen
  * cross-brand compatibility contract and are deliberately NOT brand config.
  * See docs/plans/plugin-consolidation-plan.md invariants.
  */
-class TSOL_Library_Brand {
+class MemberLibrary_Brand {
 
     /**
      * Full display name, e.g. for the auth interstitial logo alt text.

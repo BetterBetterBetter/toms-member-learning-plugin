@@ -16,19 +16,19 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$assert(class_exists('TSOL_Library_Auth'), 'Library auth class is not loaded.');
-$assert(class_exists('TSOL_Library_Auth_Repository'), 'Authorization-code repository is not loaded.');
-$assert(class_exists('TSOL_Library_Auth_Entitlements'), 'MemberPress content authority is not loaded.');
+$assert(class_exists('MemberLibrary_Auth'), 'Library auth class is not loaded.');
+$assert(class_exists('MemberLibrary_Auth_Repository'), 'Authorization-code repository is not loaded.');
+$assert(class_exists('MemberLibrary_Auth_Entitlements'), 'MemberPress content authority is not loaded.');
 $assert(has_action('admin_post_tsol_library_authorize') !== false, 'Authorization action is not registered.');
 $assert(has_action('admin_post_tsol_library_logout') !== false, 'Signed logout action is not registered.');
 $assert(wp_next_scheduled('tsol_library_auth_cleanup') !== false, 'Authorization-code cleanup is not scheduled.');
 
 if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
-    $previous_client_secret = get_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, null);
+    $previous_client_secret = get_option(MemberLibrary_Auth_Settings::CLIENT_SECRET_OPTION, null);
     $database_client_secret = 'library-auth-contract-database-secret-value';
-    update_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, $database_client_secret, false);
+    update_option(MemberLibrary_Auth_Settings::CLIENT_SECRET_OPTION, $database_client_secret, false);
     $assert(
-        TSOL_Library_Auth_Settings::client_secret() === $database_client_secret,
+        MemberLibrary_Auth_Settings::client_secret() === $database_client_secret,
         'The write-only WordPress client-secret fallback is unavailable.'
     );
     $administrator_ids = get_users(array(
@@ -41,7 +41,7 @@ if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
         $previous_user_id = get_current_user_id();
         wp_set_current_user((int) $administrator_ids[0]);
         ob_start();
-        (new TSOL_Library_Auth_Settings())->render();
+        (new MemberLibrary_Auth_Settings())->render();
         $settings_html = (string) ob_get_clean();
         $assert(strpos($settings_html, $database_client_secret) === false, 'The saved client secret was rendered into the settings page.');
         $secret_input = array();
@@ -56,18 +56,18 @@ if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
         wp_set_current_user($previous_user_id);
     }
     if (null === $previous_client_secret) {
-        delete_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION);
+        delete_option(MemberLibrary_Auth_Settings::CLIENT_SECRET_OPTION);
     } else {
-        update_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, $previous_client_secret, false);
+        update_option(MemberLibrary_Auth_Settings::CLIENT_SECRET_OPTION, $previous_client_secret, false);
     }
 }
 
 if (!defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
-    $previous_catalogue_secret = get_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, null);
+    $previous_catalogue_secret = get_option(MemberLibrary_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, null);
     $database_catalogue_secret = 'library-catalogue-contract-database-secret-value';
-    update_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $database_catalogue_secret, false);
+    update_option(MemberLibrary_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $database_catalogue_secret, false);
     $assert(
-        TSOL_Library_Auth_Settings::catalogue_webhook_secret() === $database_catalogue_secret,
+        MemberLibrary_Auth_Settings::catalogue_webhook_secret() === $database_catalogue_secret,
         'The write-only WordPress catalogue-secret fallback is unavailable.'
     );
     $administrator_ids = get_users(array('role' => 'administrator', 'fields' => 'ID', 'number' => 1));
@@ -75,16 +75,16 @@ if (!defined('TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET')) {
         $previous_user_id = get_current_user_id();
         wp_set_current_user((int) $administrator_ids[0]);
         ob_start();
-        (new TSOL_Library_Auth_Settings())->render();
+        (new MemberLibrary_Auth_Settings())->render();
         $settings_html = (string) ob_get_clean();
         $assert(strpos($settings_html, $database_catalogue_secret) === false, 'The saved catalogue synchronization secret was rendered into the settings page.');
         $assert(strpos($settings_html, 'id="tsol-library-catalogue-webhook-secret"') !== false, 'The catalogue synchronization secret input is missing.');
         wp_set_current_user($previous_user_id);
     }
     if (null === $previous_catalogue_secret) {
-        delete_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION);
+        delete_option(MemberLibrary_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION);
     } else {
-        update_option(TSOL_Library_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $previous_catalogue_secret, false);
+        update_option(MemberLibrary_Auth_Settings::CATALOGUE_WEBHOOK_SECRET_OPTION, $previous_catalogue_secret, false);
     }
 }
 
@@ -113,23 +113,23 @@ $registered_menus = get_registered_nav_menus();
 $assert(isset($registered_menus['tsol_library_footer']), 'The TSOL Library Footer menu location is not registered.');
 
 global $wpdb;
-$table = TSOL_Library_Auth_Repository::table();
+$table = MemberLibrary_Auth_Repository::table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table, 'Authorization-code table is missing.');
-$messages_table = TSOL_Library_Auth_Repository::messages_table();
+$messages_table = MemberLibrary_Auth_Repository::messages_table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $messages_table)) === $messages_table, 'Authentication-message replay table is missing.');
-$rate_limits_table = TSOL_Library_Auth_Repository::rate_limits_table();
+$rate_limits_table = MemberLibrary_Auth_Repository::rate_limits_table();
 $assert($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $rate_limits_table)) === $rate_limits_table, 'Atomic authentication rate-limit table is missing.');
 
 $rate_key = hash('sha256', 'library-auth-contract-' . wp_generate_uuid4());
 $rate_now = time();
-$first_rate = TSOL_Library_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
-$second_rate = TSOL_Library_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
+$first_rate = MemberLibrary_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
+$second_rate = MemberLibrary_Auth_Repository::increment_rate_limit($rate_key, $rate_now, MINUTE_IN_SECONDS);
 $assert(is_array($first_rate) && (int) ($first_rate['count'] ?? 0) === 1, 'The atomic rate limiter did not create its first request count.');
 $assert(is_array($second_rate) && (int) ($second_rate['count'] ?? 0) === 2, 'The atomic rate limiter did not increment its request count.');
 $wpdb->delete($rate_limits_table, array('rate_key' => $rate_key), array('%s'));
 
-$auth = new TSOL_Library_Auth();
-$authorize_request_method = new ReflectionMethod(TSOL_Library_Auth::class, 'has_exact_authorize_request');
+$auth = new MemberLibrary_Auth();
+$authorize_request_method = new ReflectionMethod(MemberLibrary_Auth::class, 'has_exact_authorize_request');
 $authorize_request_method->setAccessible(true);
 $previous_get = $_GET;
 $previous_query_string = $_SERVER['QUERY_STRING'] ?? null;
@@ -166,10 +166,10 @@ if (null === $previous_request_uri) {
     $_SERVER['REQUEST_URI'] = $previous_request_uri;
 }
 
-if (TSOL_Library_Auth_Settings::configured()) {
+if (MemberLibrary_Auth_Settings::configured()) {
     $navigation_request = new WP_REST_Request('GET', '/tsol-library/v1/footer-navigation');
-    $navigation_request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $navigation_request->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $navigation_request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $navigation_request->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $navigation_response = rest_do_request($navigation_request);
     $navigation_data = $navigation_response->get_data();
     $assert($navigation_response->get_status() === 200, 'The footer navigation endpoint did not accept valid Library credentials.');
@@ -181,8 +181,8 @@ if (TSOL_Library_Auth_Settings::configured()) {
     }
 
     $header_navigation_request = new WP_REST_Request('GET', '/tsol-library/v1/header-navigation');
-    $header_navigation_request->set_header('x-tsol-client-id', TSOL_Library_Auth_Settings::client_id());
-    $header_navigation_request->set_header('x-tsol-client-secret', TSOL_Library_Auth_Settings::client_secret());
+    $header_navigation_request->set_header('x-tsol-client-id', MemberLibrary_Auth_Settings::client_id());
+    $header_navigation_request->set_header('x-tsol-client-secret', MemberLibrary_Auth_Settings::client_secret());
     $header_navigation_response = rest_do_request($header_navigation_request);
     $header_navigation_data = $header_navigation_response->get_data();
     $assert($header_navigation_response->get_status() === 200, 'The header navigation endpoint did not accept valid Library credentials.');
@@ -200,21 +200,21 @@ if (TSOL_Library_Auth_Settings::configured()) {
 
     $verifier = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
     $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
-    $code = TSOL_Library_Auth_Repository::create(
+    $code = MemberLibrary_Auth_Repository::create(
         $user_id,
-        TSOL_Library_Auth_Settings::client_id(),
-        TSOL_Library_Auth_Settings::callback_url(),
+        MemberLibrary_Auth_Settings::client_id(),
+        MemberLibrary_Auth_Settings::callback_url(),
         $challenge
     );
     $assert(!is_wp_error($code), 'Could not create a test authorization code.');
     if (!is_wp_error($code)) {
-        $first = TSOL_Library_Auth_Repository::consume($code, TSOL_Library_Auth_Settings::client_id(), TSOL_Library_Auth_Settings::callback_url(), $verifier);
-        $replay = TSOL_Library_Auth_Repository::consume($code, TSOL_Library_Auth_Settings::client_id(), TSOL_Library_Auth_Settings::callback_url(), $verifier);
+        $first = MemberLibrary_Auth_Repository::consume($code, MemberLibrary_Auth_Settings::client_id(), MemberLibrary_Auth_Settings::callback_url(), $verifier);
+        $replay = MemberLibrary_Auth_Repository::consume($code, MemberLibrary_Auth_Settings::client_id(), MemberLibrary_Auth_Settings::callback_url(), $verifier);
         $assert($first === $user_id, 'A valid authorization code could not be consumed.');
         $assert(is_wp_error($replay) && $replay->get_error_code() === 'invalid_grant', 'An authorization code replay was not rejected.');
     }
 
-    $logout_message_method = new ReflectionMethod(TSOL_Library_Auth::class, 'logout_message');
+    $logout_message_method = new ReflectionMethod(MemberLibrary_Auth::class, 'logout_message');
     $logout_message_method->setAccessible(true);
     $logout_jti = wp_generate_uuid4();
     $logout_timestamp = time();
@@ -229,7 +229,7 @@ if (TSOL_Library_Auth_Settings::configured()) {
     $expected_subject = hash_hmac(
         'sha256',
         "logout-subject\n{$logout_jti}\n{$user_id}",
-        TSOL_Library_Auth_Settings::client_secret()
+        MemberLibrary_Auth_Settings::client_secret()
     );
     $expected_signature = 'sha256=' . hash_hmac('sha256', implode("\n", array(
         '1',
@@ -239,7 +239,7 @@ if (TSOL_Library_Auth_Settings::configured()) {
         (string) $logout_timestamp,
         home_url('/'),
         $expected_subject,
-    )), TSOL_Library_Auth_Settings::client_secret());
+    )), MemberLibrary_Auth_Settings::client_secret());
     $assert($expected_subject === ($logout_message['subject'] ?? ''), 'The logout subject does not match the cross-application contract.');
     $assert($expected_signature === ($logout_message['signature'] ?? ''), 'The logout signature does not match the cross-application contract.');
 
@@ -247,7 +247,7 @@ if (TSOL_Library_Auth_Settings::configured()) {
     $previous_query_string = $_SERVER['QUERY_STRING'] ?? null;
     $_GET = array_merge(array('action' => 'tsol_library_logout'), $logout_message);
     $_SERVER['QUERY_STRING'] = http_build_query($_GET, '', '&', PHP_QUERY_RFC3986);
-    $valid_logout_method = new ReflectionMethod(TSOL_Library_Auth::class, 'valid_logout_message');
+    $valid_logout_method = new ReflectionMethod(MemberLibrary_Auth::class, 'valid_logout_message');
     $valid_logout_method->setAccessible(true);
     $assert(true === $valid_logout_method->invoke($auth, $logout_message, $user_id), 'A canonical signed Library logout message was rejected.');
     $_SERVER['QUERY_STRING'] .= '&jti=' . rawurlencode($logout_jti);
@@ -259,7 +259,7 @@ if (TSOL_Library_Auth_Settings::configured()) {
         $_SERVER['QUERY_STRING'] = $previous_query_string;
     }
 } else {
-    $failures[] = 'Bridge is not ready: ' . TSOL_Library_Auth_Settings::readiness_error();
+    $failures[] = 'Bridge is not ready: ' . MemberLibrary_Auth_Settings::readiness_error();
 }
 
 if (!empty($failures)) {

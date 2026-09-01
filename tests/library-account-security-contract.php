@@ -22,13 +22,13 @@ $capture = static function ($callback) {
     return (string) ob_get_clean();
 };
 
-$assert(class_exists('TSOL_Library_Account_Security'), 'The MemberPress Library security integration is not loaded.');
-$assert(5 === has_action('mepr_account_nav', array('TSOL_Library_Account_Security', 'render_navigation')), 'The Security tab is not registered before third-party MemberPress navigation mutations.');
-$assert(has_action('mepr_account_nav_content', array('TSOL_Library_Account_Security', 'render_content')) !== false, 'The Security tab content is not registered.');
-$assert(has_filter('mepr_custom_account_nav_title', array('TSOL_Library_Account_Security', 'account_title')) !== false, 'The Security tab browser title is not registered.');
-$assert(has_filter('mepr_view_get_string_/account/nav', array('TSOL_Library_Account_Security', 'ensure_navigation_link')) !== false, 'The legacy account-template compatibility filter is not registered.');
-$assert(has_filter('mepr_view_get_string_/readylaunch/account/nav', array('TSOL_Library_Account_Security', 'ensure_navigation_link')) !== false, 'The ReadyLaunch account-template compatibility filter is not registered.');
-$assert(has_action('admin_post_tsol_library_force_logout', array('TSOL_Library_Account_Security', 'handle_forced_logout')) !== false, 'The authenticated all-device sign-out action is not registered.');
+$assert(class_exists('MemberLibrary_Account_Security'), 'The MemberPress Library security integration is not loaded.');
+$assert(5 === has_action('mepr_account_nav', array('MemberLibrary_Account_Security', 'render_navigation')), 'The Security tab is not registered before third-party MemberPress navigation mutations.');
+$assert(has_action('mepr_account_nav_content', array('MemberLibrary_Account_Security', 'render_content')) !== false, 'The Security tab content is not registered.');
+$assert(has_filter('mepr_custom_account_nav_title', array('MemberLibrary_Account_Security', 'account_title')) !== false, 'The Security tab browser title is not registered.');
+$assert(has_filter('mepr_view_get_string_/account/nav', array('MemberLibrary_Account_Security', 'ensure_navigation_link')) !== false, 'The legacy account-template compatibility filter is not registered.');
+$assert(has_filter('mepr_view_get_string_/readylaunch/account/nav', array('MemberLibrary_Account_Security', 'ensure_navigation_link')) !== false, 'The ReadyLaunch account-template compatibility filter is not registered.');
+$assert(has_action('admin_post_tsol_library_force_logout', array('MemberLibrary_Account_Security', 'handle_forced_logout')) !== false, 'The authenticated all-device sign-out action is not registered.');
 $assert(has_action('admin_post_nopriv_tsol_library_force_logout') === false, 'Anonymous visitors can reach the all-device sign-out action.');
 
 $user_id = (int) get_users(array('number' => 1, 'fields' => 'ID'))[0];
@@ -40,7 +40,7 @@ wp_set_current_user($user_id);
 try {
     $_REQUEST['action'] = 'security';
     $navigation = $capture(static function () {
-        TSOL_Library_Account_Security::render_navigation();
+        MemberLibrary_Account_Security::render_navigation();
     });
     $assert(strpos($navigation, 'id="mepr-account-security"') !== false, 'The Security navigation item has no stable identifier.');
     $assert(strpos($navigation, 'action=security') !== false, 'The Security navigation item does not target the MemberPress Security action.');
@@ -48,23 +48,23 @@ try {
     $assert(strpos($navigation, '>Security<') !== false, 'The Security navigation item has an unexpected label.');
 
     $theme_override = '<div id="mepr-account-nav"><span class="mepr-nav-item"><a href="/account/?action=home">Home</a></span><span class="mepr-nav-item"><a href="/logout" id="mepr-account-logout">Logout</a></span></div>';
-    $repaired_override = TSOL_Library_Account_Security::ensure_navigation_link($theme_override, array('account_url' => '/account/'));
+    $repaired_override = MemberLibrary_Account_Security::ensure_navigation_link($theme_override, array('account_url' => '/account/'));
     $assert(1 === substr_count($repaired_override, 'id="mepr-account-security"'), 'The compatibility filter did not restore exactly one Security item to the child-theme override.');
     $assert(strpos($repaired_override, 'id="mepr-account-security"') < strpos($repaired_override, 'id="mepr-account-logout"'), 'The compatibility Security item was not inserted before Logout.');
-    $assert($repaired_override === TSOL_Library_Account_Security::ensure_navigation_link($repaired_override, array('account_url' => '/account/')), 'The compatibility filter duplicated an existing Security item.');
+    $assert($repaired_override === MemberLibrary_Account_Security::ensure_navigation_link($repaired_override, array('account_url' => '/account/')), 'The compatibility filter duplicated an existing Security item.');
 
     $standard_template = '<nav><ul><li><a id="mepr-account-logout" href="/logout">Logout</a></li></ul></nav>';
-    $repaired_standard = TSOL_Library_Account_Security::ensure_navigation_link($standard_template, array('account_url' => '/account/'));
+    $repaired_standard = MemberLibrary_Account_Security::ensure_navigation_link($standard_template, array('account_url' => '/account/'));
     $assert(strpos($repaired_standard, '<li class="mepr-nav-item') !== false, 'The compatibility filter did not preserve list semantics for the standard MemberPress template.');
 
     $_GET = array();
     $unrelated_content = $capture(static function () {
-        TSOL_Library_Account_Security::render_content('subscriptions');
+        MemberLibrary_Account_Security::render_content('subscriptions');
     });
     $assert('' === $unrelated_content, 'The Library security panel rendered for an unrelated MemberPress tab.');
 
     $security_content = $capture(static function () {
-        TSOL_Library_Account_Security::render_content('security');
+        MemberLibrary_Account_Security::render_content('security');
     });
     $assert(strpos($security_content, 'method="post"') !== false, 'The all-device sign-out form is not a POST form.');
     $assert(strpos($security_content, 'admin-post.php') !== false, 'The all-device sign-out form does not use the authenticated WordPress handler.');
@@ -74,29 +74,29 @@ try {
     $assert(strpos($security_content, 'Sign out of the Library on all devices') !== false, 'The all-device action does not name its Library-only scope.');
     $assert(strpos($security_content, 'WordPress, MemberPress, or Access login may remain active') !== false, 'The security panel does not explain the upstream-session boundary.');
 
-    $_GET[TSOL_Library_Account_Security::STATUS_QUERY] = 'requested';
+    $_GET[MemberLibrary_Account_Security::STATUS_QUERY] = 'requested';
     $requested_content = $capture(static function () {
-        TSOL_Library_Account_Security::render_content('security');
+        MemberLibrary_Account_Security::render_content('security');
     });
     $assert(strpos($requested_content, 'role="status"') !== false, 'A queued revocation has no accessible status message.');
 
-    $_GET[TSOL_Library_Account_Security::STATUS_QUERY] = 'unexpected';
+    $_GET[MemberLibrary_Account_Security::STATUS_QUERY] = 'unexpected';
     $unexpected_content = $capture(static function () {
-        TSOL_Library_Account_Security::render_content('security');
+        MemberLibrary_Account_Security::render_content('security');
     });
     $assert(strpos($unexpected_content, 'role="status"') === false && strpos($unexpected_content, 'role="alert"') === false, 'An unknown status value produced a security notice.');
 
-    $assert('Security' === TSOL_Library_Account_Security::account_title('Account', 'security'), 'The custom Security tab title is incorrect.');
-    $assert('Account' === TSOL_Library_Account_Security::account_title('Account', 'payments'), 'The Security title filter changed another MemberPress tab.');
+    $assert('Security' === MemberLibrary_Account_Security::account_title('Account', 'security'), 'The custom Security tab title is incorrect.');
+    $assert('Account' === MemberLibrary_Account_Security::account_title('Account', 'payments'), 'The Security title filter changed another MemberPress tab.');
 
-    $security_url_method = new ReflectionMethod(TSOL_Library_Account_Security::class, 'security_url');
+    $security_url_method = new ReflectionMethod(MemberLibrary_Account_Security::class, 'security_url');
     $security_url_method->setAccessible(true);
     $security_url = $security_url_method->invoke(null, 'requested');
     $assert('/account/' === wp_parse_url($security_url, PHP_URL_PATH), 'The postback redirect did not use the canonical MemberPress Account page.');
     parse_str((string) wp_parse_url($security_url, PHP_URL_QUERY), $security_query);
-    $assert('security' === ($security_query['action'] ?? null) && 'requested' === ($security_query[TSOL_Library_Account_Security::STATUS_QUERY] ?? null), 'The postback redirect lost its Security action or status.');
+    $assert('security' === ($security_query['action'] ?? null) && 'requested' === ($security_query[MemberLibrary_Account_Security::STATUS_QUERY] ?? null), 'The postback redirect lost its Security action or status.');
 
-    $decision_method = new ReflectionMethod(TSOL_Library_Account_Security::class, 'request_decision');
+    $decision_method = new ReflectionMethod(MemberLibrary_Account_Security::class, 'request_decision');
     $decision_method->setAccessible(true);
     foreach (array('GET', 'POST') as $method) {
         foreach (array(0, $user_id) as $candidate_user_id) {
@@ -120,16 +120,16 @@ try {
         }
     }
 
-    TSOL_Library_Auth_Revocation::maybe_install();
+    MemberLibrary_Auth_Revocation::maybe_install();
     global $wpdb;
-    $table = TSOL_Library_Auth_Revocation::table();
-    $existing_schedule = wp_next_scheduled(TSOL_Library_Auth_Revocation::CRON_HOOK);
+    $table = MemberLibrary_Auth_Revocation::table();
+    $existing_schedule = wp_next_scheduled(MemberLibrary_Auth_Revocation::CRON_HOOK);
     $before_jtis = $wpdb->get_col($wpdb->prepare(
         'SELECT jti FROM ' . $table . ' WHERE user_id = %d AND event = %s', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static plugin-owned table name.
         $user_id,
         'user.sessions_forced_logout'
     ));
-    $queue_method = new ReflectionMethod(TSOL_Library_Account_Security::class, 'queue_forced_logout');
+    $queue_method = new ReflectionMethod(MemberLibrary_Account_Security::class, 'queue_forced_logout');
     $queue_method->setAccessible(true);
     $queued = $queue_method->invoke(null, $user_id);
     $after_jtis = $wpdb->get_col($wpdb->prepare(
@@ -142,9 +142,9 @@ try {
     foreach ($new_jtis as $jti) {
         $wpdb->delete($table, array('jti' => $jti), array('%s'));
     }
-    wp_clear_scheduled_hook(TSOL_Library_Auth_Revocation::CRON_HOOK);
+    wp_clear_scheduled_hook(MemberLibrary_Auth_Revocation::CRON_HOOK);
     if (false !== $existing_schedule) {
-        wp_schedule_single_event(max(time() + 1, (int) $existing_schedule), TSOL_Library_Auth_Revocation::CRON_HOOK);
+        wp_schedule_single_event(max(time() + 1, (int) $existing_schedule), MemberLibrary_Auth_Revocation::CRON_HOOK);
     }
 } finally {
     $_GET = $previous_get;

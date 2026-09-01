@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Admin_Navigation {
+class MemberLibrary_Admin_Navigation {
 
     const MENU_SLUG = 'tsol-library';
     const SETTINGS_SLUG = 'tsol-library-settings';
@@ -39,8 +39,8 @@ class TSOL_Library_Admin_Navigation {
 
     public function add_root_menu() {
         add_menu_page(
-            TSOL_Library_Brand::library_menu_label(),
-            TSOL_Library_Brand::library_menu_label(),
+            MemberLibrary_Brand::library_menu_label(),
+            MemberLibrary_Brand::library_menu_label(),
             'edit_pages',
             self::MENU_SLUG,
             array($this, 'render_dashboard'),
@@ -49,8 +49,8 @@ class TSOL_Library_Admin_Navigation {
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('Library Dashboard', 'tomschooloflife-plugin'),
-            __('Dashboard', 'tomschooloflife-plugin'),
+            __('Library Dashboard', 'member-library'),
+            __('Dashboard', 'member-library'),
             'edit_pages',
             self::MENU_SLUG,
             array($this, 'render_dashboard')
@@ -60,22 +60,22 @@ class TSOL_Library_Admin_Navigation {
     public function add_submenus() {
         add_submenu_page(
             self::MENU_SLUG,
-            __('Collections', 'tomschooloflife-plugin'),
-            __('Collections', 'tomschooloflife-plugin'),
+            __('Collections', 'member-library'),
+            __('Collections', 'member-library'),
             'manage_categories',
-            'edit-tags.php?taxonomy=' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY . '&post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE
+            'edit-tags.php?taxonomy=' . MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY . '&post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('Library Topics', 'tomschooloflife-plugin'),
-            __('Topics', 'tomschooloflife-plugin'),
+            __('Library Topics', 'member-library'),
+            __('Topics', 'member-library'),
             'manage_categories',
-            'edit-tags.php?taxonomy=' . TSOL_Library_Content_Model::TOPIC_TAXONOMY . '&post_type=' . TSOL_Library_Content_Model::ITEM_POST_TYPE
+            'edit-tags.php?taxonomy=' . MemberLibrary_Content_Model::TOPIC_TAXONOMY . '&post_type=' . MemberLibrary_Content_Model::ITEM_POST_TYPE
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('TSOL Library Settings', 'tomschooloflife-plugin'),
-            __('Settings', 'tomschooloflife-plugin'),
+            __('TSOL Library Settings', 'member-library'),
+            __('Settings', 'member-library'),
             'edit_pages',
             self::SETTINGS_SLUG,
             array($this, 'render_settings')
@@ -83,17 +83,17 @@ class TSOL_Library_Admin_Navigation {
 
         $this->add_hidden_legacy_settings_page(
             self::AUTH_SLUG,
-            __('Library Authentication', 'tomschooloflife-plugin'),
+            __('Library Authentication', 'member-library'),
             'manage_options'
         );
         $this->add_hidden_legacy_settings_page(
             self::IMPORT_SLUG,
-            __('Import & Legacy', 'tomschooloflife-plugin'),
+            __('Import & Legacy', 'member-library'),
             'manage_options'
         );
         $this->add_hidden_legacy_settings_page(
             self::ACCESS_SLUG,
-            __('Library Access Overview', 'tomschooloflife-plugin'),
+            __('Library Access Overview', 'member-library'),
             'edit_pages'
         );
     }
@@ -104,9 +104,9 @@ class TSOL_Library_Admin_Navigation {
         }
         wp_enqueue_style(
             'tsol-library-content-admin',
-            TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-content-admin.css',
+            MEMBER_LIBRARY_PLUGIN_URL . 'assets/features/library-content/library-content-admin.css',
             array(),
-            TSOL_SITE_PLUGIN_VERSION
+            MEMBER_LIBRARY_PLUGIN_VERSION
         );
     }
 
@@ -167,7 +167,7 @@ class TSOL_Library_Admin_Navigation {
         $filtered = array();
         foreach ($columns as $column => $label) {
             if ('posts' === $column) {
-                $filtered[self::RECORD_COUNT_COLUMN] = _x('Count', 'Number/count of Library records', 'tomschooloflife-plugin');
+                $filtered[self::RECORD_COUNT_COLUMN] = _x('Count', 'Number/count of Library records', 'member-library');
                 continue;
             }
             $filtered[$column] = $label;
@@ -189,7 +189,7 @@ class TSOL_Library_Admin_Navigation {
         $counts = $this->taxonomy_record_counts($taxonomy);
         $count = isset($counts[(int) $term_id]) ? (int) $counts[(int) $term_id] : 0;
         $formatted_count = number_format_i18n($count);
-        $description = __('Includes draft Library records.', 'tomschooloflife-plugin');
+        $description = __('Includes draft Library records.', 'member-library');
         $term = get_term((int) $term_id, $taxonomy);
         $post_types = isset($this->taxonomy_record_post_types[$taxonomy][(int) $term_id])
             ? $this->taxonomy_record_post_types[$taxonomy][(int) $term_id]
@@ -199,16 +199,16 @@ class TSOL_Library_Admin_Navigation {
             $screen = function_exists('get_current_screen') ? get_current_screen() : null;
             $post_type = 1 === count($post_types)
                 ? (string) reset($post_types)
-                : ($screen && in_array($screen->post_type, TSOL_Library_Content_Model::post_types(), true)
+                : ($screen && in_array($screen->post_type, MemberLibrary_Content_Model::post_types(), true)
                     ? (string) $screen->post_type
-                    : TSOL_Library_Content_Model::ITEM_POST_TYPE);
+                    : MemberLibrary_Content_Model::ITEM_POST_TYPE);
             $url_args = array(
                 'post_type' => $post_type,
                 'taxonomy' => $taxonomy,
                 'term' => $term->slug,
             );
-            if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
-                $url_args[TSOL_Library_Content_Admin::CONTENT_SCOPE_FILTER] = TSOL_Library_Content_Admin::CONTENT_SCOPE_ALL;
+            if (MemberLibrary_Content_Model::ITEM_POST_TYPE === $post_type) {
+                $url_args[MemberLibrary_Content_Admin::CONTENT_SCOPE_FILTER] = MemberLibrary_Content_Admin::CONTENT_SCOPE_ALL;
             }
             $url = add_query_arg($url_args, admin_url('edit.php'));
 
@@ -232,42 +232,42 @@ class TSOL_Library_Admin_Navigation {
             return;
         }
         $counts = $this->content_counts();
-        $course_url = admin_url('edit.php?post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE);
-        $series_url = admin_url('edit.php?post_type=' . TSOL_Library_Content_Model::SERIES_POST_TYPE);
+        $course_url = admin_url('edit.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE);
+        $series_url = admin_url('edit.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE);
         $content_url = add_query_arg(array(
-            'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
-            TSOL_Library_Content_Admin::CONTENT_SCOPE_FILTER => TSOL_Library_Content_Admin::CONTENT_SCOPE_ALL,
+            'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
+            MemberLibrary_Content_Admin::CONTENT_SCOPE_FILTER => MemberLibrary_Content_Admin::CONTENT_SCOPE_ALL,
         ), admin_url('edit.php'));
         ?>
         <div class="wrap tsol-library-admin-page">
-            <h1><?php esc_html_e('TSOL Library', 'tomschooloflife-plugin'); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'tomschooloflife-plugin'); ?></p>
+            <h1><?php esc_html_e('TSOL Library', 'member-library'); ?></h1>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'member-library'); ?></p>
 
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Courses', 'tomschooloflife-plugin'), $counts['courses'], $course_url); ?>
-                <?php $this->render_stat(__('Series', 'tomschooloflife-plugin'), $counts['series'], $series_url); ?>
-                <?php $this->render_stat(__('Content', 'tomschooloflife-plugin'), $counts['content'], $content_url); ?>
-                <?php $this->render_stat(__('Published', 'tomschooloflife-plugin'), $counts['published'], $content_url); ?>
-                <?php $this->render_stat(__('Drafts', 'tomschooloflife-plugin'), $counts['drafts'], $content_url); ?>
+                <?php $this->render_stat(__('Courses', 'member-library'), $counts['courses'], $course_url); ?>
+                <?php $this->render_stat(__('Series', 'member-library'), $counts['series'], $series_url); ?>
+                <?php $this->render_stat(__('Content', 'member-library'), $counts['content'], $content_url); ?>
+                <?php $this->render_stat(__('Published', 'member-library'), $counts['published'], $content_url); ?>
+                <?php $this->render_stat(__('Drafts', 'member-library'), $counts['drafts'], $content_url); ?>
             </div>
 
             <div class="tsol-library-admin-grid">
                 <section class="card">
-                    <h2><?php esc_html_e('Create and organize', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Courses own intentional curricula. Series own related ordered videos, whether recurring or finite. Content may remain standalone only when it has no meaningful parent.', 'tomschooloflife-plugin'); ?></p>
+                    <h2><?php esc_html_e('Create and organize', 'member-library'); ?></h2>
+                    <p><?php esc_html_e('Courses own intentional curricula. Series own related ordered videos, whether recurring or finite. Content may remain standalone only when it has no meaningful parent.', 'member-library'); ?></p>
                     <p>
-                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('Add course', 'tomschooloflife-plugin'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('Add series', 'tomschooloflife-plugin'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('Add content', 'tomschooloflife-plugin'); ?></a>
+                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('Add course', 'member-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('Add series', 'member-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('Add content', 'member-library'); ?></a>
                     </p>
                 </section>
                 <section class="card">
-                    <h2><?php esc_html_e('Access Groups', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'tomschooloflife-plugin'); ?></p>
+                    <h2><?php esc_html_e('Access Groups', 'member-library'); ?></h2>
+                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'member-library'); ?></p>
                     <?php if (current_user_can('manage_options')) : ?>
-                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . MemberLibrary_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'member-library'); ?></a></p>
                     <?php else : ?>
-                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'tomschooloflife-plugin'); ?></a></p>
+                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'member-library'); ?></a></p>
                     <?php endif; ?>
                 </section>
             </div>
@@ -290,8 +290,8 @@ class TSOL_Library_Admin_Navigation {
         }
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-settings-page">
-            <h1><?php esc_html_e('TSOL Library Settings', 'tomschooloflife-plugin'); ?></h1>
-            <nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e('Library settings sections', 'tomschooloflife-plugin'); ?>">
+            <h1><?php esc_html_e('TSOL Library Settings', 'member-library'); ?></h1>
+            <nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e('Library settings sections', 'member-library'); ?>">
                 <?php foreach ($tabs as $tab => $label) : ?>
                     <a
                         class="nav-tab <?php echo $active_tab === $tab ? 'nav-tab-active' : ''; ?>"
@@ -303,10 +303,10 @@ class TSOL_Library_Admin_Navigation {
             <div class="tsol-library-settings-page__panel">
                 <?php
                 if (self::SETTINGS_TAB_AUTHENTICATION === $active_tab) {
-                    $auth_settings = new TSOL_Library_Auth_Settings();
+                    $auth_settings = new MemberLibrary_Auth_Settings();
                     $auth_settings->render(true);
                 } elseif (self::SETTINGS_TAB_SYNC === $active_tab) {
-                    $sync_status = new TSOL_Library_Catalogue_Sync_Status();
+                    $sync_status = new MemberLibrary_Catalogue_Sync_Status();
                     $sync_status->render();
                 } else {
                     $this->render_access_overview(true);
@@ -329,39 +329,39 @@ class TSOL_Library_Admin_Navigation {
         ?>
         <?php if (!$embedded) : ?><div class="wrap tsol-library-admin-page"><?php endif; ?>
             <?php if ($embedded) : ?>
-                <h2><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Library Access', 'member-library'); ?></h2>
             <?php else : ?>
-                <h1><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h1>
+                <h1><?php esc_html_e('Library Access', 'member-library'); ?></h1>
             <?php endif; ?>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('MemberPress remains the live permission engine. Access Groups provide the standard way to manage which memberships unlock each part of the Library.', 'tomschooloflife-plugin'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('MemberPress remains the live permission engine. Access Groups provide the standard way to manage which memberships unlock each part of the Library.', 'member-library'); ?></p>
             <?php if ('staged' === $access_phase) : ?>
                 <div class="notice notice-info inline">
-                    <p><strong><?php esc_html_e('Modern Library access rules are staged for review.', 'tomschooloflife-plugin'); ?></strong></p>
+                    <p><strong><?php esc_html_e('Modern Library access rules are staged for review.', 'member-library'); ?></strong></p>
                     <p><?php echo esc_html(sprintf(
                         /* translators: %d is the number of inactive MemberPress rules. */
-                        _n('%d new MemberPress rule is still a draft. Legacy delegation remains active.', '%d new MemberPress rules are still drafts. Legacy delegation remains active.', $staged_rule_count, 'tomschooloflife-plugin'),
+                        _n('%d new MemberPress rule is still a draft. Legacy delegation remains active.', '%d new MemberPress rules are still drafts. Legacy delegation remains active.', $staged_rule_count, 'member-library'),
                         $staged_rule_count
                     )); ?></p>
                 </div>
             <?php elseif ('activated' === $access_phase) : ?>
-                <div class="notice notice-success inline"><p><strong><?php esc_html_e('Native Course, Series, and Collection access is active.', 'tomschooloflife-plugin'); ?></strong></p></div>
+                <div class="notice notice-success inline"><p><strong><?php esc_html_e('Native Course, Series, and Collection access is active.', 'member-library'); ?></strong></p></div>
             <?php endif; ?>
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Protected', 'tomschooloflife-plugin'), $summary['protected']); ?>
-                <?php $this->render_stat(__('All signed-in users', 'tomschooloflife-plugin'), $summary['open']); ?>
-                <?php $this->render_stat(__('Legacy delegated', 'tomschooloflife-plugin'), $summary['legacy']); ?>
-                <?php $this->render_stat(__('Native Library access', 'tomschooloflife-plugin'), $summary['native']); ?>
+                <?php $this->render_stat(__('Protected', 'member-library'), $summary['protected']); ?>
+                <?php $this->render_stat(__('All signed-in users', 'member-library'), $summary['open']); ?>
+                <?php $this->render_stat(__('Legacy delegated', 'member-library'), $summary['legacy']); ?>
+                <?php $this->render_stat(__('Native Library access', 'member-library'), $summary['native']); ?>
             </div>
             <section class="card tsol-library-admin-card--wide">
-                <h2><?php esc_html_e('How to control Library access', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('How to control Library access', 'member-library'); ?></h2>
                 <ol>
-                    <li><?php esc_html_e('Create a reusable Access Group and choose the Library content it unlocks.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Assign that group from the relevant MemberPress membership editor.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Check the full access comparison, then publish the change from Access Groups.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Create a reusable Access Group and choose the Library content it unlocks.', 'member-library'); ?></li>
+                    <li><?php esc_html_e('Assign that group from the relevant MemberPress membership editor.', 'member-library'); ?></li>
+                    <li><?php esc_html_e('Check the full access comparison, then publish the change from Access Groups.', 'member-library'); ?></li>
                 </ol>
-                <p><?php esc_html_e('Publishing compiles the groups into native MemberPress Rules. Membership billing and all non-Library MemberPress rules remain unchanged.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Publishing compiles the groups into native MemberPress Rules. Membership billing and all non-Library MemberPress rules remain unchanged.', 'member-library'); ?></p>
                 <?php if (current_user_can('manage_options')) : ?>
-                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=' . MemberLibrary_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'member-library'); ?></a></p>
                 <?php endif; ?>
             </section>
         <?php if (!$embedded) : ?></div><?php endif; ?>
@@ -379,24 +379,24 @@ class TSOL_Library_Admin_Navigation {
         ?>
         <?php if (!$embedded) : ?><div class="wrap tsol-library-admin-page"><?php endif; ?>
             <?php if ($embedded) : ?>
-                <h2><?php esc_html_e('Import & Legacy', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Import & Legacy', 'member-library'); ?></h2>
             <?php else : ?>
-                <h1><?php esc_html_e('Import & Legacy', 'tomschooloflife-plugin'); ?></h1>
+                <h1><?php esc_html_e('Import & Legacy', 'member-library'); ?></h1>
             <?php endif; ?>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('The import is a guarded clone operation. It never converts, hides, unpublishes, or rewrites the legacy MemberPress Courses system.', 'tomschooloflife-plugin'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('The import is a guarded clone operation. It never converts, hides, unpublishes, or rewrites the legacy MemberPress Courses system.', 'member-library'); ?></p>
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Legacy MP Courses', 'tomschooloflife-plugin'), $legacy_count, admin_url('edit.php?post_type=mpcs-course')); ?>
-                <?php $this->render_stat(__('Cloned courses', 'tomschooloflife-plugin'), $counts['courses']); ?>
-                <?php $this->render_stat(__('Cloned content', 'tomschooloflife-plugin'), $counts['content']); ?>
-                <?php $this->render_stat(__('Import phase', 'tomschooloflife-plugin'), (string) ($state['phase'] ?? 'not started')); ?>
+                <?php $this->render_stat(__('Legacy MP Courses', 'member-library'), $legacy_count, admin_url('edit.php?post_type=mpcs-course')); ?>
+                <?php $this->render_stat(__('Cloned courses', 'member-library'), $counts['courses']); ?>
+                <?php $this->render_stat(__('Cloned content', 'member-library'), $counts['content']); ?>
+                <?php $this->render_stat(__('Import phase', 'member-library'), (string) ($state['phase'] ?? 'not started')); ?>
             </div>
             <section class="card tsol-library-admin-card--wide">
-                <h2><?php esc_html_e('Safety boundary', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Safety boundary', 'member-library'); ?></h2>
                 <ul class="ul-disc">
-                    <li><?php esc_html_e('Legacy post content, statuses, URLs, metadata, rules, and progress remain untouched.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Imported Library records begin as drafts and move through a separate administrator review and publication process.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Imported records delegate live access checks to their original source.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Apply and rollback stay in the guarded WP-CLI workflow; this page intentionally provides no destructive browser button.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Legacy post content, statuses, URLs, metadata, rules, and progress remain untouched.', 'member-library'); ?></li>
+                    <li><?php esc_html_e('Imported Library records begin as drafts and move through a separate administrator review and publication process.', 'member-library'); ?></li>
+                    <li><?php esc_html_e('Imported records delegate live access checks to their original source.', 'member-library'); ?></li>
+                    <li><?php esc_html_e('Apply and rollback stay in the guarded WP-CLI workflow; this page intentionally provides no destructive browser button.', 'member-library'); ?></li>
                 </ul>
             </section>
         <?php if (!$embedded) : ?></div><?php endif; ?>
@@ -413,19 +413,19 @@ class TSOL_Library_Admin_Navigation {
     private function available_settings_tabs() {
         $tabs = array();
         if (current_user_can('manage_options')) {
-            $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'tomschooloflife-plugin');
-            $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'member-library');
+            $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'member-library');
         }
         if (current_user_can('edit_pages')) {
-            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access', 'member-library');
         }
         return $tabs;
     }
 
     private function content_counts() {
-        $course_counts = wp_count_posts(TSOL_Library_Content_Model::COURSE_POST_TYPE);
-        $series_counts = wp_count_posts(TSOL_Library_Content_Model::SERIES_POST_TYPE);
-        $content_counts = wp_count_posts(TSOL_Library_Content_Model::ITEM_POST_TYPE);
+        $course_counts = wp_count_posts(MemberLibrary_Content_Model::COURSE_POST_TYPE);
+        $series_counts = wp_count_posts(MemberLibrary_Content_Model::SERIES_POST_TYPE);
+        $content_counts = wp_count_posts(MemberLibrary_Content_Model::ITEM_POST_TYPE);
         $course_drafts = isset($course_counts->draft) ? (int) $course_counts->draft : 0;
         $series_drafts = isset($series_counts->draft) ? (int) $series_counts->draft : 0;
         $content_drafts = isset($content_counts->draft) ? (int) $content_counts->draft : 0;
@@ -441,7 +441,7 @@ class TSOL_Library_Admin_Navigation {
     private function access_counts() {
         $summary = array('protected' => 0, 'open' => 0, 'legacy' => 0, 'native' => 0);
         $ids = get_posts(array(
-            'post_type' => TSOL_Library_Content_Model::post_types(),
+            'post_type' => MemberLibrary_Content_Model::post_types(),
             'post_status' => array('publish', 'draft', 'private', 'pending', 'future'),
             'numberposts' => -1,
             'fields' => 'ids',
@@ -449,9 +449,9 @@ class TSOL_Library_Admin_Navigation {
         ));
         foreach ($ids as $post_id) {
             $post_id = (int) $post_id;
-            $authorization_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+            $authorization_id = (int) get_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_id = $authorization_id > 0 ? $authorization_id : $post_id;
-            if ($authorization_id !== $post_id && !in_array(get_post_type($authorization_id), TSOL_Library_Content_Model::post_types(), true)) {
+            if ($authorization_id !== $post_id && !in_array(get_post_type($authorization_id), MemberLibrary_Content_Model::post_types(), true)) {
                 $summary['legacy']++;
             } else {
                 $summary['native']++;
@@ -482,8 +482,8 @@ class TSOL_Library_Admin_Navigation {
 
     private function library_taxonomies() {
         return array(
-            TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
-            TSOL_Library_Content_Model::TOPIC_TAXONOMY,
+            MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
+            MemberLibrary_Content_Model::TOPIC_TAXONOMY,
         );
     }
 
@@ -502,9 +502,9 @@ class TSOL_Library_Admin_Navigation {
     }
 
     private function taxonomy_menu_slug($taxonomy) {
-        $post_type = TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy
-            ? TSOL_Library_Content_Model::COURSE_POST_TYPE
-            : TSOL_Library_Content_Model::ITEM_POST_TYPE;
+        $post_type = MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy
+            ? MemberLibrary_Content_Model::COURSE_POST_TYPE
+            : MemberLibrary_Content_Model::ITEM_POST_TYPE;
         return 'edit-tags.php?taxonomy=' . $taxonomy . '&post_type=' . $post_type;
     }
 
@@ -525,7 +525,7 @@ class TSOL_Library_Admin_Navigation {
             return $counts;
         }
 
-        $post_types = TSOL_Library_Content_Model::post_types();
+        $post_types = MemberLibrary_Content_Model::post_types();
         $post_statuses = array('publish', 'draft', 'private', 'pending', 'future');
         $post_type_placeholders = implode(', ', array_fill(0, count($post_types), '%s'));
         $post_status_placeholders = implode(', ', array_fill(0, count($post_statuses), '%s'));

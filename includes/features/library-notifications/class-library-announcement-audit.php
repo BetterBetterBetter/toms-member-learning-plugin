@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Announcement_Audit {
+class MemberLibrary_Announcement_Audit {
 
     const MAX_ENTRIES = 100;
 
@@ -32,11 +32,11 @@ class TSOL_Library_Announcement_Audit {
             'context' => $safe_context,
         );
         $entries = array_slice($entries, -self::MAX_ENTRIES);
-        return false !== update_post_meta($post_id, TSOL_Library_Announcement_Model::META_AUDIT, $entries);
+        return false !== update_post_meta($post_id, MemberLibrary_Announcement_Model::META_AUDIT, $entries);
     }
 
     public static function entries($post_id) {
-        $entries = get_post_meta(absint($post_id), TSOL_Library_Announcement_Model::META_AUDIT, true);
+        $entries = get_post_meta(absint($post_id), MemberLibrary_Announcement_Model::META_AUDIT, true);
         return is_array($entries) ? array_values($entries) : array();
     }
 }

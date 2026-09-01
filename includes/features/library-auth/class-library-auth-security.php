@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Auth_Rate_Limiter {
+class MemberLibrary_Auth_Rate_Limiter {
 
     public static function check($scope, $limit, $window_seconds, $subject = '') {
         $scope = sanitize_key((string) $scope);
@@ -17,13 +17,13 @@ class TSOL_Library_Auth_Rate_Limiter {
         $identity = $subject === '' ? 'address:' . self::client_address() : 'subject:' . substr($subject, 0, 256);
         $key = hash('sha256', $scope . "\n" . $identity);
         $now = time();
-        $state = TSOL_Library_Auth_Repository::increment_rate_limit($key, $now, $window_seconds);
+        $state = MemberLibrary_Auth_Repository::increment_rate_limit($key, $now, $window_seconds);
         if (is_wp_error($state)) {
             return $state;
         }
         if ((int) $state['count'] > $limit) {
             $retry_after = max(1, (int) $state['expires_at'] - $now);
-            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'tomschooloflife-plugin'), array('retry_after' => $retry_after));
+            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'member-library'), array('retry_after' => $retry_after));
         }
         return true;
     }
@@ -35,7 +35,7 @@ class TSOL_Library_Auth_Rate_Limiter {
     }
 }
 
-class TSOL_Library_Auth_Logger {
+class MemberLibrary_Auth_Logger {
 
     public static function event($event, $context = array()) {
         $event = sanitize_key((string) $event);

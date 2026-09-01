@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TSOL_Library_Announcement_Flags {
+class MemberLibrary_Announcement_Flags {
 
     const OPTION = 'tsol_library_announcement_flags';
 

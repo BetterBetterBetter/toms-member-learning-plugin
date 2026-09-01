@@ -5,7 +5,7 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this contract through WP-CLI.');
 }
 
-$service = new TSOL_Library_Access_Groups();
+$service = new MemberLibrary_Access_Groups();
 $before_configuration = $service->configuration();
 if (!$service->is_bootstrapped()) {
     WP_CLI::error('Access Groups must be bootstrapped before running this contract.');
@@ -48,7 +48,7 @@ try {
         'compiled_rules' => (int) $after_preview['compiled_rule_count'],
     ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 } finally {
-    update_option(TSOL_Library_Access_Groups::OPTION_NAME, $before_configuration, false);
+    update_option(MemberLibrary_Access_Groups::OPTION_NAME, $before_configuration, false);
 }
 
 WP_CLI::success('A new unassigned Access Group remains a non-destructive draft.');

@@ -12,9 +12,9 @@ $assert = static function ($condition, $message) use (&$failures) {
     }
 };
 
-$assert(class_exists('TSOL_Library_Environment_Migration'), 'The Library migration service is not loaded.');
-$assert(class_exists('TSOL_Library_Environment_Migration_Admin'), 'The Library migration admin is not loaded.');
-(new TSOL_Library_Environment_Migration_Admin())->init();
+$assert(class_exists('MemberLibrary_Environment_Migration'), 'The Library migration service is not loaded.');
+$assert(class_exists('MemberLibrary_Environment_Migration_Admin'), 'The Library migration admin is not loaded.');
+(new MemberLibrary_Environment_Migration_Admin())->init();
 $assert(false !== has_action('admin_post_tsol_library_migration_export'), 'The migration export action is not registered.');
 $assert(false !== has_action('admin_post_tsol_library_migration_preview'), 'The migration preview action is not registered.');
 $assert(false !== has_action('admin_post_tsol_library_migration_apply'), 'The migration apply action is not registered.');
@@ -23,7 +23,7 @@ $assert(false !== has_action('wp_ajax_tsol_library_migration_upload_chunk'), 'Th
 $assert(false !== has_action('wp_ajax_tsol_library_migration_prepare_attachments'), 'The resumable attachment preparation action is not registered.');
 $assert(class_exists('ZipArchive'), 'The PHP Zip extension required for complete migration packages is unavailable.');
 
-$migration = new TSOL_Library_Environment_Migration();
+$migration = new MemberLibrary_Environment_Migration();
 $package = $migration->build_package();
 $json = $migration->encode($package);
 $decoded = $migration->decode($json);
@@ -35,7 +35,7 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 
 $assert('wordpress-library-only' === (string) ($package['manifest']['scope'] ?? ''), 'The package is not explicitly limited to WordPress Library data.');
-$assert(TSOL_Library_Environment_Migration::SCHEMA_VERSION === (int) ($package['manifest']['schema_version'] ?? 0), 'The package does not use the current migration schema.');
+$assert(MemberLibrary_Environment_Migration::SCHEMA_VERSION === (int) ($package['manifest']['schema_version'] ?? 0), 'The package does not use the current migration schema.');
 $assert($post_count > 0, 'The package contains no WordPress Library records.');
 $assert($post_count === (int) ($package['manifest']['counts']['posts'] ?? -1), 'The package post manifest count is incorrect.');
 $assert(0 === (int) $preview['creates'], 'A self-preview would create unexpected Library records.');
@@ -72,7 +72,7 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 
 foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
-    if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === (string) ($term['taxonomy'] ?? '')) {
+    if (MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY === (string) ($term['taxonomy'] ?? '')) {
         $assert(array_key_exists('appearance', (array) ($term['meta'] ?? array())), 'A portable Collection omitted its optional appearance.');
     }
 }
@@ -80,7 +80,7 @@ foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
 $inherited_authority_count = 0;
 foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
     $meta = (array) ($record['meta'] ?? array());
-    foreach (array(TSOL_Library_Content_Model::META_COURSE_ID, TSOL_Library_Content_Model::META_SERIES_ID) as $key) {
+    foreach (array(MemberLibrary_Content_Model::META_COURSE_ID, MemberLibrary_Content_Model::META_SERIES_ID) as $key) {
         $parent_uuid = (string) ($meta[$key]['__post_uuid'] ?? '');
         $parent_authority = (array) ($records_by_uuid[$parent_uuid]['legacy_authorization'] ?? array());
         if ('' !== $parent_uuid && !empty($parent_authority)) {
@@ -91,12 +91,12 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 $assert($inherited_authority_count > 0, 'The migration fixture contains no inherited portable authorization relationships.');
 
-$legacy_resolver = new ReflectionMethod(TSOL_Library_Environment_Migration::class, 'package_legacy_authorization_ref');
+$legacy_resolver = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'package_legacy_authorization_ref');
 $compatibility_checked = false;
 foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
     $meta = (array) ($record['meta'] ?? array());
-    $has_parent = isset($meta[TSOL_Library_Content_Model::META_COURSE_ID]['__post_uuid'])
-        || isset($meta[TSOL_Library_Content_Model::META_SERIES_ID]['__post_uuid']);
+    $has_parent = isset($meta[MemberLibrary_Content_Model::META_COURSE_ID]['__post_uuid'])
+        || isset($meta[MemberLibrary_Content_Model::META_SERIES_ID]['__post_uuid']);
     if (!$has_parent || empty($record['legacy_authorization'])) {
         continue;
     }
@@ -110,11 +110,11 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 $assert($compatibility_checked, 'The migration fixture contains no parent-authorized record for backward-compatibility testing.');
 
-$with_lock = new ReflectionMethod(TSOL_Library_Environment_Migration::class, 'with_lock');
-delete_option(TSOL_Library_Environment_Migration::LOCK_OPTION);
+$with_lock = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'with_lock');
+delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
 add_option(
-    TSOL_Library_Environment_Migration::LOCK_OPTION,
-    time() - TSOL_Library_Environment_Migration::LOCK_TTL - 1,
+    MemberLibrary_Environment_Migration::LOCK_OPTION,
+    time() - MemberLibrary_Environment_Migration::LOCK_TTL - 1,
     '',
     'no'
 );
@@ -122,9 +122,9 @@ $stale_lock_result = $with_lock->invoke($migration, static function () {
     return 'stale-lock-recovered';
 });
 $assert('stale-lock-recovered' === $stale_lock_result, 'An interrupted migration lock was not recovered after its safety window.');
-$assert(false === get_option(TSOL_Library_Environment_Migration::LOCK_OPTION, false), 'The recovered migration lock was not released.');
+$assert(false === get_option(MemberLibrary_Environment_Migration::LOCK_OPTION, false), 'The recovered migration lock was not released.');
 
-add_option(TSOL_Library_Environment_Migration::LOCK_OPTION, time(), '', 'no');
+add_option(MemberLibrary_Environment_Migration::LOCK_OPTION, time(), '', 'no');
 $active_lock_blocked = false;
 try {
     $with_lock->invoke($migration, static function () {
@@ -133,7 +133,7 @@ try {
 } catch (Throwable $exception) {
     $active_lock_blocked = false !== strpos($exception->getMessage(), 'Another Library migration operation is running.');
 }
-delete_option(TSOL_Library_Environment_Migration::LOCK_OPTION);
+delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
 $assert($active_lock_blocked, 'An active migration lock did not retain exclusive access.');
 
 if (!empty($failures)) {
