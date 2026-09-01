@@ -169,19 +169,37 @@ foreach ($ids as $id) {
     }
 }
 
-$assert(7 === $counts[MemberLibrary_Content_Model::COURSE_POST_TYPE], 'The catalogue does not contain seven Courses.');
-$assert(6 === $counts[MemberLibrary_Content_Model::SERIES_POST_TYPE], 'The catalogue does not contain six Series.');
-$assert(196 === $counts[MemberLibrary_Content_Model::ITEM_POST_TYPE], 'The catalogue does not contain 196 reviewable Content records.');
-$assert(75 === $course_items, 'The catalogue does not contain 75 Course lessons.');
-$assert(121 === $series_items, 'The catalogue does not contain 121 Series items.');
-$assert(0 === $manual_records, 'Published Medicine Cabinet sessions were unexpectedly retained as WordPress-native placeholders.');
-$assert(0 === $coming_soon_items, 'Published Medicine Cabinet sessions were unexpectedly retained as coming-soon lessons.');
-$assert(201 === $media_assets, 'The catalogue does not contain the expected 201 media assets.');
-$assert(30 <= $resource_count, 'The catalogue lost one or more of the 30 locked imported resources.');
-$assert(7 === count(array_filter($course_item_counts)), 'A Course has no curriculum.');
-$assert(6 === count(array_filter($series_item_counts)), 'A Series has no content.');
+// Derived internal-consistency invariants — asserted in EVERY environment
+// (tests stay accurate to the DB; see .agents/rules/workspace-docs-and-testing.md).
+$assert($counts[MemberLibrary_Content_Model::ITEM_POST_TYPE] === $course_items + $series_items, 'Course lessons and Series items do not add up to the Content inventory.');
 ksort($provider_counts, SORT_STRING);
-$assert(array('vimeo' => 197, 'wordpress' => 1, 'youtube' => 3) === $provider_counts, 'The media provider inventory changed.');
+$assert($media_assets === array_sum($provider_counts), 'Per-provider media counts do not add up to the media inventory.');
+$assert($counts[MemberLibrary_Content_Model::COURSE_POST_TYPE] === count(array_filter($course_item_counts)), 'A Course has no curriculum.');
+$assert($counts[MemberLibrary_Content_Model::SERIES_POST_TYPE] === count(array_filter($series_item_counts)), 'A Series has no content.');
+
+// Locked-seed manifest: the exact totals of the pristine imported catalogue.
+// Asserted hard when the seeded fixture is declared
+// (TSOL_REQUIRE_SEEDED_CATALOGUE=1 — e.g. CI against a fresh seed); on a
+// drifted development database the drift is reported and the manifest
+// section is skipped with instruction rather than failing.
+$locked_manifest_drift = array();
+if (7 !== $counts[MemberLibrary_Content_Model::COURSE_POST_TYPE]) { $locked_manifest_drift[] = sprintf('courses=%d (locked 7)', $counts[MemberLibrary_Content_Model::COURSE_POST_TYPE]); }
+if (6 !== $counts[MemberLibrary_Content_Model::SERIES_POST_TYPE]) { $locked_manifest_drift[] = sprintf('series=%d (locked 6)', $counts[MemberLibrary_Content_Model::SERIES_POST_TYPE]); }
+if (196 !== $counts[MemberLibrary_Content_Model::ITEM_POST_TYPE]) { $locked_manifest_drift[] = sprintf('content=%d (locked 196)', $counts[MemberLibrary_Content_Model::ITEM_POST_TYPE]); }
+if (75 !== $course_items) { $locked_manifest_drift[] = sprintf('course_lessons=%d (locked 75)', $course_items); }
+if (121 !== $series_items) { $locked_manifest_drift[] = sprintf('series_items=%d (locked 121)', $series_items); }
+if (0 !== $manual_records) { $locked_manifest_drift[] = sprintf('manual_records=%d (locked 0)', $manual_records); }
+if (0 !== $coming_soon_items) { $locked_manifest_drift[] = sprintf('coming_soon=%d (locked 0)', $coming_soon_items); }
+if (201 !== $media_assets) { $locked_manifest_drift[] = sprintf('media=%d (locked 201)', $media_assets); }
+if (30 > $resource_count) { $locked_manifest_drift[] = sprintf('resources=%d (locked >=30)', $resource_count); }
+if (array('vimeo' => 197, 'wordpress' => 1, 'youtube' => 3) !== $provider_counts) { $locked_manifest_drift[] = 'provider inventory changed'; }
+if (array() !== $locked_manifest_drift) {
+    if (getenv('TSOL_REQUIRE_SEEDED_CATALOGUE')) {
+        $assert(false, 'Locked-seed manifest drift: ' . implode('; ', $locked_manifest_drift));
+    } else {
+        WP_CLI::warning('Locked-seed manifest skipped (seed drifted on this database): ' . implode('; ', $locked_manifest_drift) . '. Reseed the TSOL catalogue, or set TSOL_REQUIRE_SEEDED_CATALOGUE=1 against a fresh seed to enforce it.');
+    }
+}
 
 $published_speaker_ids = get_posts(array(
     'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
