@@ -372,14 +372,18 @@ class TSOL_Library_Content_Catalogue {
 
         $section_key = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_KEY, true);
         $registry_section = self::structure_group($course_id, $section_key);
+        $section_title = is_array($registry_section)
+            ? (string) $registry_section['title']
+            : sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_TITLE, true));
+        if ('' === $section_title) {
+            $section_title = __('Course content', 'tomschooloflife-plugin');
+        }
         return array(
             'course_id' => $course_id,
             'section' => array(
                 'id' => self::section_numeric_id($course_id, $section_key),
                 'uuid' => self::section_key($section_key),
-                'title' => is_array($registry_section)
-                    ? (string) $registry_section['title']
-                    : sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_TITLE, true)),
+                'title' => $section_title,
                 'position' => is_array($registry_section)
                     ? (int) $registry_section['position']
                     : max(1, (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_POSITION, true)),
@@ -617,6 +621,7 @@ class TSOL_Library_Content_Catalogue {
                 'url' => $url,
                 'attachment_id' => $attachment_id,
                 'mime_type' => $mime_type,
+                'duration_seconds' => absint($asset['duration_seconds'] ?? 0),
                 'position' => absint($asset['position'] ?? 0),
             );
         }, $assets));
