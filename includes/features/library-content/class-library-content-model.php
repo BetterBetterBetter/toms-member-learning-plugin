@@ -1,6 +1,6 @@
 <?php
 /**
- * Canonical WordPress content types and metadata for the TSOL Library.
+ * Canonical WordPress content types and metadata for the Library.
  */
 
 if (!defined('ABSPATH')) {

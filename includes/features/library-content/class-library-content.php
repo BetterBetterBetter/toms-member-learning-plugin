@@ -1,6 +1,6 @@
 <?php
 /**
- * Permanent WordPress content-model registration for the TSOL Library.
+ * Permanent WordPress content-model registration for the Library.
  */
 
 if (!defined('ABSPATH')) {

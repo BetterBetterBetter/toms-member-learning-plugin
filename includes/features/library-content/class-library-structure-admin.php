@@ -42,7 +42,7 @@ class MemberLibrary_Structure_Admin {
     public function hide_page_from_submenu() {
         // This runs after admin.php's capability/page lookup but before the
         // menu is rendered. The builder remains an in-context destination
-        // while WordPress retains the correct TSOL Library parent hierarchy.
+        // while WordPress retains the correct Library parent hierarchy.
         remove_submenu_page(MemberLibrary_Admin_Navigation::MENU_SLUG, self::PAGE_SLUG);
     }
 

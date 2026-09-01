@@ -96,7 +96,7 @@ recipient list.
 ## Private draft editor
 
 The default-off Phase 2 feature registers `tsol_announcement` as a private,
-non-queryable, non-exportable, non-REST post type under **TSOL Library >
+non-queryable, non-exportable, non-REST post type under **Library >
 Announcements**. Editors receive only `edit_tsol_announcements` and may revise
 draft copy. Administrators receive the separate audience, preview, publication,
 schedule, and delivery-report capabilities. Publication and scheduling remain

@@ -1,4 +1,4 @@
-# TSOL Library Content
+# Library Content
 
 This feature is the permanent WordPress back office for the standalone Library.
 It is deliberately separate from the legacy MemberPress Courses system.
@@ -16,7 +16,7 @@ It is deliberately separate from the legacy MemberPress Courses system.
 
 ## Environment migration
 
-**TSOL Library → Migration** exports and imports only this WordPress-owned
+**Library → Migration** exports and imports only this WordPress-owned
 Library model and its portable Access Groups configuration. Relationships use
 content UUIDs, membership assignments use MemberPress product slugs, and media
 uses upload-path references backed by checksum-verified files inside the ZIP.
@@ -235,7 +235,7 @@ determine Series membership or order.
 
 ## Admin experience
 
-`TSOL Library` is a dedicated top-level menu containing:
+`Library` is a dedicated top-level menu containing:
 
 - Dashboard
 - Courses
@@ -313,7 +313,7 @@ no-JavaScript fallback for direct mode.
 
 The access panel and compact list column remain read-only projections of the
 live MemberPress rules. Administrators standardize membership access under
-**TSOL Library → Access Groups** rather than maintaining a growing set of
+**Library → Access Groups** rather than maintaining a growing set of
 membership conditions by hand. Administrators create and name only the
 packages they need, then select the broad Library areas, Collections, Courses,
 or Series each package unlocks. A **Library Access Groups** panel on every

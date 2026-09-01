@@ -1,6 +1,6 @@
 <?php
 /**
- * Native post editor enhancements for TSOL Library Speaker profiles.
+ * Native post editor enhancements for Library Speaker profiles.
  */
 
 if (!defined('ABSPATH')) {

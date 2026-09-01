@@ -1,5 +1,5 @@
 <?php
-/** WordPress admin UI for TSOL Library Access Groups. */
+/** WordPress admin UI for Library Access Groups. */
 
 if (!defined('ABSPATH')) {
     exit;
