@@ -93,6 +93,32 @@ class TSOL_Library_Brand {
     }
 
     /**
+     * Whether an optional feature is enabled for this brand. Core features
+     * (library-auth, library-content, library-notifications) are always on;
+     * the site-specific ones (accountability_modal, cookie_consent) default
+     * ON to preserve TSOL, and a brand disables them via constant or option:
+     *
+     *   define('TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL', false);  // wp-config
+     *   update_option('tsol_library_feature_accountability_modal', '0');
+     *
+     * @param string $feature One of: accountability_modal, cookie_consent.
+     */
+    public static function feature_enabled($feature) {
+        $constant = 'TSOL_LIBRARY_FEATURE_' . strtoupper($feature);
+        if (defined($constant)) {
+            $enabled = (bool) constant($constant);
+        } else {
+            // Missing option ('') means unset → default enabled.
+            $stored = get_option('tsol_library_feature_' . $feature, '');
+            $enabled = ('' === (string) $stored) ? true : ('0' !== (string) $stored && false !== $stored);
+        }
+        /**
+         * Filter per-feature enablement. Filter name is the option key.
+         */
+        return (bool) apply_filters('tsol_library_feature_' . $feature, $enabled);
+    }
+
+    /**
      * Constant override → option → default, with a filter for extensibility.
      */
     private static function get($constant, $option, $default) {

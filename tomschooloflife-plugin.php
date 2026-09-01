@@ -113,6 +113,12 @@ if (defined('WP_CLI') && WP_CLI) {
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-resource-backfill/class-library-resource-backfill-cli.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal.php';
     require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/library-publication-rehearsal/class-library-publication-rehearsal-cli.php';
+    // Liberty-only import source (LearnDash). CLI-only and self-guarded to
+    // write only when home_url() host is libertyclassroom.test; harmless to
+    // load on other brands (its commands no-op off that host).
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/liberty-learndash-import/class-liberty-learndash-manifest.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/liberty-learndash-import/class-liberty-learndash-import.php';
+    require_once TSOL_SITE_PLUGIN_DIR . 'includes/migrations/liberty-learndash-import/class-liberty-learndash-import-cli.php';
     WP_CLI::add_command(TSOL_Library_Catalogue_Import_CLI::COMMAND, 'TSOL_Library_Catalogue_Import_CLI');
     WP_CLI::add_command(TSOL_Library_Series_Import_CLI::COMMAND, 'TSOL_Library_Series_Import_CLI');
     WP_CLI::add_command(TSOL_Library_Access_Rules_Migration_CLI::COMMAND, 'TSOL_Library_Access_Rules_Migration_CLI');
@@ -120,6 +126,7 @@ if (defined('WP_CLI') && WP_CLI) {
     WP_CLI::add_command(TSOL_Library_Course_Body_Publication_CLI::COMMAND, 'TSOL_Library_Course_Body_Publication_CLI');
     WP_CLI::add_command(TSOL_Library_Resource_Backfill_CLI::COMMAND, 'TSOL_Library_Resource_Backfill_CLI');
     WP_CLI::add_command(TSOL_Library_Publication_Rehearsal_CLI::COMMAND, 'TSOL_Library_Publication_Rehearsal_CLI');
+    WP_CLI::add_command(Liberty_Classroom_LearnDash_Import_CLI::COMMAND, 'Liberty_Classroom_LearnDash_Import_CLI');
 }
 
 require_once TSOL_SITE_PLUGIN_DIR . 'includes/class-plugin.php';

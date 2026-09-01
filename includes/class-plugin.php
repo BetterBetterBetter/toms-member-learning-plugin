@@ -38,10 +38,14 @@ class TomsSchoolOfLifePlugin {
 
         $this->admin_settings = new TSOL_Site_Admin_Settings();
         $this->admin_settings->init();
-        $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
-        $this->accountability_modal_admin->init();
-        $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
-        $this->cookie_consent_admin->init();
+        if (TSOL_Library_Brand::feature_enabled('accountability_modal')) {
+            $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
+            $this->accountability_modal_admin->init();
+        }
+        if (TSOL_Library_Brand::feature_enabled('cookie_consent')) {
+            $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
+            $this->cookie_consent_admin->init();
+        }
         $this->library_auth = new TSOL_Library_Auth();
         $this->library_auth->init();
 
@@ -76,23 +80,27 @@ class TomsSchoolOfLifePlugin {
             array($this, 'render_settings_page')
         );
 
-        $this->admin_page_hooks[] = add_submenu_page(
-            'tsol-site',
-            __('Accountability Modal', 'tomschooloflife-plugin'),
-            __('Accountability Modal', 'tomschooloflife-plugin'),
-            'manage_options',
-            TSOL_Accountability_Modal_Admin::PAGE_SLUG,
-            array($this, 'render_accountability_modal_page')
-        );
+        if (TSOL_Library_Brand::feature_enabled('accountability_modal')) {
+            $this->admin_page_hooks[] = add_submenu_page(
+                'tsol-site',
+                __('Accountability Modal', 'tomschooloflife-plugin'),
+                __('Accountability Modal', 'tomschooloflife-plugin'),
+                'manage_options',
+                TSOL_Accountability_Modal_Admin::PAGE_SLUG,
+                array($this, 'render_accountability_modal_page')
+            );
+        }
 
-        $this->admin_page_hooks[] = add_submenu_page(
-            'tsol-site',
-            __('Cookie Consent', 'tomschooloflife-plugin'),
-            __('Cookie Consent', 'tomschooloflife-plugin'),
-            'manage_options',
-            TSOL_Cookie_Consent_Admin::PAGE_SLUG,
-            array($this, 'render_cookie_consent_page')
-        );
+        if (TSOL_Library_Brand::feature_enabled('cookie_consent')) {
+            $this->admin_page_hooks[] = add_submenu_page(
+                'tsol-site',
+                __('Cookie Consent', 'tomschooloflife-plugin'),
+                __('Cookie Consent', 'tomschooloflife-plugin'),
+                'manage_options',
+                TSOL_Cookie_Consent_Admin::PAGE_SLUG,
+                array($this, 'render_cookie_consent_page')
+            );
+        }
     }
 
     public function admin_enqueue_scripts($hook) {
@@ -235,12 +243,18 @@ class TomsSchoolOfLifePlugin {
     }
 
     private function register_features() {
-        $this->features = array(
-            new TSOL_Accountability_Modal(),
-            new TSOL_Cookie_Consent(),
-            new TSOL_Library_Content(),
-            new TSOL_Library_Announcements(),
-        );
+        // Core features are always on; site-specific ones are per-brand
+        // (TSOL_Library_Brand::feature_enabled), so a brand like Liberty runs
+        // the library core only. See docs/plans/plugin-consolidation-plan.md.
+        $this->features = array();
+        if (TSOL_Library_Brand::feature_enabled('accountability_modal')) {
+            $this->features[] = new TSOL_Accountability_Modal();
+        }
+        if (TSOL_Library_Brand::feature_enabled('cookie_consent')) {
+            $this->features[] = new TSOL_Cookie_Consent();
+        }
+        $this->features[] = new TSOL_Library_Content();
+        $this->features[] = new TSOL_Library_Announcements();
 
         /**
          * Filters site plugin features before they are initialized.
