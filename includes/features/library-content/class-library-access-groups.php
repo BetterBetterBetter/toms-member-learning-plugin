@@ -421,7 +421,39 @@ class TSOL_Library_Access_Groups {
                 'target_id' => (int) $post->ID,
             );
         }
+
+        // Brands without a Masterclasses collection should not expose or
+        // require that TSOL-specific scope. Course-level scopes remain fully
+        // available for their access groups.
+        if ($this->masterclasses_term_id() <= 0) {
+            unset($definitions['collection:masterclasses']);
+        }
+
         return $definitions;
+    }
+
+    /**
+     * Resolve the permanent MemberPress authorization target after a legacy
+     * catalogue transition. Child Content follows its Course or Series so one
+     * native rule protects the complete parent curriculum.
+     */
+    public function native_authorization_post_id($target_id) {
+        $target_id = absint($target_id);
+        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== get_post_type($target_id)) {
+            return $target_id;
+        }
+
+        $course_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
+        if ($course_id > 0 && TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($course_id)) {
+            return $course_id;
+        }
+
+        $series_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        if ($series_id > 0 && TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type($series_id)) {
+            return $series_id;
+        }
+
+        return $target_id;
     }
 
     public function memberships() {
@@ -581,7 +613,11 @@ class TSOL_Library_Access_Groups {
             }
             foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
                 $target_id = (int) $target_id;
-                update_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $target_id);
+                update_post_meta(
+                    $target_id,
+                    TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
+                    $this->native_authorization_post_id($target_id)
+                );
             }
             $state['phase'] = 'active';
             $state['activated_at'] = gmdate('Y-m-d H:i:s');
