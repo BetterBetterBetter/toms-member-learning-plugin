@@ -5,10 +5,10 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this report through WP-CLI.');
 }
 
-$configuration = get_option(TSOL_Library_Access_Groups::OPTION_NAME, array());
+$configuration = get_option(MemberLibrary_Access_Groups::OPTION_NAME, array());
 $managed_ids = array_fill_keys(array_map('intval', (array) ($configuration['source_rule_ids'] ?? array())), true);
 $targets = get_posts(array(
-    'post_type' => TSOL_Library_Content_Model::post_types(),
+    'post_type' => MemberLibrary_Content_Model::post_types(),
     'post_status' => array_values(get_post_stati()),
     'posts_per_page' => -1,
     'fields' => 'ids',
@@ -16,7 +16,7 @@ $targets = get_posts(array(
 ));
 $rules = array();
 foreach ($targets as $target_id) {
-    $authorization_id = (int) get_post_meta((int) $target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
+    $authorization_id = (int) get_post_meta((int) $target_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
     $authorization_id = $authorization_id > 0 ? $authorization_id : (int) $target_id;
     $authorization_post = get_post($authorization_id);
     if (!$authorization_post instanceof WP_Post) {
@@ -39,7 +39,7 @@ foreach ($targets as $target_id) {
             $rules[$rule_id] = array(
                 'id' => $rule_id,
                 'title' => get_the_title($rule_id),
-                'managed' => isset($managed_ids[$rule_id]) || TSOL_Library_Access_Groups::OWNER_VALUE === (string) get_post_meta($rule_id, TSOL_Library_Access_Groups::META_OWNER, true),
+                'managed' => isset($managed_ids[$rule_id]) || MemberLibrary_Access_Groups::OWNER_VALUE === (string) get_post_meta($rule_id, MemberLibrary_Access_Groups::META_OWNER, true),
                 'memberpress_type' => (string) $rule->mepr_type,
                 'memberpress_content' => (string) $rule->mepr_content,
                 'conditions' => $conditions,

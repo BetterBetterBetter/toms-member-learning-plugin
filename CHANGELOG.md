@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.6.0 - 2026-09-01
+
+Consolidation into one canonical multi-brand library plugin (serves Tom's
+School of Life and Liberty Classroom via per-install brand config).
+
+- Reconciled the Liberty fork's improvements into the core: collection
+  appearance colors with WCAG contrast enforcement, catalogue schema
+  `20260830.1` + media `duration_seconds`, native authorization through the
+  parent Course/Series, an explicit `tsol_library_header` nav location, and
+  environment-migration package schema v2 (reads v1).
+- Added `MemberLibrary_Brand` per-install brand configuration (constant →
+  option → default); replaced hardcoded brand couplings (auth interstitial
+  logo/CSP, OAuth client-id default, admin labels). Fixes the fork bug where
+  the auth error page served the wrong logo/CSP regardless of brand.
+- Stripped the plugin to the library core only: removed the accountability
+  modal, cookie consent, and TSOL legacy data migrations (they belong in the
+  separate TSOL companion plugin); kept the active Liberty LearnDash importer.
+- Renamed internal PHP identifiers `TSOL_* → MemberLibrary_*`, the main class
+  to `Member_Library_Plugin`, internal constants to `MEMBER_LIBRARY_PLUGIN_*`,
+  the text domain to `member-library`, and the entry file to
+  `member-library-plugin.php`. **Machine identifiers** (REST namespace
+  `tsol-library/v1`, `tsol_*` hooks/options/meta/CPTs/table, `X-TSOL-*`
+  headers, `TSOL_LIBRARY_*` wp-config constants) are unchanged — a frozen
+  cross-brand contract.
+- Rewired the update channel to the canonical repo; added CI (PHP lint) and a
+  tagged release ZIP workflow; `RELEASE.md` supersedes `UPDATER_GUIDE.md`.
+
 ## 0.5.1 - 2026-08-27
 
 - Moved the WebVTT transcript upload and synchronization status into the Content editor’s Media panel, directly beneath the primary playback source.
