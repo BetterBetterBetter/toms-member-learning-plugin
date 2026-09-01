@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin Settings Class
- * Handles WordPress admin interface for Tom's School Of Life site settings.
+ * Displays the Liberty Classroom Library integration status.
  */
 
 if (!defined('ABSPATH')) {
@@ -10,33 +10,8 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Site_Admin_Settings {
 
-    private $options_group = 'tsol_site_plugin_settings';
-    private $page_slug = 'tomschooloflife-plugin';
-
     public function init() {
-        add_action('admin_init', array($this, 'register_settings'));
-    }
-
-    public function register_settings() {
-        add_settings_section(
-            'tsol_site_general',
-            __('General Settings', 'tomschooloflife-plugin'),
-            array($this, 'general_section_callback'),
-            $this->page_slug
-        );
-
-        add_settings_field(
-            'tsol_site_plugin_enabled',
-            __('Enable Site Features', 'tomschooloflife-plugin'),
-            array($this, 'enabled_callback'),
-            $this->page_slug,
-            'tsol_site_general'
-        );
-
-        register_setting($this->options_group, 'tsol_site_plugin_enabled', array(
-            'sanitize_callback' => array($this, 'sanitize_checkbox'),
-            'default' => '1',
-        ));
+        // Feature-specific settings are registered by the Library modules.
     }
 
     public function display_page() {
@@ -47,51 +22,28 @@ class TSOL_Site_Admin_Settings {
             <?php settings_errors(); ?>
 
             <div class="tsol-site-status-card">
-                <h2><?php esc_html_e('Site Plugin Status', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Library integration status', 'libertyclassroom-library'); ?></h2>
                 <dl>
-                    <dt><?php esc_html_e('Plugin version', 'tomschooloflife-plugin'); ?></dt>
+                    <dt><?php esc_html_e('Plugin version', 'libertyclassroom-library'); ?></dt>
                     <dd><?php echo esc_html(TSOL_SITE_PLUGIN_VERSION); ?></dd>
 
-                    <dt><?php esc_html_e('Access Platform SSO', 'tomschooloflife-plugin'); ?></dt>
+                    <dt><?php esc_html_e('Access Platform SSO', 'libertyclassroom-library'); ?></dt>
                     <dd>
-                        <?php if (TomsSchoolOfLifePlugin::is_access_sso_available()) : ?>
-                            <span class="tsol-site-status tsol-site-status--ok"><?php esc_html_e('Active', 'tomschooloflife-plugin'); ?></span>
+                        <?php if (LibertyClassroomLibraryPlugin::is_access_sso_available()) : ?>
+                            <span class="tsol-site-status tsol-site-status--ok"><?php esc_html_e('Active', 'libertyclassroom-library'); ?></span>
                         <?php else : ?>
-                            <span class="tsol-site-status tsol-site-status--error"><?php esc_html_e('Missing', 'tomschooloflife-plugin'); ?></span>
+                            <span class="tsol-site-status tsol-site-status--error"><?php esc_html_e('Missing', 'libertyclassroom-library'); ?></span>
                         <?php endif; ?>
                     </dd>
 
-                    <dt><?php esc_html_e('Home URL', 'tomschooloflife-plugin'); ?></dt>
+                    <dt><?php esc_html_e('Home URL', 'libertyclassroom-library'); ?></dt>
                     <dd><code><?php echo esc_html(home_url()); ?></code></dd>
 
                 </dl>
             </div>
 
-            <form method="post" action="options.php">
-                <?php
-                settings_fields($this->options_group);
-                do_settings_sections($this->page_slug);
-                submit_button();
-                ?>
-            </form>
         </div>
         <?php
     }
 
-    public function general_section_callback() {
-        echo '<p>' . esc_html__('Use this plugin for site-specific features that should not live in the shared Access Platform SSO plugin.', 'tomschooloflife-plugin') . '</p>';
-    }
-
-    public function enabled_callback() {
-        $value = get_option('tsol_site_plugin_enabled', '1');
-
-        echo '<label>';
-        echo '<input type="checkbox" name="tsol_site_plugin_enabled" value="1" ' . checked('1', $value, false) . '>';
-        echo ' ' . esc_html__('Load Tom\'s School Of Life site-specific hooks.', 'tomschooloflife-plugin');
-        echo '</label>';
-    }
-
-    public function sanitize_checkbox($value) {
-        return $value === '1' ? '1' : '0';
-    }
 }

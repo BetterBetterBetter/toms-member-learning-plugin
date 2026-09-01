@@ -154,7 +154,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library authentication revocation contract failed with ' . count($failures) . ' issue(s).');
+    WP_CLI::error('Liberty Classroom Library authentication revocation contract failed with ' . count($failures) . ' issue(s).');
 }
 
-WP_CLI::success('TSOL Library authentication revocation contract passed.');
+WP_CLI::success('Liberty Classroom Library authentication revocation contract passed.');

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-08-30
+
+- Created an independent Liberty Classroom Library plugin from the proven shared Library contract.
+- Removed TSOL-only accountability, cookie-consent, and New Marketer migration features.
+- Disabled GitHub update checks until Liberty has its own plugin repository and release channel.
+
 ## 0.5.1 - 2026-08-27
 
 - Moved the WebVTT transcript upload and synchronization status into the Content editor’s Media panel, directly beneath the primary playback source.
@@ -47,7 +53,7 @@
 
 ## 0.4.0 - 2026-08-26
 
-- Added **TSOL Library → Migration** for checksum-verified, preview-first movement of WordPress-owned Library records, taxonomy, homepage curation, attachment references, Access Groups, and membership assignments between test and production.
+- Added **Liberty Classroom Library → Migration** for checksum-verified, preview-first movement of WordPress-owned Library records, taxonomy, homepage curation, attachment references, Access Groups, and membership assignments between test and production.
 - Explicitly excluded the standalone app database, app accounts, sessions, progress, notes, bookmarks, WordPress users, MemberPress transactions, secrets, logs, generated rules, and temporary state from migration packages.
 - Added stable UUID and membership-slug mapping, guarded adoption of matching records created by older independent imports, blocking identity and authorization conflicts, missing-attachment warnings, exact confirmation phrases, operation locking, and one-step rollback.
 - Imported Access Groups as an unpublished draft and retained the existing MemberPress rules as the live comparison baseline; publication remains blocked whenever the full current-user/content matrix would remove access.
@@ -58,11 +64,11 @@
 
 ## 0.3.0 - 2026-08-26
 
-- Added **TSOL Library → Access Groups**, where administrators create named reusable Library access packages and define the Courses, Series, collections, or broad Library areas each package unlocks.
+- Added **Liberty Classroom Library → Access Groups**, where administrators create named reusable Library access packages and define the Courses, Series, collections, or broad Library areas each package unlocks.
 - Added a **Library Access Groups** panel to MemberPress membership editors so new and existing products can receive one or more packages without duplicating access conditions.
 - Added guarded compilation to native MemberPress rules, full current-user/content access comparison, explicit publication confirmation, concurrent-operation locking, source-change detection, and one-step rollback.
 - Imported the complete current policy—including the separately shipped New Marketer Workshop rule—into eight editable groups while preserving the non-membership exception.
-- Made Access Groups the ownership boundary for TSOL Library rules: plugin-owned stragglers can be reconciled without changing live access, arbitrary rules are never auto-modified, and publishing is blocked while any Library rule remains unmanaged.
+- Made Access Groups the ownership boundary for Liberty Classroom Library rules: plugin-owned stragglers can be reconciled without changing live access, arbitrary rules are never auto-modified, and publishing is blocked while any Library rule remains unmanaged.
 - Retired the completed Import & Legacy browser tab while preserving its guarded WP-CLI verification and rollback tools, and updated Library Settings to direct administrators to Access Groups instead of raw MemberPress rules.
 
 ## 0.2.3 - 2026-08-26
@@ -86,12 +92,12 @@
 
 ## 0.2.1 - 2026-08-09
 
-- Added a dedicated TSOL Library Footer menu location and authenticated navigation endpoint for the standalone Library.
+- Added a dedicated Liberty Classroom Library Footer menu location and authenticated navigation endpoint for the standalone Library.
 - Return an empty navigation list when no menu is assigned so the Library can omit the WordPress-managed menu cleanly.
 
 ## 0.2.0 - 2026-08-07
 
-- Added the TSOL Library authentication bridge with mandatory S256 PKCE, exact callbacks, hashed one-use authorization codes, short-lived tokens, rate limits, and signed logout propagation.
+- Added the Liberty Classroom Library authentication bridge with mandatory S256 PKCE, exact callbacks, hashed one-use authorization codes, short-lived tokens, rate limits, and signed logout propagation.
 - Separated authentication from course authorization: every authenticated WordPress user can enter the Library, while MemberPress-native per-content rules and WordPress `manage_options` decide protected content access without a second allowlist.
 - Added authenticated content-access and readiness endpoints, redacted audit events, no-store security headers, `DONOTCACHEPAGE` and WP Rocket exclusions, and scheduled authorization-code cleanup.
 - Made Access Platform SSO an optional WordPress login source instead of a hard plugin dependency.

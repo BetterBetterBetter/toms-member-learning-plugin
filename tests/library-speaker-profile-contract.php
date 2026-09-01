@@ -235,4 +235,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
 }
 
-WP_CLI::success('Private TSOL Library Speaker profile contract passed; disposable fixtures were removed.');
+WP_CLI::success('Private Liberty Classroom Library Speaker profile contract passed; disposable fixtures were removed.');

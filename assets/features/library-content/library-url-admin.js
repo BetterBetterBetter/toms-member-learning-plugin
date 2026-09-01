@@ -1,4 +1,4 @@
-/* TSOL Library canonical URL editor */
+/* Liberty Classroom Library canonical URL editor */
 
 (function() {
     'use strict';

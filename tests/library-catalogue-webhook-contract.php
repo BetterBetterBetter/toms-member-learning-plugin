@@ -175,7 +175,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library catalogue webhook contract failed with ' . count($failures) . ' issue(s).');
+    WP_CLI::error('Liberty Classroom Library catalogue webhook contract failed with ' . count($failures) . ' issue(s).');
 }
 
-WP_CLI::success('TSOL Library catalogue webhook contract passed.');
+WP_CLI::success('Liberty Classroom Library catalogue webhook contract passed.');

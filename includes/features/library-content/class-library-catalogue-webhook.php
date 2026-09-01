@@ -75,7 +75,7 @@ class TSOL_Library_Catalogue_Webhook {
         }
         $schedules[self::WATCHDOG_SCHEDULE] = array(
             'interval' => MINUTE_IN_SECONDS,
-            'display' => __('Every minute (TSOL catalogue delivery)', 'tomschooloflife-plugin'),
+            'display' => __('Every minute (Liberty catalogue delivery)', 'libertyclassroom-library'),
         );
         return $schedules;
     }

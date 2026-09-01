@@ -70,7 +70,7 @@ class TSOL_Library_Access_Groups {
 
         $source_rules = $this->source_rules();
         if (empty($source_rules)) {
-            throw new RuntimeException('No activated TSOL-native MemberPress rules were found to bootstrap.');
+            throw new RuntimeException('No activated Library-native MemberPress rules were found to bootstrap.');
         }
 
         $scope_assignments = array();
@@ -298,7 +298,7 @@ class TSOL_Library_Access_Groups {
                 $configuration['groups'][$group_id] = array(
                     'id' => $group_id,
                     'name' => $this->imported_group_name(array($scope_key), count($configuration['groups']) + 1),
-                    'description' => __('Imported from an existing plugin-owned Library rule.', 'tomschooloflife-plugin'),
+                    'description' => __('Imported from an existing plugin-owned Library rule.', 'libertyclassroom-library'),
                     'scopes' => array($scope_key),
                 );
             }
@@ -380,33 +380,39 @@ class TSOL_Library_Access_Groups {
         $definitions = array(
             'library:all' => array(
                 'key' => 'library:all',
-                'label' => __('Entire Library', 'tomschooloflife-plugin'),
-                'description' => __('Every current Course, Masterclass, and Series.', 'tomschooloflife-plugin'),
+                'label' => __('Entire Library', 'libertyclassroom-library'),
+                'description' => __('Every current Course, Masterclass, and Series.', 'libertyclassroom-library'),
                 'kind' => 'library',
                 'target_id' => 0,
             ),
             'collection:masterclasses' => array(
                 'key' => 'collection:masterclasses',
-                'label' => __('All Masterclasses', 'tomschooloflife-plugin'),
-                'description' => __('Every Course in the Masterclasses collection, including future additions.', 'tomschooloflife-plugin'),
+                'label' => __('All Masterclasses', 'libertyclassroom-library'),
+                'description' => __('Every Course in the Masterclasses collection, including future additions.', 'libertyclassroom-library'),
                 'kind' => 'collection',
                 'target_id' => $this->masterclasses_term_id(),
             ),
             'series:all' => array(
                 'key' => 'series:all',
-                'label' => __('All Series', 'tomschooloflife-plugin'),
-                'description' => __('Every current and future Library Series.', 'tomschooloflife-plugin'),
+                'label' => __('All Series', 'libertyclassroom-library'),
+                'description' => __('Every current and future Library Series.', 'libertyclassroom-library'),
                 'kind' => 'all_series',
                 'target_id' => 0,
             ),
         );
+        // Brands without a Masterclasses collection should not expose or
+        // require that TSOL-specific scope. Course-level scopes remain fully
+        // available for their access groups.
+        if ($this->masterclasses_term_id() <= 0) {
+            unset($definitions['collection:masterclasses']);
+        }
 
         foreach ($this->library_posts(TSOL_Library_Content_Model::COURSE_POST_TYPE) as $post) {
             $key = $this->post_group_key('course', $post->ID);
             $definitions[$key] = array(
                 'key' => $key,
-                'label' => sprintf(__('Course: %s', 'tomschooloflife-plugin'), $post->post_title),
-                'description' => __('This Course and all of its Library content.', 'tomschooloflife-plugin'),
+                'label' => sprintf(__('Course: %s', 'libertyclassroom-library'), $post->post_title),
+                'description' => __('This Course and all of its Library content.', 'libertyclassroom-library'),
                 'kind' => 'course',
                 'target_id' => (int) $post->ID,
             );
@@ -415,8 +421,8 @@ class TSOL_Library_Access_Groups {
             $key = $this->post_group_key('series', $post->ID);
             $definitions[$key] = array(
                 'key' => $key,
-                'label' => sprintf(__('Series: %s', 'tomschooloflife-plugin'), $post->post_title),
-                'description' => __('This Series and all of its Library content.', 'tomschooloflife-plugin'),
+                'label' => sprintf(__('Series: %s', 'libertyclassroom-library'), $post->post_title),
+                'description' => __('This Series and all of its Library content.', 'libertyclassroom-library'),
                 'kind' => 'series',
                 'target_id' => (int) $post->ID,
             );
@@ -432,6 +438,30 @@ class TSOL_Library_Access_Groups {
             'orderby' => array('title' => 'ASC', 'ID' => 'ASC'),
             'suppress_filters' => true,
         ));
+    }
+
+    /**
+     * Resolve the permanent MemberPress authorization target after a legacy
+     * catalogue transition. Child Content follows its Course or Series so one
+     * native rule protects the complete parent curriculum.
+     */
+    public function native_authorization_post_id($target_id) {
+        $target_id = absint($target_id);
+        if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== get_post_type($target_id)) {
+            return $target_id;
+        }
+
+        $course_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_COURSE_ID, true);
+        if ($course_id > 0 && TSOL_Library_Content_Model::COURSE_POST_TYPE === get_post_type($course_id)) {
+            return $course_id;
+        }
+
+        $series_id = (int) get_post_meta($target_id, TSOL_Library_Content_Model::META_SERIES_ID, true);
+        if ($series_id > 0 && TSOL_Library_Content_Model::SERIES_POST_TYPE === get_post_type($series_id)) {
+            return $series_id;
+        }
+
+        return $target_id;
     }
 
     public function preview() {
@@ -477,7 +507,7 @@ class TSOL_Library_Access_Groups {
             $unmanaged = $this->unmanaged_effective_rules($configuration);
             if (!empty($unmanaged) && empty($configuration['environment_migration'])) {
                 throw new RuntimeException(sprintf(
-                    _n('%d published MemberPress rule affecting the Library is outside Access Groups. Reconcile it before checking changes.', '%d published MemberPress rules affecting the Library are outside Access Groups. Reconcile them before checking changes.', count($unmanaged), 'tomschooloflife-plugin'),
+                    _n('%d published MemberPress rule affecting the Library is outside Access Groups. Reconcile it before checking changes.', '%d published MemberPress rules affecting the Library are outside Access Groups. Reconcile them before checking changes.', count($unmanaged), 'libertyclassroom-library'),
                     count($unmanaged)
                 ));
             }
@@ -581,7 +611,11 @@ class TSOL_Library_Access_Groups {
             }
             foreach ((array) ($configuration['transition_authorization_ids'] ?? array()) as $target_id => $authorization_id) {
                 $target_id = (int) $target_id;
-                update_post_meta($target_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $target_id);
+                update_post_meta(
+                    $target_id,
+                    TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID,
+                    $this->native_authorization_post_id($target_id)
+                );
             }
             $state['phase'] = 'active';
             $state['activated_at'] = gmdate('Y-m-d H:i:s');
@@ -711,22 +745,22 @@ class TSOL_Library_Access_Groups {
     private function rule_target($definition) {
         if ('collection' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Masterclasses', 'tomschooloflife-plugin'),
+                'title' => __('Liberty Library Access Groups — All Masterclasses', 'libertyclassroom-library'),
                 'type' => 'tax_' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY . '||cpt_' . TSOL_Library_Content_Model::COURSE_POST_TYPE,
                 'content' => (string) $definition['target_id'],
             );
         }
         if ('all_series' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Series', 'tomschooloflife-plugin'),
+                'title' => __('Liberty Library Access Groups — All Series', 'libertyclassroom-library'),
                 'type' => 'all_' . TSOL_Library_Content_Model::SERIES_POST_TYPE,
                 'content' => '',
             );
         }
-        $noun = 'course' === $definition['kind'] ? __('Course', 'tomschooloflife-plugin') : __('Series', 'tomschooloflife-plugin');
+        $noun = 'course' === $definition['kind'] ? __('Course', 'libertyclassroom-library') : __('Series', 'libertyclassroom-library');
         $post_type = 'course' === $definition['kind'] ? TSOL_Library_Content_Model::COURSE_POST_TYPE : TSOL_Library_Content_Model::SERIES_POST_TYPE;
         return array(
-            'title' => sprintf(__('TSOL Access Groups — %1$s: %2$s', 'tomschooloflife-plugin'), $noun, get_the_title((int) $definition['target_id'])),
+            'title' => sprintf(__('Liberty Library Access Groups — %1$s: %2$s', 'libertyclassroom-library'), $noun, get_the_title((int) $definition['target_id'])),
             'type' => 'single_' . $post_type,
             'content' => (string) $definition['target_id'],
         );
@@ -830,7 +864,7 @@ class TSOL_Library_Access_Groups {
                 $groups[$group_id] = array(
                     'id' => $group_id,
                     'name' => $this->imported_group_name($scope_keys, count($groups) + 1),
-                    'description' => __('Imported from the current MemberPress Library access policy.', 'tomschooloflife-plugin'),
+                    'description' => __('Imported from the current MemberPress Library access policy.', 'libertyclassroom-library'),
                     'scopes' => $scope_keys,
                 );
             }
@@ -846,13 +880,13 @@ class TSOL_Library_Access_Groups {
     private function imported_group_name($scope_keys, $ordinal) {
         $definitions = $this->definitions();
         if (array('library:all') === $scope_keys) {
-            return __('Complete Library', 'tomschooloflife-plugin');
+            return __('Complete Library', 'libertyclassroom-library');
         }
         if (array('collection:masterclasses') === $scope_keys) {
-            return __('Masterclasses', 'tomschooloflife-plugin');
+            return __('Masterclasses', 'libertyclassroom-library');
         }
         if (array('series:all') === $scope_keys) {
-            return __('All Series', 'tomschooloflife-plugin');
+            return __('All Series', 'libertyclassroom-library');
         }
         if (1 === count($scope_keys) && isset($definitions[$scope_keys[0]])) {
             return preg_replace('/^(Course|Series):\s*/', '', (string) $definitions[$scope_keys[0]]['label']);
@@ -865,7 +899,7 @@ class TSOL_Library_Access_Groups {
         }
         sort($core_scopes, SORT_STRING);
         if ($core_scopes === $scope_keys) {
-            return __('Complete Library', 'tomschooloflife-plugin');
+            return __('Complete Library', 'libertyclassroom-library');
         }
         // The production policy intentionally excludes newer separately sold
         // courses, so its historical all-access package is not called
@@ -873,9 +907,9 @@ class TSOL_Library_Access_Groups {
         if (in_array('collection:masterclasses', $scope_keys, true)
             && in_array('series:all', $scope_keys, true)
         ) {
-            return __('School of Life Core Library', 'tomschooloflife-plugin');
+            return __('School of Life Core Library', 'libertyclassroom-library');
         }
-        return sprintf(__('Imported Library Access %d', 'tomschooloflife-plugin'), (int) $ordinal);
+        return sprintf(__('Imported Library Access %d', 'libertyclassroom-library'), (int) $ordinal);
     }
 
     private function sanitize_groups($raw_groups) {
@@ -1175,7 +1209,7 @@ class TSOL_Library_Access_Groups {
                 }
                 foreach ($this->rule_conditions((int) $rule->ID) as $key => $condition) {
                     $old[$key] = $condition;
-                    // Access Groups replace only the imported TSOL-native rule
+                    // Access Groups replace only the imported Library-native rule
                     // set. Independently managed MemberPress rules continue to
                     // apply and must be part of the proposed policy too.
                     if (!$is_transition_source && !isset($replaced_rule_ids[(int) $rule->ID])) {
@@ -1254,9 +1288,6 @@ class TSOL_Library_Access_Groups {
     private function assert_memberpress() {
         if (!class_exists('MeprRule') || !class_exists('MeprRuleAccessCondition') || !class_exists('MeprUser')) {
             throw new RuntimeException('MemberPress is unavailable; Access Groups fail closed.');
-        }
-        if ($this->masterclasses_term_id() <= 0) {
-            throw new RuntimeException('The Masterclasses collection is unavailable.');
         }
     }
 

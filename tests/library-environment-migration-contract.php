@@ -35,6 +35,7 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 
 $assert('wordpress-library-only' === (string) ($package['manifest']['scope'] ?? ''), 'The package is not explicitly limited to WordPress Library data.');
+$assert(TSOL_Library_Environment_Migration::SCHEMA_VERSION === (int) ($package['manifest']['schema_version'] ?? 0), 'The package does not use the current migration schema.');
 $assert($post_count > 0, 'The package contains no WordPress Library records.');
 $assert($post_count === (int) ($package['manifest']['counts']['posts'] ?? -1), 'The package post manifest count is incorrect.');
 $assert(0 === (int) $preview['creates'], 'A self-preview would create unexpected Library records.');
@@ -67,6 +68,12 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
     $assert(!isset($record['ID']), 'A Library record exposes a source WordPress post ID.');
     foreach ((array) ($record['speaker_uuids'] ?? array()) as $speaker_uuid) {
         $assert(!is_numeric($speaker_uuid), 'A Speaker relationship contains a source WordPress post ID.');
+    }
+}
+
+foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
+    if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === (string) ($term['taxonomy'] ?? '')) {
+        $assert(array_key_exists('appearance', (array) ($term['meta'] ?? array())), 'A portable Collection omitted its optional appearance.');
     }
 }
 
@@ -141,4 +148,4 @@ WP_CLI::line(wp_json_encode(array(
     'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
     'bytes' => strlen($json),
 ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-WP_CLI::success('The portable package contains only WordPress-owned TSOL Library data and round-trips unchanged.');
+WP_CLI::success('The portable package contains only WordPress-owned Liberty Classroom Library data and round-trips unchanged.');

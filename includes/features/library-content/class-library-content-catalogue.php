@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260823.1';
+    const SCHEMA_VERSION = '20260830.1';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -95,7 +95,7 @@ class TSOL_Library_Content_Catalogue {
     public static function record($post_id) {
         $post = get_post((int) $post_id);
         if (!$post instanceof WP_Post || !self::is_exportable_post($post)) {
-            return new WP_Error('unknown_catalogue_content', __('The requested Library catalogue record does not exist.', 'tomschooloflife-plugin'));
+            return new WP_Error('unknown_catalogue_content', __('The requested Library catalogue record does not exist.', 'libertyclassroom-library'));
         }
 
         $thumbnail_id = (int) get_post_thumbnail_id($post->ID);
@@ -334,7 +334,7 @@ class TSOL_Library_Content_Catalogue {
             });
             unset($group['item_positions']);
             if ('' === $group['title']) {
-                $group['title'] = __('Series episodes', 'tomschooloflife-plugin');
+                $group['title'] = __('Series episodes', 'libertyclassroom-library');
             }
         }
         unset($group);
@@ -372,14 +372,18 @@ class TSOL_Library_Content_Catalogue {
 
         $section_key = (string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_KEY, true);
         $registry_section = self::structure_group($course_id, $section_key);
+        $section_title = is_array($registry_section)
+            ? (string) $registry_section['title']
+            : sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_TITLE, true));
+        if ('' === $section_title) {
+            $section_title = __('Course content', 'libertyclassroom-library');
+        }
         return array(
             'course_id' => $course_id,
             'section' => array(
                 'id' => self::section_numeric_id($course_id, $section_key),
                 'uuid' => self::section_key($section_key),
-                'title' => is_array($registry_section)
-                    ? (string) $registry_section['title']
-                    : sanitize_text_field((string) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_TITLE, true)),
+                'title' => $section_title,
                 'position' => is_array($registry_section)
                     ? (int) $registry_section['position']
                     : max(1, (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_SECTION_POSITION, true)),
@@ -437,7 +441,7 @@ class TSOL_Library_Content_Catalogue {
             });
             unset($section['lesson_positions']);
             if ('' === $section['title']) {
-                $section['title'] = __('Course content', 'tomschooloflife-plugin');
+                $section['title'] = __('Course content', 'libertyclassroom-library');
             }
         }
         unset($section);
@@ -531,6 +535,9 @@ class TSOL_Library_Content_Catalogue {
                 'overview_html' => $overview_html,
                 'hero_image' => $hero_image,
                 'featured_course_wordpress_id' => $featured_course_id,
+                'appearance' => TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy
+                    ? TSOL_Library_Content_Model::collection_appearance((int) $term->term_id)
+                    : null,
             );
         }, $terms));
     }
@@ -614,6 +621,7 @@ class TSOL_Library_Content_Catalogue {
                 'url' => $url,
                 'attachment_id' => $attachment_id,
                 'mime_type' => $mime_type,
+                'duration_seconds' => absint($asset['duration_seconds'] ?? 0),
                 'position' => absint($asset['position'] ?? 0),
             );
         }, $assets));

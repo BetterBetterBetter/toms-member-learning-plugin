@@ -31,8 +31,8 @@ class TSOL_Library_Structure_Admin {
     public function register_page() {
         $this->page_hook = (string) add_submenu_page(
             TSOL_Library_Admin_Navigation::MENU_SLUG,
-            __('Library Structure Builder', 'tomschooloflife-plugin'),
-            __('Structure Builder', 'tomschooloflife-plugin'),
+            __('Library Structure Builder', 'libertyclassroom-library'),
+            __('Structure Builder', 'libertyclassroom-library'),
             'edit_pages',
             self::PAGE_SLUG,
             array($this, 'render_page')
@@ -42,7 +42,7 @@ class TSOL_Library_Structure_Admin {
     public function hide_page_from_submenu() {
         // This runs after admin.php's capability/page lookup but before the
         // menu is rendered. The builder remains an in-context destination
-        // while WordPress retains the correct TSOL Library parent hierarchy.
+        // while WordPress retains the correct Liberty Classroom Library parent hierarchy.
         remove_submenu_page(TSOL_Library_Admin_Navigation::MENU_SLUG, self::PAGE_SLUG);
     }
 
@@ -81,15 +81,15 @@ class TSOL_Library_Structure_Admin {
             'action' => self::AJAX_ACTION,
             'nonce' => wp_create_nonce(self::NONCE_ACTION),
             'messages' => array(
-                'unsaved' => __('You have unsaved structure changes.', 'tomschooloflife-plugin'),
-                'saving' => __('Saving structure…', 'tomschooloflife-plugin'),
-                'saved' => __('Structure saved.', 'tomschooloflife-plugin'),
-                'saveError' => __('The structure could not be saved.', 'tomschooloflife-plugin'),
-                'filteredSorting' => __('Clear the search before reordering.', 'tomschooloflife-plugin'),
-                'groupTitle' => __('Group title', 'tomschooloflife-plugin'),
-                'newGroup' => __('New group', 'tomschooloflife-plugin'),
-                'emptyGroup' => __('No content in this group yet.', 'tomschooloflife-plugin'),
-                'removeGroup' => __('Remove empty group', 'tomschooloflife-plugin'),
+                'unsaved' => __('You have unsaved structure changes.', 'libertyclassroom-library'),
+                'saving' => __('Saving structure…', 'libertyclassroom-library'),
+                'saved' => __('Structure saved.', 'libertyclassroom-library'),
+                'saveError' => __('The structure could not be saved.', 'libertyclassroom-library'),
+                'filteredSorting' => __('Clear the search before reordering.', 'libertyclassroom-library'),
+                'groupTitle' => __('Group title', 'libertyclassroom-library'),
+                'newGroup' => __('New group', 'libertyclassroom-library'),
+                'emptyGroup' => __('No content in this group yet.', 'libertyclassroom-library'),
+                'removeGroup' => __('Remove empty group', 'libertyclassroom-library'),
             ),
         ));
     }
@@ -97,7 +97,7 @@ class TSOL_Library_Structure_Admin {
     public function render_page() {
         $parent_id = isset($_GET['parent_id']) ? absint(wp_unslash($_GET['parent_id'])) : 0;
         if ($parent_id <= 0 || !current_user_can('edit_post', $parent_id)) {
-            wp_die(esc_html__('You are not allowed to edit this Library structure.', 'tomschooloflife-plugin'));
+            wp_die(esc_html__('You are not allowed to edit this Library structure.', 'libertyclassroom-library'));
         }
 
         $snapshot = TSOL_Library_Structure::snapshot($parent_id);
@@ -115,16 +115,16 @@ class TSOL_Library_Structure_Admin {
         <div class="wrap tsol-library-structure-page" data-structure-builder data-parent-id="<?php echo esc_attr((string) $parent_id); ?>" data-revision="<?php echo esc_attr((string) $snapshot['revision']); ?>" data-item-label="<?php echo esc_attr((string) $snapshot['itemLabel']); ?>" data-item-plural="<?php echo esc_attr($this->pluralize((string) $snapshot['itemLabel'])); ?>" data-start-collapsed="<?php echo (int) $snapshot['itemCount'] > 12 ? 'true' : 'false'; ?>">
             <a class="tsol-library-structure-page__back" href="<?php echo esc_url((string) $snapshot['parentEditUrl']); ?>">
                 <span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
-                <?php echo esc_html(sprintf(__('Back to %s', 'tomschooloflife-plugin'), (string) $snapshot['parentTitle'])); ?>
+                <?php echo esc_html(sprintf(__('Back to %s', 'libertyclassroom-library'), (string) $snapshot['parentTitle'])); ?>
             </a>
 
             <div class="tsol-library-structure-page__heading">
                 <div>
-                    <h1><?php echo esc_html(sprintf(__('%s structure', 'tomschooloflife-plugin'), (string) $snapshot['parentTitle'])); ?></h1>
+                    <h1><?php echo esc_html(sprintf(__('%s structure', 'libertyclassroom-library'), (string) $snapshot['parentTitle'])); ?></h1>
                     <p class="description">
                         <?php
                         echo esc_html(sprintf(
-                            __('Arrange %1$s %2$s in %3$s %4$s. This changes catalogue presentation only; MemberPress access is not changed here.', 'tomschooloflife-plugin'),
+                            __('Arrange %1$s %2$s in %3$s %4$s. This changes catalogue presentation only; MemberPress access is not changed here.', 'libertyclassroom-library'),
                             number_format_i18n((int) $snapshot['itemCount']),
                             $item_plural,
                             number_format_i18n((int) $snapshot['groupCount']),
@@ -135,11 +135,11 @@ class TSOL_Library_Structure_Admin {
                     <?php if (!empty($snapshot['descending'])) : ?>
                         <p class="tsol-library-structure-page__order-note">
                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
-                            <?php esc_html_e('Shown in the same newest-first order visitors see in the Library.', 'tomschooloflife-plugin'); ?>
+                            <?php esc_html_e('Shown in the same newest-first order visitors see in the Library.', 'libertyclassroom-library'); ?>
                         </p>
                     <?php endif; ?>
                 </div>
-                <button type="button" class="button button-primary button-hero" data-structure-save disabled><?php esc_html_e('Save structure', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-primary button-hero" data-structure-save disabled><?php esc_html_e('Save structure', 'libertyclassroom-library'); ?></button>
             </div>
 
             <div class="notice notice-error inline tsol-library-structure-page__notice" data-structure-error hidden><p></p></div>
@@ -147,14 +147,14 @@ class TSOL_Library_Structure_Admin {
             <div class="tsol-library-structure-toolbar">
                 <?php if ((int) $snapshot['itemCount'] > 12) : ?>
                     <label class="tsol-library-structure-toolbar__search">
-                        <span class="screen-reader-text"><?php esc_html_e('Search content in this structure', 'tomschooloflife-plugin'); ?></span>
+                        <span class="screen-reader-text"><?php esc_html_e('Search content in this structure', 'libertyclassroom-library'); ?></span>
                         <span class="dashicons dashicons-search" aria-hidden="true"></span>
-                        <input type="search" data-structure-search placeholder="<?php esc_attr_e('Search content…', 'tomschooloflife-plugin'); ?>" />
+                        <input type="search" data-structure-search placeholder="<?php esc_attr_e('Search content…', 'libertyclassroom-library'); ?>" />
                     </label>
                 <?php endif; ?>
                 <div class="tsol-library-structure-toolbar__actions">
-                    <button type="button" class="button" data-structure-expand><?php esc_html_e('Expand all', 'tomschooloflife-plugin'); ?></button>
-                    <button type="button" class="button" data-structure-collapse><?php esc_html_e('Collapse all', 'tomschooloflife-plugin'); ?></button>
+                    <button type="button" class="button" data-structure-expand><?php esc_html_e('Expand all', 'libertyclassroom-library'); ?></button>
+                    <button type="button" class="button" data-structure-collapse><?php esc_html_e('Collapse all', 'libertyclassroom-library'); ?></button>
                 </div>
             </div>
             <p class="tsol-library-structure-toolbar__filter-note" data-structure-filter-note hidden></p>
@@ -168,7 +168,7 @@ class TSOL_Library_Structure_Admin {
             <div class="tsol-library-structure-add-group">
                 <button type="button" class="button button-secondary" data-structure-add-group>
                     <span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span>
-                    <?php echo esc_html(sprintf(__('Add %s', 'tomschooloflife-plugin'), (string) $snapshot['groupLabel'])); ?>
+                    <?php echo esc_html(sprintf(__('Add %s', 'libertyclassroom-library'), (string) $snapshot['groupLabel'])); ?>
                 </button>
             </div>
 
@@ -178,7 +178,7 @@ class TSOL_Library_Structure_Admin {
 
             <div class="tsol-library-structure-page__footer">
                 <p data-structure-status aria-live="polite"></p>
-                <button type="button" class="button button-primary" data-structure-save disabled><?php esc_html_e('Save structure', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-primary" data-structure-save disabled><?php esc_html_e('Save structure', 'libertyclassroom-library'); ?></button>
             </div>
         </div>
         <?php
@@ -195,12 +195,12 @@ class TSOL_Library_Structure_Admin {
         $item_word = 1 === (int) $snapshot['itemCount'] ? (string) $snapshot['itemLabel'] : $this->pluralize((string) $snapshot['itemLabel']);
         ?>
         <div class="tsol-library-structure-summary">
-            <div class="tsol-library-structure-summary__counts" aria-label="<?php esc_attr_e('Structure summary', 'tomschooloflife-plugin'); ?>">
+            <div class="tsol-library-structure-summary__counts" aria-label="<?php esc_attr_e('Structure summary', 'libertyclassroom-library'); ?>">
                 <span><strong><?php echo esc_html(number_format_i18n((int) $snapshot['groupCount'])); ?></strong> <?php echo esc_html($group_word); ?></span>
                 <span><strong><?php echo esc_html(number_format_i18n((int) $snapshot['itemCount'])); ?></strong> <?php echo esc_html($item_word); ?></span>
             </div>
             <?php if (empty($snapshot['groups'])) : ?>
-                <p class="description"><?php esc_html_e('No structure has been created yet.', 'tomschooloflife-plugin'); ?></p>
+                <p class="description"><?php esc_html_e('No structure has been created yet.', 'libertyclassroom-library'); ?></p>
             <?php else : ?>
                 <ul class="tsol-library-structure-summary__groups">
                     <?php foreach (array_slice($snapshot['groups'], 0, 5) as $group) : ?>
@@ -208,18 +208,18 @@ class TSOL_Library_Structure_Admin {
                     <?php endforeach; ?>
                 </ul>
                 <?php if (count($snapshot['groups']) > 5) : ?>
-                    <p class="description"><?php echo esc_html(sprintf(__('%s more groups are available in the builder.', 'tomschooloflife-plugin'), number_format_i18n(count($snapshot['groups']) - 5))); ?></p>
+                    <p class="description"><?php echo esc_html(sprintf(__('%s more groups are available in the builder.', 'libertyclassroom-library'), number_format_i18n(count($snapshot['groups']) - 5))); ?></p>
                 <?php endif; ?>
             <?php endif; ?>
             <p class="tsol-library-structure-summary__actions">
-                <a class="button button-primary" href="<?php echo esc_url(self::url((int) $post->ID)); ?>"><?php esc_html_e('Open structure builder', 'tomschooloflife-plugin'); ?></a>
+                <a class="button button-primary" href="<?php echo esc_url(self::url((int) $post->ID)); ?>"><?php esc_html_e('Open structure builder', 'libertyclassroom-library'); ?></a>
                 <?php
                 $new_item_url = add_query_arg(array(
                     'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
                     TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type ? 'tsol_course_id' : 'tsol_series_id' => (int) $post->ID,
                 ), admin_url('post-new.php'));
                 ?>
-                <a class="button" href="<?php echo esc_url($new_item_url); ?>"><?php echo esc_html(sprintf(__('Add %s', 'tomschooloflife-plugin'), (string) $snapshot['itemLabel'])); ?></a>
+                <a class="button" href="<?php echo esc_url($new_item_url); ?>"><?php echo esc_html(sprintf(__('Add %s', 'libertyclassroom-library'), (string) $snapshot['itemLabel'])); ?></a>
             </p>
         </div>
         <?php
@@ -229,14 +229,14 @@ class TSOL_Library_Structure_Admin {
         check_ajax_referer(self::NONCE_ACTION, 'nonce');
         $parent_id = isset($_POST['parent_id']) ? absint(wp_unslash($_POST['parent_id'])) : 0;
         if ($parent_id <= 0 || !current_user_can('edit_post', $parent_id)) {
-            wp_send_json_error(array('message' => __('You are not allowed to edit this Library structure.', 'tomschooloflife-plugin')), 403);
+            wp_send_json_error(array('message' => __('You are not allowed to edit this Library structure.', 'libertyclassroom-library')), 403);
         }
 
         $revision = isset($_POST['revision']) ? sanitize_text_field(wp_unslash($_POST['revision'])) : '';
         $raw_structure = isset($_POST['structure']) ? wp_unslash($_POST['structure']) : '';
         $structure = json_decode((string) $raw_structure, true);
         if (!is_array($structure)) {
-            wp_send_json_error(array('message' => __('The submitted structure could not be read.', 'tomschooloflife-plugin')), 400);
+            wp_send_json_error(array('message' => __('The submitted structure could not be read.', 'libertyclassroom-library')), 400);
         }
 
         $result = TSOL_Library_Structure::save_display_structure($parent_id, $structure, $revision);
@@ -252,7 +252,7 @@ class TSOL_Library_Structure_Admin {
             'revision' => (string) $result['revision'],
             'groupCount' => (int) $result['groupCount'],
             'itemCount' => (int) $result['itemCount'],
-            'message' => __('Structure saved.', 'tomschooloflife-plugin'),
+            'message' => __('Structure saved.', 'libertyclassroom-library'),
         ));
     }
 
@@ -267,7 +267,7 @@ class TSOL_Library_Structure_Admin {
         $actions['tsol_structure'] = sprintf(
             '<a href="%s">%s</a>',
             esc_url(self::url((int) $post->ID)),
-            esc_html__('Manage structure', 'tomschooloflife-plugin')
+            esc_html__('Manage structure', 'libertyclassroom-library')
         );
         return $actions;
     }
@@ -294,20 +294,20 @@ class TSOL_Library_Structure_Admin {
         $key = isset($group['key']) ? (string) $group['key'] : '';
         $title = isset($group['title']) ? (string) $group['title'] : '';
         $items = isset($group['items']) && is_array($group['items']) ? $group['items'] : array();
-        $display_title = '' !== $title ? $title : __('New group', 'tomschooloflife-plugin');
+        $display_title = '' !== $title ? $title : __('New group', 'libertyclassroom-library');
         ?>
         <section class="tsol-library-structure-group" data-structure-group data-group-key="<?php echo esc_attr($key); ?>"<?php echo $template ? ' data-template-group' : ''; ?>>
             <header class="tsol-library-structure-group__header">
-                <button type="button" class="button-link tsol-library-structure-handle tsol-library-structure-handle--group" data-group-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), $display_title)); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
+                <button type="button" class="button-link tsol-library-structure-handle tsol-library-structure-handle--group" data-group-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'libertyclassroom-library'), $display_title)); ?>" title="<?php esc_attr_e('Drag to reorder', 'libertyclassroom-library'); ?>">
                     <span class="dashicons dashicons-move" aria-hidden="true"></span>
                 </button>
-                <button type="button" class="button-link tsol-library-structure-disclosure" data-group-toggle aria-expanded="true" aria-label="<?php echo esc_attr(sprintf(__('Collapse %s', 'tomschooloflife-plugin'), $display_title)); ?>">
+                <button type="button" class="button-link tsol-library-structure-disclosure" data-group-toggle aria-expanded="true" aria-label="<?php echo esc_attr(sprintf(__('Collapse %s', 'libertyclassroom-library'), $display_title)); ?>">
                     <span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
                 </button>
                 <div class="tsol-library-structure-group__name">
                     <label>
-                        <span class="screen-reader-text"><?php echo esc_html(sprintf(__('%s title', 'tomschooloflife-plugin'), ucfirst((string) $snapshot['groupLabel']))); ?></span>
-                        <input type="text" value="<?php echo esc_attr($title); ?>" data-group-title required maxlength="200" placeholder="<?php echo esc_attr(sprintf(__('%s title', 'tomschooloflife-plugin'), ucfirst((string) $snapshot['groupLabel']))); ?>" />
+                        <span class="screen-reader-text"><?php echo esc_html(sprintf(__('%s title', 'libertyclassroom-library'), ucfirst((string) $snapshot['groupLabel']))); ?></span>
+                        <input type="text" value="<?php echo esc_attr($title); ?>" data-group-title required maxlength="200" placeholder="<?php echo esc_attr(sprintf(__('%s title', 'libertyclassroom-library'), ucfirst((string) $snapshot['groupLabel']))); ?>" />
                     </label>
                     <span data-group-count>
                         <?php
@@ -320,9 +320,9 @@ class TSOL_Library_Structure_Admin {
                     </span>
                 </div>
                 <div class="tsol-library-structure-group__controls">
-                    <button type="button" class="button button-small" data-group-up aria-label="<?php echo esc_attr(sprintf(__('Move %s up', 'tomschooloflife-plugin'), $display_title)); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button button-small" data-group-down aria-label="<?php echo esc_attr(sprintf(__('Move %s down', 'tomschooloflife-plugin'), $display_title)); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button button-small tsol-library-structure-group__remove" data-group-remove<?php echo !empty($items) ? ' disabled' : ''; ?>><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+                    <button type="button" class="button button-small" data-group-up aria-label="<?php echo esc_attr(sprintf(__('Move %s up', 'libertyclassroom-library'), $display_title)); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button button-small" data-group-down aria-label="<?php echo esc_attr(sprintf(__('Move %s down', 'libertyclassroom-library'), $display_title)); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button button-small tsol-library-structure-group__remove" data-group-remove<?php echo !empty($items) ? ' disabled' : ''; ?>><?php esc_html_e('Remove', 'libertyclassroom-library'); ?></button>
                 </div>
             </header>
             <div class="tsol-library-structure-group__body" data-group-body>
@@ -331,7 +331,7 @@ class TSOL_Library_Structure_Admin {
                         <?php $this->render_item($item, $snapshot['groups'], (int) $snapshot['parentId']); ?>
                     <?php endforeach; ?>
                 </ul>
-                <p class="tsol-library-structure-group__empty" data-group-empty<?php echo !empty($items) ? ' hidden' : ''; ?>><?php esc_html_e('No content in this group yet.', 'tomschooloflife-plugin'); ?></p>
+                <p class="tsol-library-structure-group__empty" data-group-empty<?php echo !empty($items) ? ' hidden' : ''; ?>><?php esc_html_e('No content in this group yet.', 'libertyclassroom-library'); ?></p>
                 <div class="tsol-library-structure-group__footer">
                     <?php
                     $add_args = array(
@@ -347,7 +347,7 @@ class TSOL_Library_Structure_Admin {
                     ?>
                     <a class="button button-small" data-group-add-item href="<?php echo esc_url(add_query_arg($add_args, admin_url('post-new.php'))); ?>">
                         <span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span>
-                        <?php echo esc_html(sprintf(__('Add %s here', 'tomschooloflife-plugin'), (string) $snapshot['itemLabel'])); ?>
+                        <?php echo esc_html(sprintf(__('Add %s here', 'libertyclassroom-library'), (string) $snapshot['itemLabel'])); ?>
                     </a>
                 </div>
             </div>
@@ -362,13 +362,13 @@ class TSOL_Library_Structure_Admin {
             (string) $item['editUrl']
         );
         $is_coming_soon = TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === (string) ($item['availability'] ?? '');
-        $availability_label = __('Coming soon', 'tomschooloflife-plugin');
+        $availability_label = __('Coming soon', 'libertyclassroom-library');
         if ($is_coming_soon && !empty($item['releaseAt'])) {
             $release_date_local = get_date_from_gmt((string) $item['releaseAt'], 'Y-m-d');
             $availability_label = $release_date_local < current_datetime()->format('Y-m-d')
-                ? __('Coming soon · release date passed', 'tomschooloflife-plugin')
+                ? __('Coming soon · release date passed', 'libertyclassroom-library')
                 : sprintf(
-                    __('Coming soon · %s', 'tomschooloflife-plugin'),
+                    __('Coming soon · %s', 'libertyclassroom-library'),
                     get_date_from_gmt(
                         (string) $item['releaseAt'],
                         get_option('date_format')
@@ -377,7 +377,7 @@ class TSOL_Library_Structure_Admin {
         }
         ?>
         <li class="tsol-library-structure-item" data-structure-item data-item-id="<?php echo esc_attr((string) $item['id']); ?>" data-search-text="<?php echo esc_attr(strtolower((string) $item['title'] . ' ' . (string) $item['statusLabel'] . ($is_coming_soon ? ' ' . $availability_label : ''))); ?>">
-            <button type="button" class="button-link tsol-library-structure-handle" data-item-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'tomschooloflife-plugin'), (string) $item['title'])); ?>" title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>">
+            <button type="button" class="button-link tsol-library-structure-handle" data-item-handle aria-label="<?php echo esc_attr(sprintf(__('Drag %s to reorder', 'libertyclassroom-library'), (string) $item['title'])); ?>" title="<?php esc_attr_e('Drag to reorder', 'libertyclassroom-library'); ?>">
                 <span class="dashicons dashicons-move" aria-hidden="true"></span>
             </button>
             <div class="tsol-library-structure-item__identity">
@@ -388,7 +388,7 @@ class TSOL_Library_Structure_Admin {
                 <?php endif; ?>
             </div>
             <label class="tsol-library-structure-item__move">
-                <span><?php esc_html_e('Move to', 'tomschooloflife-plugin'); ?></span>
+                <span><?php esc_html_e('Move to', 'libertyclassroom-library'); ?></span>
                 <select data-item-group-select>
                     <?php foreach ($groups as $group) : ?>
                         <option value="<?php echo esc_attr((string) $group['key']); ?>"><?php echo esc_html((string) $group['title']); ?></option>
@@ -396,8 +396,8 @@ class TSOL_Library_Structure_Admin {
                 </select>
             </label>
             <div class="tsol-library-structure-item__controls">
-                <button type="button" class="button button-small" data-item-up aria-label="<?php echo esc_attr(sprintf(__('Move %s up', 'tomschooloflife-plugin'), (string) $item['title'])); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
-                <button type="button" class="button button-small" data-item-down aria-label="<?php echo esc_attr(sprintf(__('Move %s down', 'tomschooloflife-plugin'), (string) $item['title'])); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
+                <button type="button" class="button button-small" data-item-up aria-label="<?php echo esc_attr(sprintf(__('Move %s up', 'libertyclassroom-library'), (string) $item['title'])); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
+                <button type="button" class="button button-small" data-item-down aria-label="<?php echo esc_attr(sprintf(__('Move %s down', 'libertyclassroom-library'), (string) $item['title'])); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
             </div>
         </li>
         <?php
@@ -418,22 +418,22 @@ class TSOL_Library_Structure_Admin {
 
         $parent = get_post($parent_id);
         $parent_label = TSOL_Library_Content_Model::COURSE_POST_TYPE === $parent->post_type
-            ? __('Course', 'tomschooloflife-plugin')
-            : __('Series', 'tomschooloflife-plugin');
+            ? __('Course', 'libertyclassroom-library')
+            : __('Series', 'libertyclassroom-library');
         $parent_title = '' !== trim((string) $parent->post_title)
             ? (string) $parent->post_title
-            : __('(no title)', 'tomschooloflife-plugin');
+            : __('(no title)', 'libertyclassroom-library');
         ?>
         <div class="tsol-library-structure-return" data-structure-return>
             <a
                 class="button"
                 href="<?php echo esc_url(self::url($parent_id)); ?>"
-                aria-label="<?php echo esc_attr(sprintf(__('Back to %1$s structure for %2$s', 'tomschooloflife-plugin'), $parent_label, $parent_title)); ?>"
+                aria-label="<?php echo esc_attr(sprintf(__('Back to %1$s structure for %2$s', 'libertyclassroom-library'), $parent_label, $parent_title)); ?>"
             >
                 <svg class="tsol-library-structure-return__icon" aria-hidden="true" viewBox="0 0 20 20" focusable="false">
                     <path d="M17 10H3M9 4l-6 6 6 6" />
                 </svg>
-                <?php echo esc_html(sprintf(__('Back to %s structure', 'tomschooloflife-plugin'), $parent_label)); ?>
+                <?php echo esc_html(sprintf(__('Back to %s structure', 'libertyclassroom-library'), $parent_label)); ?>
             </a>
             <span class="tsol-library-structure-return__parent"><?php echo esc_html($parent_title); ?></span>
             <input type="hidden" name="<?php echo esc_attr(self::RETURN_ARG); ?>" value="<?php echo esc_attr((string) $parent_id); ?>" />

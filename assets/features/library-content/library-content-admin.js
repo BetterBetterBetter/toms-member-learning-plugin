@@ -1,4 +1,4 @@
-/* TSOL Library content editor */
+/* Liberty Classroom Library content editor */
 
 (function($) {
     'use strict';

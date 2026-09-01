@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Environment_Migration {
 
-    const SCHEMA_VERSION = 1;
+    const SCHEMA_VERSION = 2;
     const ROLLBACK_OPTION = 'tsol_library_environment_migration_rollback';
     const LOCK_OPTION = 'tsol_library_environment_migration_lock';
     const LOCK_TTL = 300;
@@ -126,7 +126,7 @@ class TSOL_Library_Environment_Migration {
             }
             $package = $this->decode($package_json);
             if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
-                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+                throw new RuntimeException('This is not a complete Liberty Classroom Library ZIP package.');
             }
             $expected_entries = array(self::PACKAGE_FILENAME => true);
             $manifest_paths = array();
@@ -187,7 +187,7 @@ class TSOL_Library_Environment_Migration {
             }
             $package = $this->decode($package_json);
             if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
-                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+                throw new RuntimeException('This is not a complete Liberty Classroom Library ZIP package.');
             }
             foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
                 $relative = (string) ($attachment['relative_file'] ?? '');
@@ -218,7 +218,7 @@ class TSOL_Library_Environment_Migration {
 
     public function validate($package) {
         if (!is_array($package)
-            || self::SCHEMA_VERSION !== (int) ($package['manifest']['schema_version'] ?? 0)
+            || !in_array((int) ($package['manifest']['schema_version'] ?? 0), array(1, self::SCHEMA_VERSION), true)
             || 'wordpress-library-only' !== (string) ($package['manifest']['scope'] ?? '')
             || !is_array($package['data'] ?? null)
         ) {
@@ -637,6 +637,7 @@ class TSOL_Library_Environment_Migration {
                     $record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] = (string) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, true);
                     $record['meta']['hero_attachment'] = $this->attachment_ref((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, true));
                     $record['meta']['featured_course_uuid'] = $this->post_uuid((int) get_term_meta($term->term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, true));
+                    $record['meta']['appearance'] = TSOL_Library_Content_Model::collection_appearance((int) $term->term_id);
                 }
                 $records[] = $record;
             }
@@ -673,9 +674,32 @@ class TSOL_Library_Environment_Migration {
                 update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, (string) ($record['meta'][TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW] ?? ''));
                 $hero_id = $this->resolve_attachment((array) ($record['meta']['hero_attachment'] ?? array()));
                 update_term_meta($term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_id);
+                $this->import_collection_appearance($term_id, $record['meta']['appearance'] ?? null);
             }
         }
         return $ids;
+    }
+
+    private function import_collection_appearance($term_id, $appearance) {
+        $portable_keys = array('light_background', 'light_foreground', 'dark_background', 'dark_foreground');
+        $meta_keys = TSOL_Library_Content_Model::collection_appearance_meta_keys();
+        $colors = array();
+        foreach ($portable_keys as $index => $portable_key) {
+            $colors[$index] = is_array($appearance)
+                ? sanitize_hex_color((string) ($appearance[$portable_key] ?? ''))
+                : '';
+        }
+        $valid = !in_array('', $colors, true)
+            && !in_array(null, $colors, true)
+            && TSOL_Library_Content_Model::collection_color_contrast($colors[0], $colors[1]) >= 4.5
+            && TSOL_Library_Content_Model::collection_color_contrast($colors[2], $colors[3]) >= 4.5;
+        foreach ($meta_keys as $index => $meta_key) {
+            if ($valid) {
+                update_term_meta((int) $term_id, $meta_key, strtolower($colors[$index]));
+            } else {
+                delete_term_meta((int) $term_id, $meta_key);
+            }
+        }
     }
 
     private function import_term_meta($records, $term_ids, $post_ids) {

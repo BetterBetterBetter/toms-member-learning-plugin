@@ -134,7 +134,7 @@ class TSOL_Library_Structure {
                 $key = self::new_group_key('group', $child->ID);
             }
             if ('' === $title) {
-                $title = __('Ungrouped', 'tomschooloflife-plugin');
+                $title = __('Ungrouped', 'libertyclassroom-library');
             }
 
             if (!isset($groups[$key]) || $position < (int) $groups[$key]['position']) {
@@ -206,7 +206,7 @@ class TSOL_Library_Structure {
             TSOL_Library_Content_Model::COURSE_POST_TYPE,
             TSOL_Library_Content_Model::SERIES_POST_TYPE,
         ), true)) {
-            return new WP_Error('invalid_structure_parent', __('The requested Library structure does not exist.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_structure_parent', __('The requested Library structure does not exist.', 'libertyclassroom-library'));
         }
 
         $group_keys = self::group_meta_keys($post->post_type);
@@ -230,7 +230,7 @@ class TSOL_Library_Structure {
             if (!isset($groups[$key])) {
                 $groups[$key] = array(
                     'key' => $key,
-                    'title' => sanitize_text_field((string) get_post_meta($child->ID, $group_keys['title'], true)) ?: __('Ungrouped', 'tomschooloflife-plugin'),
+                    'title' => sanitize_text_field((string) get_post_meta($child->ID, $group_keys['title'], true)) ?: __('Ungrouped', 'libertyclassroom-library'),
                     'position' => max(1, (int) get_post_meta($child->ID, $group_keys['position'], true)),
                     'items' => array(),
                 );
@@ -281,11 +281,11 @@ class TSOL_Library_Structure {
             'parentTitle' => get_the_title($post),
             'parentEditUrl' => get_edit_post_link($parent_id, 'raw'),
             'itemLabel' => TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
-                ? __('lesson', 'tomschooloflife-plugin')
+                ? __('lesson', 'libertyclassroom-library')
                 : self::series_item_label($parent_id),
             'groupLabel' => TSOL_Library_Content_Model::COURSE_POST_TYPE === $post->post_type
-                ? __('section', 'tomschooloflife-plugin')
-                : __('group', 'tomschooloflife-plugin'),
+                ? __('section', 'libertyclassroom-library')
+                : __('group', 'libertyclassroom-library'),
             'descending' => self::is_descending_series($parent_id),
             'groups' => $groups,
             'groupCount' => count($groups),
@@ -303,16 +303,16 @@ class TSOL_Library_Structure {
         if (!hash_equals((string) $snapshot['revision'], (string) $revision)) {
             return new WP_Error(
                 'structure_conflict',
-                __('This structure changed in another tab or by another administrator. Reload before saving so no work is overwritten.', 'tomschooloflife-plugin')
+                __('This structure changed in another tab or by another administrator. Reload before saving so no work is overwritten.', 'libertyclassroom-library')
             );
         }
         if (!is_array($payload) || !isset($payload['groups']) || !is_array($payload['groups'])) {
-            return new WP_Error('invalid_structure', __('The submitted structure is invalid.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_structure', __('The submitted structure is invalid.', 'libertyclassroom-library'));
         }
 
         $submitted = $payload['groups'];
         if (count($submitted) > self::MAX_GROUPS) {
-            return new WP_Error('too_many_groups', __('The submitted structure contains too many groups.', 'tomschooloflife-plugin'));
+            return new WP_Error('too_many_groups', __('The submitted structure contains too many groups.', 'libertyclassroom-library'));
         }
 
         $expected_items = array_map(static function ($child) {
@@ -325,20 +325,20 @@ class TSOL_Library_Structure {
         $normalized = array();
         foreach ($submitted as $group) {
             if (!is_array($group)) {
-                return new WP_Error('invalid_group', __('One of the submitted groups is invalid.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_group', __('One of the submitted groups is invalid.', 'libertyclassroom-library'));
             }
 
             $key = sanitize_key(isset($group['key']) ? (string) $group['key'] : '');
             $title = sanitize_text_field(isset($group['title']) ? (string) $group['title'] : '');
             if ('' === $key || '' === $title || isset($seen_groups[$key])) {
-                return new WP_Error('invalid_group', __('Every group needs a unique key and a title.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_group', __('Every group needs a unique key and a title.', 'libertyclassroom-library'));
             }
             $seen_groups[$key] = true;
 
             $items = isset($group['items']) && is_array($group['items']) ? array_map('absint', $group['items']) : array();
             foreach ($items as $item_id) {
                 if ($item_id <= 0 || isset($seen_items[$item_id])) {
-                    return new WP_Error('invalid_items', __('Every item must appear exactly once.', 'tomschooloflife-plugin'));
+                    return new WP_Error('invalid_items', __('Every item must appear exactly once.', 'libertyclassroom-library'));
                 }
                 $seen_items[$item_id] = true;
             }
@@ -351,7 +351,7 @@ class TSOL_Library_Structure {
         }
 
         if (count($seen_items) > self::MAX_ITEMS) {
-            return new WP_Error('too_many_items', __('The submitted structure contains too many items.', 'tomschooloflife-plugin'));
+            return new WP_Error('too_many_items', __('The submitted structure contains too many items.', 'libertyclassroom-library'));
         }
 
         $submitted_items = array_keys($seen_items);
@@ -359,7 +359,7 @@ class TSOL_Library_Structure {
         if ($expected_items !== $submitted_items) {
             return new WP_Error(
                 'structure_membership_changed',
-                __('The content in this structure changed while you were editing. Reload before saving.', 'tomschooloflife-plugin')
+                __('The content in this structure changed while you were editing. Reload before saving.', 'libertyclassroom-library')
             );
         }
 
@@ -369,7 +369,7 @@ class TSOL_Library_Structure {
             if (TSOL_Library_Content_Model::ITEM_POST_TYPE !== get_post_type($item_id)
                 || $parent_id !== (int) get_post_meta($item_id, $parent_meta_key, true)
             ) {
-                return new WP_Error('invalid_parent', __('An item no longer belongs to this structure. Reload before saving.', 'tomschooloflife-plugin'));
+                return new WP_Error('invalid_parent', __('An item no longer belongs to this structure. Reload before saving.', 'libertyclassroom-library'));
             }
         }
 
@@ -415,7 +415,7 @@ class TSOL_Library_Structure {
                 $operation['new']
             )) {
                 self::rollback_operations($applied);
-                return new WP_Error('structure_save_failed', __('WordPress could not save the complete structure. No intentional changes were kept.', 'tomschooloflife-plugin'));
+                return new WP_Error('structure_save_failed', __('WordPress could not save the complete structure. No intentional changes were kept.', 'libertyclassroom-library'));
             }
             if (false !== $result) {
                 $applied[] = $operation;
@@ -432,7 +432,7 @@ class TSOL_Library_Structure {
 
     private static function series_item_label($parent_id) {
         $label = sanitize_text_field((string) get_post_meta((int) $parent_id, TSOL_Library_Content_Model::META_SERIES_ITEM_LABEL, true));
-        return '' !== $label ? strtolower($label) : __('episode', 'tomschooloflife-plugin');
+        return '' !== $label ? strtolower($label) : __('episode', 'libertyclassroom-library');
     }
 
     private static function revision_from_groups($parent_id, $groups) {

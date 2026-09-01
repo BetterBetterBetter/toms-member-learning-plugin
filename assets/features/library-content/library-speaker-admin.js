@@ -1,4 +1,4 @@
-/* TSOL Library Speaker profile editor */
+/* Liberty Classroom Library Speaker profile editor */
 
 (function($, wp, settings) {
     'use strict';

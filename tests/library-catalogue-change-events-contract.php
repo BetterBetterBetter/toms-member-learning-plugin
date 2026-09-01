@@ -27,12 +27,12 @@ $fixtures = array(
     array(
         'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
         'taxonomy' => TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY,
-        'title' => 'TSOL catalogue Collection event contract',
+        'title' => 'Liberty catalogue Collection event contract',
     ),
     array(
         'post_type' => TSOL_Library_Content_Model::ITEM_POST_TYPE,
         'taxonomy' => TSOL_Library_Content_Model::TOPIC_TAXONOMY,
-        'title' => 'TSOL catalogue Topic event contract',
+        'title' => 'Liberty catalogue Topic event contract',
     ),
 );
 
@@ -56,7 +56,7 @@ try {
         update_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, $post_id);
 
         $term = wp_insert_term(
-            'TSOL catalogue event term ' . $index . ' ' . wp_generate_password(8, false, false),
+            'Liberty catalogue event term ' . $index . ' ' . wp_generate_password(8, false, false),
             $fixture['taxonomy']
         );
         $assert(!is_wp_error($term), 'Could not create the disposable projected taxonomy term.');
@@ -119,7 +119,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library catalogue change-event contract failed with ' . count($failures) . ' issue(s).');
+    WP_CLI::error('Liberty Classroom Library catalogue change-event contract failed with ' . count($failures) . ' issue(s).');
 }
 
-WP_CLI::success('TSOL Library catalogue change-event contract passed.');
+WP_CLI::success('Liberty Classroom Library catalogue change-event contract passed.');

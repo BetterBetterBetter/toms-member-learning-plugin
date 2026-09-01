@@ -12,6 +12,7 @@ class TSOL_Library_Auth {
     private const TOKEN_TTL = 300;
     private const LOGOUT_TTL = 60;
     private const CLEANUP_HOOK = 'tsol_library_auth_cleanup';
+    private const HEADER_MENU_LOCATION = 'tsol_library_header';
     private const FOOTER_MENU_LOCATION = 'tsol_library_footer';
     private $settings;
     private $suppress_logout_propagation = false;
@@ -172,8 +173,12 @@ class TSOL_Library_Auth {
 
     public function register_navigation_locations() {
         register_nav_menu(
+            self::HEADER_MENU_LOCATION,
+            __('Liberty Classroom Library Header', 'libertyclassroom-library')
+        );
+        register_nav_menu(
             self::FOOTER_MENU_LOCATION,
-            __('TSOL Library Footer', 'tomschooloflife-plugin')
+            __('Liberty Classroom Library Footer', 'libertyclassroom-library')
         );
     }
 
@@ -260,7 +265,7 @@ class TSOL_Library_Auth {
         $started_at = microtime(true);
         $server_only = $this->require_server_request($request);
         if (is_wp_error($server_only)) {
-            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'), 403);
+            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'libertyclassroom-library'), 403);
         }
         if (!TSOL_Library_Auth_Settings::configured()) {
             return $this->logged_rest_error('token', 'not_ready', 503, $started_at);
@@ -315,7 +320,7 @@ class TSOL_Library_Auth {
     public function userinfo(WP_REST_Request $request) {
         $started_at = microtime(true);
         if (is_wp_error($this->require_server_request($request))) {
-            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'), 403);
+            return $this->rest_error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'libertyclassroom-library'), 403);
         }
         if (!TSOL_Library_Auth_Settings::configured()) {
             return $this->logged_rest_error('userinfo', 'not_ready', 503, $started_at);
@@ -609,7 +614,13 @@ class TSOL_Library_Auth {
         wp_set_current_user(0);
 
         try {
-            $menu_id = $this->elementor_header_menu_id();
+            $locations = get_nav_menu_locations();
+            $menu_id = isset($locations[self::HEADER_MENU_LOCATION])
+                ? absint($locations[self::HEADER_MENU_LOCATION])
+                : 0;
+            if ($menu_id <= 0) {
+                $menu_id = $this->elementor_header_menu_id();
+            }
             if ($menu_id > 0) {
                 $menu_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'publish'));
                 if (is_array($menu_items)) {
@@ -707,7 +718,7 @@ class TSOL_Library_Auth {
 
     private function server_client_auth(WP_REST_Request $request, $scope, $limit, $require_ready = true) {
         if (is_wp_error($this->require_server_request($request))) {
-            return new WP_Error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_request', __('Browser requests are not accepted by this endpoint.', 'libertyclassroom-library'));
         }
         list($client_id, $client_secret) = $this->client_credentials($request);
         if (!$this->valid_secret($client_id, $client_secret)) {
@@ -715,7 +726,7 @@ class TSOL_Library_Auth {
             if (is_wp_error($invalid_rate)) {
                 return $invalid_rate;
             }
-            return new WP_Error('invalid_client', __('Client authentication failed.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_client', __('Client authentication failed.', 'libertyclassroom-library'));
         }
         $rate_subject = $client_id;
         $user_id = absint($request->get_param('user_id'));
@@ -727,7 +738,7 @@ class TSOL_Library_Auth {
             return $rate;
         }
         if ($require_ready && !TSOL_Library_Auth_Settings::configured()) {
-            return new WP_Error('not_ready', __('Library authentication is not configured.', 'tomschooloflife-plugin'));
+            return new WP_Error('not_ready', __('Library authentication is not configured.', 'libertyclassroom-library'));
         }
 
         return $client_id;
@@ -744,11 +755,11 @@ class TSOL_Library_Auth {
     private function bearer_token_data(WP_REST_Request $request) {
         $header = (string) $request->get_header('authorization');
         if (!preg_match('/^Bearer\s+([A-Za-z0-9_-]{43,128})$/i', $header, $matches)) {
-            return new WP_Error('invalid_token', __('A valid bearer token is required.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_token', __('A valid bearer token is required.', 'libertyclassroom-library'));
         }
         $data = get_transient('tsol_library_token_' . hash('sha256', $matches[1]));
         if (!is_array($data) || empty($data['user_id']) || empty($data['client_id'])) {
-            return new WP_Error('invalid_token', __('The bearer token is invalid or expired.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_token', __('The bearer token is invalid or expired.', 'libertyclassroom-library'));
         }
         return $data;
     }
@@ -852,7 +863,7 @@ class TSOL_Library_Auth {
         }
 
         $error_url = add_query_arg('error', $this->public_error_code($code), $app_url . '/auth/error');
-        wp_redirect($error_url, 302, 'TSOL Library Authentication'); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Fixed validated Library origin.
+        wp_redirect($error_url, 302, 'Liberty Classroom Library Authentication'); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Fixed validated Library origin.
         exit;
     }
 
@@ -864,28 +875,28 @@ class TSOL_Library_Auth {
         }
 
         $copy = array(
-            'eyebrow' => __('Sign-in interrupted', 'tomschooloflife-plugin'),
-            'title' => __('School sign-in unavailable', 'tomschooloflife-plugin'),
-            'description' => __('We could not complete School sign-in. Return to TSOL and start again.', 'tomschooloflife-plugin'),
+            'eyebrow' => __('Sign-in interrupted', 'libertyclassroom-library'),
+            'title' => __('School sign-in unavailable', 'libertyclassroom-library'),
+            'description' => __('We could not complete School sign-in. Return to Liberty Classroom and start again.', 'libertyclassroom-library'),
         );
 
         if ($code === 'invalid_request') {
             $copy = array(
-                'eyebrow' => __('Sign-in expired', 'tomschooloflife-plugin'),
-                'title' => __('Let’s try that again', 'tomschooloflife-plugin'),
-                'description' => __('This sign-in request is invalid or has expired. Return to TSOL and start again.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Sign-in expired', 'libertyclassroom-library'),
+                'title' => __('Let’s try that again', 'libertyclassroom-library'),
+                'description' => __('This sign-in request is invalid or has expired. Return to Liberty Classroom and start again.', 'libertyclassroom-library'),
             );
         } elseif ($code === 'invalid_sign_out') {
             $copy = array(
-                'eyebrow' => __('Sign-out interrupted', 'tomschooloflife-plugin'),
-                'title' => __('Unable to complete sign-out', 'tomschooloflife-plugin'),
-                'description' => __('We could not verify that sign-out request. Return to TSOL to safely continue.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Sign-out interrupted', 'libertyclassroom-library'),
+                'title' => __('Unable to complete sign-out', 'libertyclassroom-library'),
+                'description' => __('We could not verify that sign-out request. Return to Liberty Classroom to safely continue.', 'libertyclassroom-library'),
             );
         } elseif (in_array($code, array('server_error', 'temporarily_unavailable'), true)) {
             $copy = array(
-                'eyebrow' => __('Service unavailable', 'tomschooloflife-plugin'),
-                'title' => __('School sign-in is temporarily unavailable', 'tomschooloflife-plugin'),
-                'description' => __('Your account has not been changed. Please wait a moment and try again.', 'tomschooloflife-plugin'),
+                'eyebrow' => __('Service unavailable', 'libertyclassroom-library'),
+                'title' => __('School sign-in is temporarily unavailable', 'libertyclassroom-library'),
+                'description' => __('Your account has not been changed. Please wait a moment and try again.', 'libertyclassroom-library'),
             );
         }
 
@@ -927,12 +938,12 @@ class TSOL_Library_Auth {
         </head>
         <body>
             <main>
-                <img class="brand" src="https://tomschooloflife.com/wp-content/uploads/2020/04/THE-TOM-WOODS-SCHOOL-OF-LIFE-logo.svg" alt="<?php esc_attr_e('The Tom Woods School of Life', 'tomschooloflife-plugin'); ?>" width="190" height="51">
+                <img class="brand" src="https://tomschooloflife.com/wp-content/uploads/2020/04/THE-TOM-WOODS-SCHOOL-OF-LIFE-logo.svg" alt="<?php esc_attr_e('The Tom Woods School of Life', 'libertyclassroom-library'); ?>" width="190" height="51">
                 <section class="panel" aria-labelledby="library-error-title">
                     <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
                     <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>
                     <p class="description"><?php echo esc_html($copy['description']); ?></p>
-                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to TSOL', 'tomschooloflife-plugin'); ?></a>
+                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to Liberty Classroom', 'libertyclassroom-library'); ?></a>
                 </section>
             </main>
         </body>
@@ -959,23 +970,23 @@ class TSOL_Library_Auth {
             'duration_ms' => $this->duration_ms($started_at),
         ));
         $messages = array(
-            'not_ready' => __('Library authentication is not configured.', 'tomschooloflife-plugin'),
-            'invalid_client' => __('Client authentication failed.', 'tomschooloflife-plugin'),
-            'invalid_request' => __('The request is invalid.', 'tomschooloflife-plugin'),
-            'unsupported_grant_type' => __('Only the authorization_code grant is supported.', 'tomschooloflife-plugin'),
-            'invalid_grant' => __('The authorization code is invalid, expired, or already used.', 'tomschooloflife-plugin'),
-            'invalid_token' => __('The bearer token is invalid or expired.', 'tomschooloflife-plugin'),
-            'unknown_user' => __('The WordPress user does not exist.', 'tomschooloflife-plugin'),
-            'unknown_content' => __('The requested content does not exist.', 'tomschooloflife-plugin'),
-            'unknown_catalogue_content' => __('The requested Library catalogue record does not exist.', 'tomschooloflife-plugin'),
-            'memberpress_unavailable' => __('MemberPress is unavailable.', 'tomschooloflife-plugin'),
-            'audience_definition_invalid' => __('The announcement audience definition is invalid.', 'tomschooloflife-plugin'),
-            'audience_schema_unsupported' => __('The announcement audience schema is unsupported.', 'tomschooloflife-plugin'),
-            'audience_request_invalid' => __('The announcement audience request is invalid.', 'tomschooloflife-plugin'),
-            'audience_cursor_invalid' => __('The announcement audience cursor is invalid.', 'tomschooloflife-plugin'),
-            'unknown_audience_content' => __('The selected announcement content does not exist.', 'tomschooloflife-plugin'),
-            'unknown_audience_membership' => __('The selected announcement membership does not exist.', 'tomschooloflife-plugin'),
-            'server_error' => __('The authentication service encountered an error.', 'tomschooloflife-plugin'),
+            'not_ready' => __('Library authentication is not configured.', 'libertyclassroom-library'),
+            'invalid_client' => __('Client authentication failed.', 'libertyclassroom-library'),
+            'invalid_request' => __('The request is invalid.', 'libertyclassroom-library'),
+            'unsupported_grant_type' => __('Only the authorization_code grant is supported.', 'libertyclassroom-library'),
+            'invalid_grant' => __('The authorization code is invalid, expired, or already used.', 'libertyclassroom-library'),
+            'invalid_token' => __('The bearer token is invalid or expired.', 'libertyclassroom-library'),
+            'unknown_user' => __('The WordPress user does not exist.', 'libertyclassroom-library'),
+            'unknown_content' => __('The requested content does not exist.', 'libertyclassroom-library'),
+            'unknown_catalogue_content' => __('The requested Library catalogue record does not exist.', 'libertyclassroom-library'),
+            'memberpress_unavailable' => __('MemberPress is unavailable.', 'libertyclassroom-library'),
+            'audience_definition_invalid' => __('The announcement audience definition is invalid.', 'libertyclassroom-library'),
+            'audience_schema_unsupported' => __('The announcement audience schema is unsupported.', 'libertyclassroom-library'),
+            'audience_request_invalid' => __('The announcement audience request is invalid.', 'libertyclassroom-library'),
+            'audience_cursor_invalid' => __('The announcement audience cursor is invalid.', 'libertyclassroom-library'),
+            'unknown_audience_content' => __('The selected announcement content does not exist.', 'libertyclassroom-library'),
+            'unknown_audience_membership' => __('The selected announcement membership does not exist.', 'libertyclassroom-library'),
+            'server_error' => __('The authentication service encountered an error.', 'libertyclassroom-library'),
         );
         $headers = $code === 'invalid_token' ? array('WWW-Authenticate' => 'Bearer') : array();
         return $this->rest_error($code, $messages[$code] ?? $messages['server_error'], $status, $headers);
@@ -984,7 +995,7 @@ class TSOL_Library_Auth {
     private function rate_error(WP_Error $error, $endpoint) {
         if ($error->get_error_code() === 'rate_limit_unavailable') {
             TSOL_Library_Auth_Logger::event($endpoint, array('outcome' => 'failure', 'error' => 'rate_limit_unavailable', 'endpoint' => $endpoint));
-            return $this->rest_error('temporarily_unavailable', __('The request limit service is unavailable.', 'tomschooloflife-plugin'), 503);
+            return $this->rest_error('temporarily_unavailable', __('The request limit service is unavailable.', 'libertyclassroom-library'), 503);
         }
         $data = $error->get_error_data();
         $retry_after = is_array($data) && isset($data['retry_after']) ? max(1, absint($data['retry_after'])) : MINUTE_IN_SECONDS;

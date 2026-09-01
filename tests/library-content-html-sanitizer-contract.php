@@ -109,7 +109,7 @@ $assert(
 $saved_post_id = wp_insert_post(wp_slash(array(
     'post_type' => TSOL_Library_Content_Model::COURSE_POST_TYPE,
     'post_status' => 'draft',
-    'post_title' => 'TSOL Library editor sanitizer save fixture',
+    'post_title' => 'Liberty Classroom Library editor sanitizer save fixture',
     'post_content' => '<p><a href="/courses/safe-course" class="pasted">Internal Course</a> and <a href="https://example.test/resource" target="_blank">external resource</a>.</p>' . $copied_affiliate_html,
 )), true);
 $assert(!is_wp_error($saved_post_id), 'Could not create the editor sanitizer save fixture.');
@@ -140,7 +140,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library editor-HTML sanitizer contract failed.');
+    WP_CLI::error('Liberty Classroom Library editor-HTML sanitizer contract failed.');
 }
 
-WP_CLI::success('TSOL Library editor-HTML sanitizer contract passed.');
+WP_CLI::success('Liberty Classroom Library editor-HTML sanitizer contract passed.');

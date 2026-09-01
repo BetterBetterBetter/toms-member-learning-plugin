@@ -74,7 +74,7 @@ class TSOL_Library_Auth_Repository {
         try {
             $code = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
         } catch (Throwable $exception) {
-            return new WP_Error('code_generation_failed', __('Could not create the sign-in code.', 'tomschooloflife-plugin'));
+            return new WP_Error('code_generation_failed', __('Could not create the sign-in code.', 'libertyclassroom-library'));
         }
 
         $now = time();
@@ -88,7 +88,7 @@ class TSOL_Library_Auth_Repository {
             'created_at' => gmdate('Y-m-d H:i:s', $now),
         ), array('%s', '%d', '%s', '%s', '%s', '%s', '%s'));
 
-        return $ok ? $code : new WP_Error('code_storage_failed', __('Could not create the sign-in code.', 'tomschooloflife-plugin'));
+        return $ok ? $code : new WP_Error('code_storage_failed', __('Could not create the sign-in code.', 'libertyclassroom-library'));
     }
 
     public static function consume($code, $client_id, $redirect_uri, $verifier) {
@@ -97,12 +97,12 @@ class TSOL_Library_Auth_Repository {
         $hash = hash('sha256', (string) $code);
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE code_hash = %s LIMIT 1", $hash));
         if (!$row || $row->consumed_at !== null || strtotime($row->expires_at . ' UTC') < time()) {
-            return new WP_Error('invalid_grant', __('The authorization code is invalid, expired, or already used.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_grant', __('The authorization code is invalid, expired, or already used.', 'libertyclassroom-library'));
         }
 
         $expected = rtrim(strtr(base64_encode(hash('sha256', (string) $verifier, true)), '+/', '-_'), '=');
         if (!hash_equals((string) $row->client_id, (string) $client_id) || !hash_equals((string) $row->redirect_uri, (string) $redirect_uri) || !hash_equals((string) $row->code_challenge, $expected)) {
-            return new WP_Error('invalid_grant', __('The authorization code could not be verified.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_grant', __('The authorization code could not be verified.', 'libertyclassroom-library'));
         }
 
         $now = gmdate('Y-m-d H:i:s');
@@ -113,7 +113,7 @@ class TSOL_Library_Auth_Repository {
             $now
         ));
 
-        return $updated === 1 ? (int) $row->user_id : new WP_Error('invalid_grant', __('The authorization code is invalid, expired, or already used.', 'tomschooloflife-plugin'));
+        return $updated === 1 ? (int) $row->user_id : new WP_Error('invalid_grant', __('The authorization code is invalid, expired, or already used.', 'libertyclassroom-library'));
     }
 
     public static function cleanup() {
@@ -138,7 +138,7 @@ class TSOL_Library_Auth_Repository {
         $now = (int) $now;
         $window_seconds = (int) $window_seconds;
         if (!preg_match('/^[a-f0-9]{64}$/', $rate_key) || $now <= 0 || $window_seconds < 10 || $window_seconds > DAY_IN_SECONDS) {
-            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'libertyclassroom-library'));
         }
 
         $expires_at = $now + $window_seconds;
@@ -160,7 +160,7 @@ class TSOL_Library_Auth_Repository {
             $expires_at
         ));
         if (false === $written) {
-            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'libertyclassroom-library'));
         }
 
         $state = $wpdb->get_row($wpdb->prepare(
@@ -168,7 +168,7 @@ class TSOL_Library_Auth_Repository {
             $rate_key
         ), ARRAY_A);
         if (!is_array($state) || !isset($state['request_count'], $state['expires_at'])) {
-            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'tomschooloflife-plugin'));
+            return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'libertyclassroom-library'));
         }
 
         return array(
@@ -181,13 +181,13 @@ class TSOL_Library_Auth_Repository {
         global $wpdb;
 
         if (!wp_is_uuid((string) $jti, 4) || !preg_match('/^[a-z0-9._-]{3,64}$/', (string) $event)) {
-            return new WP_Error('invalid_message', __('The authentication message is invalid.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_message', __('The authentication message is invalid.', 'libertyclassroom-library'));
         }
 
         $now = time();
         $expires_at = (int) $expires_at;
         if ($expires_at < $now || $expires_at > $now + 10 * MINUTE_IN_SECONDS) {
-            return new WP_Error('invalid_message', __('The authentication message is invalid or expired.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_message', __('The authentication message is invalid or expired.', 'libertyclassroom-library'));
         }
 
         $inserted = $wpdb->insert(self::messages_table(), array(
@@ -198,7 +198,7 @@ class TSOL_Library_Auth_Repository {
         ), array('%s', '%s', '%s', '%s'));
 
         return false === $inserted
-            ? new WP_Error('message_replay', __('The authentication message was already used.', 'tomschooloflife-plugin'))
+            ? new WP_Error('message_replay', __('The authentication message was already used.', 'libertyclassroom-library'))
             : true;
     }
 }

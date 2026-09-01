@@ -37,7 +37,7 @@ try {
         $assert(false === $post_type->publicly_queryable, 'Announcements must not be publicly queryable.');
         $assert(false === $post_type->show_in_rest, 'Announcements must not be available through the public REST post API.');
         $assert(false === $post_type->can_export, 'Announcements must not be bulk-exportable from WordPress.');
-        $assert('tsol-library' === $post_type->show_in_menu, 'Announcements are not grouped under the TSOL Library menu.');
+        $assert('tsol-library' === $post_type->show_in_menu, 'Announcements are not grouped under the Liberty Classroom Library menu.');
     }
 
     $editor_role = get_role('editor');
@@ -95,8 +95,8 @@ try {
         'suppress_filters' => true,
     ));
     $candidate_user_ids = get_users(array('number' => 3, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC'));
-    $assert(!empty($destinations), 'A published TSOL Course or Series fixture is required.');
-    $assert(!empty($course_destinations), 'A published TSOL Course fixture is required.');
+    $assert(!empty($destinations), 'A published Library Course or Series fixture is required.');
+    $assert(!empty($course_destinations), 'A published Library Course fixture is required.');
     $assert(!empty($series_destinations), 'A published TSOL Series fixture is required.');
     $assert(!empty($memberships), 'A published MemberPress membership fixture is required.');
     $assert(count($candidate_user_ids) >= 2, 'At least two local user fixtures are required.');

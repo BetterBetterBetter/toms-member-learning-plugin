@@ -40,17 +40,17 @@ class TSOL_Library_Announcement_Model {
     public static function register() {
         register_post_type(self::POST_TYPE, array(
             'labels' => array(
-                'name' => __('Announcements', 'tomschooloflife-plugin'),
-                'singular_name' => __('Announcement', 'tomschooloflife-plugin'),
-                'add_new' => __('Add announcement', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add School announcement', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit School announcement', 'tomschooloflife-plugin'),
-                'new_item' => __('New School announcement', 'tomschooloflife-plugin'),
-                'search_items' => __('Search announcements', 'tomschooloflife-plugin'),
-                'not_found' => __('No announcements found.', 'tomschooloflife-plugin'),
-                'not_found_in_trash' => __('No announcements found in Trash.', 'tomschooloflife-plugin'),
-                'all_items' => __('Announcements', 'tomschooloflife-plugin'),
-                'menu_name' => __('Announcements', 'tomschooloflife-plugin'),
+                'name' => __('Announcements', 'libertyclassroom-library'),
+                'singular_name' => __('Announcement', 'libertyclassroom-library'),
+                'add_new' => __('Add announcement', 'libertyclassroom-library'),
+                'add_new_item' => __('Add School announcement', 'libertyclassroom-library'),
+                'edit_item' => __('Edit School announcement', 'libertyclassroom-library'),
+                'new_item' => __('New School announcement', 'libertyclassroom-library'),
+                'search_items' => __('Search announcements', 'libertyclassroom-library'),
+                'not_found' => __('No announcements found.', 'libertyclassroom-library'),
+                'not_found_in_trash' => __('No announcements found in Trash.', 'libertyclassroom-library'),
+                'all_items' => __('Announcements', 'libertyclassroom-library'),
+                'menu_name' => __('Announcements', 'libertyclassroom-library'),
             ),
             'public' => false,
             'publicly_queryable' => false,
@@ -114,7 +114,7 @@ class TSOL_Library_Announcement_Model {
             $title = sanitize_text_field(wp_unslash($data['post_title']));
             if (self::text_length($title) > self::MAX_SUBJECT_LENGTH) {
                 $title = self::text_slice($title, self::MAX_SUBJECT_LENGTH);
-                self::queue_notice('error', __('The subject was limited to 160 characters.', 'tomschooloflife-plugin'));
+                self::queue_notice('error', __('The subject was limited to 160 characters.', 'libertyclassroom-library'));
             }
             $data['post_title'] = wp_slash($title);
         }
@@ -125,7 +125,7 @@ class TSOL_Library_Announcement_Model {
                 $post_id = isset($postarr['ID']) ? absint($postarr['ID']) : 0;
                 $previous = $post_id > 0 ? (string) get_post_field('post_content', $post_id) : '';
                 $body = self::sanitize_body($previous);
-                self::queue_notice('error', __('The body was not changed because it exceeds 5,000 characters.', 'tomschooloflife-plugin'));
+                self::queue_notice('error', __('The body was not changed because it exceeds 5,000 characters.', 'libertyclassroom-library'));
             }
             $data['post_content'] = wp_slash($body);
         }
@@ -133,7 +133,7 @@ class TSOL_Library_Announcement_Model {
         if (in_array((string) ($data['post_status'] ?? ''), array('publish', 'future', 'private'), true)
             && !TSOL_Library_Announcement_Flags::publish_enabled()) {
             $data['post_status'] = 'draft';
-            self::queue_notice('warning', __('Publishing and scheduling are disabled. The announcement remains a draft.', 'tomschooloflife-plugin'));
+            self::queue_notice('warning', __('Publishing and scheduling are disabled. The announcement remains a draft.', 'libertyclassroom-library'));
         }
 
         return $data;

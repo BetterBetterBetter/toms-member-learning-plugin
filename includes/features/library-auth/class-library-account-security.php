@@ -74,7 +74,7 @@ class TSOL_Library_Account_Security {
             $container_tag,
             esc_attr($classes),
             esc_url($url),
-            esc_html__('Security', 'tomschooloflife-plugin')
+            esc_html__('Security', 'libertyclassroom-library')
         );
     }
 
@@ -90,23 +90,23 @@ class TSOL_Library_Account_Security {
         <div class="mp_wrapper">
             <?php if ('requested' === $status) : ?>
                 <div class="mepr_updated" role="status">
-                    <?php esc_html_e('Your Library sessions are being signed out on every device. This may take a moment.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('Your Library sessions are being signed out on every device. This may take a moment.', 'libertyclassroom-library'); ?>
                 </div>
             <?php elseif ('unavailable' === $status) : ?>
                 <div class="mepr_error" role="alert">
-                    <?php esc_html_e('We could not request the Library sign-out. Please try again.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('We could not request the Library sign-out. Please try again.', 'libertyclassroom-library'); ?>
                 </div>
             <?php endif; ?>
 
             <section aria-labelledby="tsol-library-session-security-title">
                 <h3 id="tsol-library-session-security-title">
-                    <?php esc_html_e('Library sessions', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('Library sessions', 'libertyclassroom-library'); ?>
                 </h3>
                 <p>
-                    <?php esc_html_e('Use this if you have lost a device, used a shared computer, or no longer recognize a Library session.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('Use this if you have lost a device, used a shared computer, or no longer recognize a Library session.', 'libertyclassroom-library'); ?>
                 </p>
                 <p>
-                    <?php esc_html_e('This signs your account out of the standalone Library on every browser and device. Your WordPress, MemberPress, or Access login may remain active.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('This signs your account out of the standalone Library on every browser and device. Your WordPress, MemberPress, or Access login may remain active.', 'libertyclassroom-library'); ?>
                 </p>
 
                 <form class="mepr-account-form mepr-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -122,13 +122,13 @@ class TSOL_Library_Account_Security {
                                 value="yes"
                                 required
                             />
-                            <?php esc_html_e('I understand that every active Library session, including this browser, will be signed out.', 'tomschooloflife-plugin'); ?>
+                            <?php esc_html_e('I understand that every active Library session, including this browser, will be signed out.', 'libertyclassroom-library'); ?>
                         </label>
                     </div>
 
                     <div class="mepr_spacer">&nbsp;</div>
                     <button type="submit" class="mepr-submit">
-                        <?php esc_html_e('Sign out of the Library on all devices', 'tomschooloflife-plugin'); ?>
+                        <?php esc_html_e('Sign out of the Library on all devices', 'libertyclassroom-library'); ?>
                     </button>
                 </form>
             </section>
@@ -138,7 +138,7 @@ class TSOL_Library_Account_Security {
 
     public static function account_title($title, $action) {
         return self::ACCOUNT_ACTION === sanitize_key((string) $action)
-            ? __('Security', 'tomschooloflife-plugin')
+            ? __('Security', 'libertyclassroom-library')
             : $title;
     }
 
@@ -161,17 +161,17 @@ class TSOL_Library_Account_Security {
         );
 
         if ('method_not_allowed' === $decision) {
-            wp_die(esc_html__('This action requires a POST request.', 'tomschooloflife-plugin'), '', array('response' => 405));
+            wp_die(esc_html__('This action requires a POST request.', 'libertyclassroom-library'), '', array('response' => 405));
         }
         if ('authentication_required' === $decision) {
             auth_redirect();
             exit;
         }
         if ('invalid_request' === $decision) {
-            wp_die(esc_html__('The security request could not be verified.', 'tomschooloflife-plugin'), '', array('response' => 403));
+            wp_die(esc_html__('The security request could not be verified.', 'libertyclassroom-library'), '', array('response' => 403));
         }
         if ('confirmation_required' === $decision) {
-            wp_die(esc_html__('Please confirm that every Library session should be signed out.', 'tomschooloflife-plugin'), '', array('response' => 400));
+            wp_die(esc_html__('Please confirm that every Library session should be signed out.', 'libertyclassroom-library'), '', array('response' => 400));
         }
 
         $queued = self::queue_forced_logout($user_id);

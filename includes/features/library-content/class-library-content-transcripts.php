@@ -43,29 +43,29 @@ class TSOL_Library_Content_Transcripts {
         <section class="tsol-library-transcript-editor" data-library-transcript-editor aria-labelledby="tsol-library-transcript-heading">
             <div class="tsol-library-section-intro">
                 <div>
-                    <h3 id="tsol-library-transcript-heading"><?php esc_html_e('Primary video transcript', 'tomschooloflife-plugin'); ?></h3>
-                    <p><?php esc_html_e('Upload the transcript for the primary playback source in the first media row.', 'tomschooloflife-plugin'); ?></p>
-                    <p class="description"><?php esc_html_e('Choose a UTF-8 WebVTT file up to 5 MB. Saving without choosing a file keeps the current transcript.', 'tomschooloflife-plugin'); ?></p>
+                    <h3 id="tsol-library-transcript-heading"><?php esc_html_e('Primary video transcript', 'libertyclassroom-library'); ?></h3>
+                    <p><?php esc_html_e('Upload the transcript for the primary playback source in the first media row.', 'libertyclassroom-library'); ?></p>
+                    <p class="description"><?php esc_html_e('Choose a UTF-8 WebVTT file up to 5 MB. Saving without choosing a file keeps the current transcript.', 'libertyclassroom-library'); ?></p>
                 </div>
             </div>
             <div class="tsol-library-field tsol-library-field--wide">
-                <label for="tsol-library-transcript-file"><?php esc_html_e('WebVTT transcript (.vtt)', 'tomschooloflife-plugin'); ?></label>
+                <label for="tsol-library-transcript-file"><?php esc_html_e('WebVTT transcript (.vtt)', 'libertyclassroom-library'); ?></label>
                 <input id="tsol-library-transcript-file" name="<?php echo esc_attr(self::FILE_NAME); ?>" type="file" accept=".vtt,text/vtt" />
             </div>
             <?php if ('' !== $hash) : ?>
                 <div class="tsol-library-transcript-status" role="status">
                     <p>
-                        <strong><?php esc_html_e('Current transcript:', 'tomschooloflife-plugin'); ?></strong>
-                        <?php echo esc_html('' !== $filename ? $filename : __('WebVTT file', 'tomschooloflife-plugin')); ?>
+                        <strong><?php esc_html_e('Current transcript:', 'libertyclassroom-library'); ?></strong>
+                        <?php echo esc_html('' !== $filename ? $filename : __('WebVTT file', 'libertyclassroom-library')); ?>
                         <?php if ('' !== $modified_at) : ?>
-                            <span class="description"><?php echo esc_html(sprintf(__('updated %s UTC', 'tomschooloflife-plugin'), $modified_at)); ?></span>
+                            <span class="description"><?php echo esc_html(sprintf(__('updated %s UTC', 'libertyclassroom-library'), $modified_at)); ?></span>
                         <?php endif; ?>
                     </p>
                     <p><code><?php echo esc_html(substr($hash, 0, 12)); ?>&hellip;</code>
                         <?php if ('delivered' === $delivery_status) : ?>
-                            <span class="tsol-library-transcript-status__delivered"><?php esc_html_e('Synchronized with School', 'tomschooloflife-plugin'); ?></span>
+                            <span class="tsol-library-transcript-status__delivered"><?php esc_html_e('Synchronized with School', 'libertyclassroom-library'); ?></span>
                         <?php else : ?>
-                            <span class="tsol-library-transcript-status__pending"><?php esc_html_e('Waiting to synchronize with School', 'tomschooloflife-plugin'); ?></span>
+                            <span class="tsol-library-transcript-status__pending"><?php esc_html_e('Waiting to synchronize with School', 'libertyclassroom-library'); ?></span>
                         <?php endif; ?>
                     </p>
                 </div>
@@ -92,17 +92,17 @@ class TSOL_Library_Content_Transcripts {
         $filename = sanitize_file_name((string) ($upload['name'] ?? ''));
         $temporary_name = (string) ($upload['tmp_name'] ?? '');
         if (UPLOAD_ERR_OK !== $error || $size <= 0 || $size > self::MAX_FILE_BYTES || 'vtt' !== strtolower((string) pathinfo($filename, PATHINFO_EXTENSION))) {
-            self::store_error($post_id, __('Choose a valid .vtt transcript no larger than 5 MB.', 'tomschooloflife-plugin'));
+            self::store_error($post_id, __('Choose a valid .vtt transcript no larger than 5 MB.', 'libertyclassroom-library'));
             return;
         }
         if (!is_uploaded_file($temporary_name) || !is_readable($temporary_name)) {
-            self::store_error($post_id, __('The transcript upload could not be read. Please choose the file again.', 'tomschooloflife-plugin'));
+            self::store_error($post_id, __('The transcript upload could not be read. Please choose the file again.', 'libertyclassroom-library'));
             return;
         }
         $vtt = file_get_contents($temporary_name);
         $vtt = TSOL_Library_Content_Model::sanitize_transcript_vtt($vtt);
         if ('' === $vtt) {
-            self::store_error($post_id, __('The selected file is not valid WebVTT.', 'tomschooloflife-plugin'));
+            self::store_error($post_id, __('The selected file is not valid WebVTT.', 'libertyclassroom-library'));
             return;
         }
 

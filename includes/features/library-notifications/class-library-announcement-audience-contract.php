@@ -266,6 +266,6 @@ class TSOL_Library_Announcement_Audience_Contract {
     }
 
     private static function error($code) {
-        return new WP_Error($code, __('The announcement audience definition is invalid.', 'tomschooloflife-plugin'));
+        return new WP_Error($code, __('The announcement audience definition is invalid.', 'libertyclassroom-library'));
     }
 }

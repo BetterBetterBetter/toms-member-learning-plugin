@@ -27,8 +27,8 @@ class TSOL_Library_Homepage_Curation {
     public function add_menu_page() {
         $this->page_hook = (string) add_submenu_page(
             TSOL_Library_Admin_Navigation::MENU_SLUG,
-            __('Library Homepage', 'tomschooloflife-plugin'),
-            __('Homepage', 'tomschooloflife-plugin'),
+            __('Library Homepage', 'libertyclassroom-library'),
+            __('Homepage', 'libertyclassroom-library'),
             'edit_pages',
             self::PAGE_SLUG,
             array($this, 'render')
@@ -58,20 +58,20 @@ class TSOL_Library_Homepage_Curation {
     public static function rails() {
         return array(
             'featured' => array(
-                'label' => __('Featured', 'tomschooloflife-plugin'),
-                'description' => __('A deliberately promoted mix of Courses and Series.', 'tomschooloflife-plugin'),
+                'label' => __('Featured', 'libertyclassroom-library'),
+                'description' => __('A deliberately promoted mix of Courses and Series.', 'libertyclassroom-library'),
             ),
             'courses' => array(
-                'label' => __('Courses', 'tomschooloflife-plugin'),
-                'description' => __('Published Courses that are not Masterclasses.', 'tomschooloflife-plugin'),
+                'label' => __('Courses', 'libertyclassroom-library'),
+                'description' => __('Published Courses that are not Masterclasses.', 'libertyclassroom-library'),
             ),
             'masterclasses' => array(
-                'label' => __('Masterclasses', 'tomschooloflife-plugin'),
-                'description' => __('Courses from the Masterclasses Collection.', 'tomschooloflife-plugin'),
+                'label' => __('Masterclasses', 'libertyclassroom-library'),
+                'description' => __('Courses from the Masterclasses Collection.', 'libertyclassroom-library'),
             ),
             'series' => array(
-                'label' => __('Series', 'tomschooloflife-plugin'),
-                'description' => __('Ongoing or finite Series.', 'tomschooloflife-plugin'),
+                'label' => __('Series', 'libertyclassroom-library'),
+                'description' => __('Ongoing or finite Series.', 'libertyclassroom-library'),
             ),
         );
     }
@@ -148,7 +148,7 @@ class TSOL_Library_Homepage_Curation {
 
     public function save() {
         if (!current_user_can('edit_pages')) {
-            wp_die(esc_html__('You are not allowed to curate the Library homepage.', 'tomschooloflife-plugin'));
+            wp_die(esc_html__('You are not allowed to curate the Library homepage.', 'libertyclassroom-library'));
         }
         check_admin_referer(self::NONCE_ACTION, self::NONCE_NAME);
 
@@ -216,19 +216,19 @@ class TSOL_Library_Homepage_Curation {
         });
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-homepage" data-homepage-curation>
-            <h1><?php esc_html_e('Library Homepage', 'tomschooloflife-plugin'); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Choose which Courses and Series belong on the homepage, move them between sections, and drag them into the intended order.', 'tomschooloflife-plugin'); ?></p>
+            <h1><?php esc_html_e('Library Homepage', 'libertyclassroom-library'); ?></h1>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Choose which Courses and Series belong on the homepage, move them between sections, and drag them into the intended order.', 'libertyclassroom-library'); ?></p>
 
             <?php if (isset($_GET['updated'])) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Homepage curation saved.', 'tomschooloflife-plugin'); ?></p></div>
+                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Homepage curation saved.', 'libertyclassroom-library'); ?></p></div>
             <?php endif; ?>
 
             <?php if (isset($_GET['conflict'])) : ?>
-                <div class="notice notice-error"><p><?php esc_html_e('The Homepage changed in another browser tab. Your save was not applied; review the current order and try again.', 'tomschooloflife-plugin'); ?></p></div>
+                <div class="notice notice-error"><p><?php esc_html_e('The Homepage changed in another browser tab. Your save was not applied; review the current order and try again.', 'libertyclassroom-library'); ?></p></div>
             <?php endif; ?>
 
             <div class="notice notice-info inline">
-                <p><?php esc_html_e('Only published records are visible to ordinary visitors. Drafts can be arranged now and will remain hidden until they are published. Homepage placement never grants access and never changes search eligibility.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Only published records are visible to ordinary visitors. Drafts can be arranged now and will remain hidden until they are published. Homepage placement never grants access and never changes search eligibility.', 'libertyclassroom-library'); ?></p>
             </div>
 
             <form action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post" data-homepage-form>
@@ -237,9 +237,9 @@ class TSOL_Library_Homepage_Curation {
                 <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
 
                 <div class="tsol-library-homepage__toolbar">
-                    <label for="tsol-library-homepage-search"><?php esc_html_e('Find content', 'tomschooloflife-plugin'); ?></label>
-                    <input id="tsol-library-homepage-search" type="search" class="regular-text" placeholder="<?php esc_attr_e('Search Courses and Series', 'tomschooloflife-plugin'); ?>" data-homepage-search />
-                    <span class="description"><?php esc_html_e('Search only filters this editing screen.', 'tomschooloflife-plugin'); ?></span>
+                    <label for="tsol-library-homepage-search"><?php esc_html_e('Find content', 'libertyclassroom-library'); ?></label>
+                    <input id="tsol-library-homepage-search" type="search" class="regular-text" placeholder="<?php esc_attr_e('Search Courses and Series', 'libertyclassroom-library'); ?>" data-homepage-search />
+                    <span class="description"><?php esc_html_e('Search only filters this editing screen.', 'libertyclassroom-library'); ?></span>
                 </div>
 
                 <div class="tsol-library-homepage__rails">
@@ -255,7 +255,7 @@ class TSOL_Library_Homepage_Curation {
                                         <?php $this->render_record($record_lookup[(int) $post_id], $rail); ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
-                                <p class="tsol-library-homepage__empty" data-homepage-empty><?php esc_html_e('No content assigned.', 'tomschooloflife-plugin'); ?></p>
+                                <p class="tsol-library-homepage__empty" data-homepage-empty><?php esc_html_e('No content assigned.', 'libertyclassroom-library'); ?></p>
                             </div>
                         </section>
                     <?php endforeach; ?>
@@ -263,19 +263,19 @@ class TSOL_Library_Homepage_Curation {
 
                 <section class="tsol-library-homepage__available" aria-labelledby="tsol-homepage-available-heading">
                     <header>
-                        <h2 id="tsol-homepage-available-heading"><?php esc_html_e('Not on the homepage', 'tomschooloflife-plugin'); ?></h2>
-                        <p><?php esc_html_e('These records remain available through their public URLs and search when published.', 'tomschooloflife-plugin'); ?></p>
+                        <h2 id="tsol-homepage-available-heading"><?php esc_html_e('Not on the homepage', 'libertyclassroom-library'); ?></h2>
+                        <p><?php esc_html_e('These records remain available through their public URLs and search when published.', 'libertyclassroom-library'); ?></p>
                     </header>
                     <div class="tsol-library-homepage__list" data-homepage-list data-rail="">
                         <?php foreach ($available_ids as $post_id) : ?>
                             <?php $this->render_record($record_lookup[(int) $post_id], ''); ?>
                         <?php endforeach; ?>
-                        <p class="tsol-library-homepage__empty" data-homepage-empty><?php esc_html_e('Every Course and Series is assigned to a homepage section.', 'tomschooloflife-plugin'); ?></p>
+                        <p class="tsol-library-homepage__empty" data-homepage-empty><?php esc_html_e('Every Course and Series is assigned to a homepage section.', 'libertyclassroom-library'); ?></p>
                     </div>
                 </section>
 
                 <div class="tsol-library-homepage__actions">
-                    <?php submit_button(__('Save homepage', 'tomschooloflife-plugin'), 'primary', 'submit', false); ?>
+                    <?php submit_button(__('Save homepage', 'libertyclassroom-library'), 'primary', 'submit', false); ?>
                     <span class="description" aria-live="polite" data-homepage-status></span>
                 </div>
             </form>
@@ -288,23 +288,23 @@ class TSOL_Library_Homepage_Curation {
         $status = get_post_status_object((string) $post->post_status);
         $status_label = $status ? (string) $status->label : ucfirst((string) $post->post_status);
         $kind = TSOL_Library_Content_Model::SERIES_POST_TYPE === $post->post_type
-            ? __('Series', 'tomschooloflife-plugin')
+            ? __('Series', 'libertyclassroom-library')
             : (has_term('masterclasses', TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY, $post_id)
-                ? __('Masterclass', 'tomschooloflife-plugin')
-                : __('Course', 'tomschooloflife-plugin'));
+                ? __('Masterclass', 'libertyclassroom-library')
+                : __('Course', 'libertyclassroom-library'));
         $edit_url = get_edit_post_link($post_id, 'raw');
         ?>
         <article class="tsol-library-homepage-record" data-homepage-record data-title="<?php echo esc_attr(strtolower((string) $post->post_title)); ?>" data-post-id="<?php echo esc_attr((string) $post_id); ?>">
-            <span class="tsol-library-homepage-record__handle" data-homepage-handle title="<?php esc_attr_e('Drag to reorder', 'tomschooloflife-plugin'); ?>" aria-hidden="true">
+            <span class="tsol-library-homepage-record__handle" data-homepage-handle title="<?php esc_attr_e('Drag to reorder', 'libertyclassroom-library'); ?>" aria-hidden="true">
                 <span class="dashicons dashicons-menu" aria-hidden="true"></span>
             </span>
             <div class="tsol-library-homepage-record__identity">
-                <strong><?php echo esc_html($post->post_title ?: __('(no title)', 'tomschooloflife-plugin')); ?></strong>
+                <strong><?php echo esc_html($post->post_title ?: __('(no title)', 'libertyclassroom-library')); ?></strong>
                 <span><?php echo esc_html($kind); ?> · <?php echo esc_html($status_label); ?> <span data-homepage-position></span></span>
             </div>
-            <label class="screen-reader-text" for="tsol-homepage-record-rail-<?php echo esc_attr((string) $post_id); ?>"><?php esc_html_e('Homepage section', 'tomschooloflife-plugin'); ?></label>
+            <label class="screen-reader-text" for="tsol-homepage-record-rail-<?php echo esc_attr((string) $post_id); ?>"><?php esc_html_e('Homepage section', 'libertyclassroom-library'); ?></label>
             <select id="tsol-homepage-record-rail-<?php echo esc_attr((string) $post_id); ?>" data-homepage-rail-select>
-                <option value="" <?php selected('', $rail); ?>><?php esc_html_e('Not on homepage', 'tomschooloflife-plugin'); ?></option>
+                <option value="" <?php selected('', $rail); ?>><?php esc_html_e('Not on homepage', 'libertyclassroom-library'); ?></option>
                 <?php foreach (self::rails() as $rail_key => $config) : ?>
                     <?php if (in_array($rail_key, self::allowed_rails_for_post($post), true)) : ?>
                         <option value="<?php echo esc_attr($rail_key); ?>" <?php selected($rail_key, $rail); ?>><?php echo esc_html($config['label']); ?></option>
@@ -312,9 +312,9 @@ class TSOL_Library_Homepage_Curation {
                 <?php endforeach; ?>
             </select>
             <div class="tsol-library-homepage-record__actions">
-                <button type="button" class="button button-small" data-homepage-move="up"><?php esc_html_e('Up', 'tomschooloflife-plugin'); ?></button>
-                <button type="button" class="button button-small" data-homepage-move="down"><?php esc_html_e('Down', 'tomschooloflife-plugin'); ?></button>
-                <?php if ($edit_url) : ?><a class="button button-small" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e('Edit', 'tomschooloflife-plugin'); ?></a><?php endif; ?>
+                <button type="button" class="button button-small" data-homepage-move="up"><?php esc_html_e('Up', 'libertyclassroom-library'); ?></button>
+                <button type="button" class="button button-small" data-homepage-move="down"><?php esc_html_e('Down', 'libertyclassroom-library'); ?></button>
+                <?php if ($edit_url) : ?><a class="button button-small" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e('Edit', 'libertyclassroom-library'); ?></a><?php endif; ?>
             </div>
             <input type="hidden" value="<?php echo esc_attr((string) $post_id); ?>" data-homepage-input <?php disabled('' === $rail); ?> />
         </article>

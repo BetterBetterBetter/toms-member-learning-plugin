@@ -29,7 +29,7 @@ class TSOL_Library_Content_Access_Column {
 
     /**
      * MemberPress prints its own verbose Access cell on every eligible post
-     * list. Replace it only for the two TSOL-owned Library lists; native
+     * list. Replace it only for the two Liberty-owned Library lists; native
      * MemberPress, Page, and other WordPress screens remain untouched.
      */
     public function suppress_memberpress_renderer_on_library_lists($screen) {
@@ -41,7 +41,7 @@ class TSOL_Library_Content_Access_Column {
     }
 
     public function add_column($columns) {
-        $columns[self::COLUMN] = __('MemberPress access', 'tomschooloflife-plugin');
+        $columns[self::COLUMN] = __('MemberPress access', 'libertyclassroom-library');
         return $columns;
     }
 
@@ -73,14 +73,14 @@ class TSOL_Library_Content_Access_Column {
         $summary = $this->access_summary($post_id);
         if (is_wp_error($summary)) {
             echo '<span class="tsol-content-access tsol-content-access--unavailable">';
-            esc_html_e('Unavailable', 'tomschooloflife-plugin');
+            esc_html_e('Unavailable', 'libertyclassroom-library');
             echo '</span>';
             return;
         }
 
         if (!empty($summary['public'])) {
             echo '<span class="tsol-content-access tsol-content-access--public">';
-            esc_html_e('All signed-in users', 'tomschooloflife-plugin');
+            esc_html_e('All signed-in users', 'libertyclassroom-library');
             echo '</span>';
             return;
         }
@@ -89,7 +89,7 @@ class TSOL_Library_Content_Access_Column {
         $content_title = get_the_title($post_id);
         $aria_label = sprintf(
             /* translators: 1: access summary, 2: content title. */
-            __('View %1$s granting access to %2$s', 'tomschooloflife-plugin'),
+            __('View %1$s granting access to %2$s', 'libertyclassroom-library'),
             $summary['label'],
             $content_title
         );
@@ -103,7 +103,7 @@ class TSOL_Library_Content_Access_Column {
             aria-haspopup="dialog"
             aria-controls="tsol-content-access-dialog"
             aria-label="<?php echo esc_attr($aria_label); ?>"
-            title="<?php echo esc_attr__('View effective MemberPress access', 'tomschooloflife-plugin'); ?>"
+            title="<?php echo esc_attr__('View effective MemberPress access', 'libertyclassroom-library'); ?>"
         ><?php echo esc_html($summary['label']); ?></button>
         <?php
     }
@@ -114,16 +114,16 @@ class TSOL_Library_Content_Access_Column {
     public function access_summary($post_id) {
         $post = get_post((int) $post_id);
         if (!$post instanceof WP_Post) {
-            return new WP_Error('invalid_content', __('The content could not be resolved.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_content', __('The content could not be resolved.', 'libertyclassroom-library'));
         }
         if (!class_exists('MeprRule')) {
-            return new WP_Error('memberpress_unavailable', __('MemberPress access rules are unavailable.', 'tomschooloflife-plugin'));
+            return new WP_Error('memberpress_unavailable', __('MemberPress access rules are unavailable.', 'libertyclassroom-library'));
         }
 
         $authorization_post_id = (int) get_post_meta($post->ID, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
         $authorization_post = $authorization_post_id > 0 ? get_post($authorization_post_id) : $post;
         if (!$authorization_post instanceof WP_Post) {
-            return new WP_Error('invalid_authorization_content', __('The MemberPress authorization source could not be resolved.', 'tomschooloflife-plugin'));
+            return new WP_Error('invalid_authorization_content', __('The MemberPress authorization source could not be resolved.', 'libertyclassroom-library'));
         }
         $rules = MeprRule::get_rules($authorization_post);
         $rule_ids = array_values(array_unique(array_filter(array_map(static function ($rule) {
@@ -186,7 +186,7 @@ class TSOL_Library_Content_Access_Column {
 
         $rule_details = array();
         foreach ($rule_ids as $rule_id) {
-            $rule_details[] = self::post_detail($rule_id, __('Rule', 'tomschooloflife-plugin'));
+            $rule_details[] = self::post_detail($rule_id, __('Rule', 'libertyclassroom-library'));
         }
 
         $membership_count = count($memberships);
@@ -219,11 +219,11 @@ class TSOL_Library_Content_Access_Column {
             id="tsol-content-access-dialog"
             class="tsol-content-access-dialog"
             aria-labelledby="tsol-content-access-dialog-title"
-            data-title-prefix="<?php echo esc_attr__('Access:', 'tomschooloflife-plugin'); ?>"
+            data-title-prefix="<?php echo esc_attr__('Access:', 'libertyclassroom-library'); ?>"
         >
             <div class="tsol-content-access-dialog__header">
-                <h2 id="tsol-content-access-dialog-title"><?php esc_html_e('Content access', 'tomschooloflife-plugin'); ?></h2>
-                <button type="button" class="button-link tsol-content-access-dialog__close" data-tsol-content-access-close aria-label="<?php echo esc_attr__('Close access details', 'tomschooloflife-plugin'); ?>">
+                <h2 id="tsol-content-access-dialog-title"><?php esc_html_e('Content access', 'libertyclassroom-library'); ?></h2>
+                <button type="button" class="button-link tsol-content-access-dialog__close" data-tsol-content-access-close aria-label="<?php echo esc_attr__('Close access details', 'libertyclassroom-library'); ?>">
                     <span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
                 </button>
             </div>
@@ -243,14 +243,14 @@ class TSOL_Library_Content_Access_Column {
     private function render_access_details($summary) {
         ?>
         <p class="tsol-content-access-dialog__intro">
-            <?php esc_html_e('This is the effective access inherited from MemberPress rules. Nothing is stored or edited on the content by this TSOL view.', 'tomschooloflife-plugin'); ?>
+            <?php esc_html_e('This is the effective access inherited from MemberPress rules. Nothing is stored or edited on the content by this Library view.', 'libertyclassroom-library'); ?>
         </p>
 
         <?php if (!empty($summary['memberships'])) : ?>
             <section class="tsol-content-access-dialog__section">
                 <h3><?php echo esc_html(sprintf(
                     /* translators: %s: number of memberships. */
-                    _n('%s effective membership', '%s effective memberships', $summary['membership_count'], 'tomschooloflife-plugin'),
+                    _n('%s effective membership', '%s effective memberships', $summary['membership_count'], 'libertyclassroom-library'),
                     number_format_i18n($summary['membership_count'])
                 )); ?></h3>
                 <ul class="tsol-content-access-dialog__membership-list">
@@ -269,7 +269,7 @@ class TSOL_Library_Content_Access_Column {
 
         <?php if (!empty($summary['other_conditions'])) : ?>
             <section class="tsol-content-access-dialog__section">
-                <h3><?php esc_html_e('Other access conditions', 'tomschooloflife-plugin'); ?></h3>
+                <h3><?php esc_html_e('Other access conditions', 'libertyclassroom-library'); ?></h3>
                 <dl class="tsol-content-access-dialog__conditions">
                     <?php foreach ($summary['other_conditions'] as $condition) : ?>
                         <dt><?php echo esc_html($condition['label']); ?></dt>
@@ -281,7 +281,7 @@ class TSOL_Library_Content_Access_Column {
 
         <?php if (!empty($summary['rules'])) : ?>
             <section class="tsol-content-access-dialog__section">
-                <h3><?php esc_html_e('Providing MemberPress rules', 'tomschooloflife-plugin'); ?></h3>
+                <h3><?php esc_html_e('Providing MemberPress rules', 'libertyclassroom-library'); ?></h3>
                 <ul class="tsol-content-access-dialog__rule-list">
                     <?php foreach ($summary['rules'] as $rule) : ?>
                         <li>
@@ -312,7 +312,7 @@ class TSOL_Library_Content_Access_Column {
     }
 
     private function membership_detail($membership_id) {
-        return self::post_detail($membership_id, __('Membership', 'tomschooloflife-plugin'));
+        return self::post_detail($membership_id, __('Membership', 'libertyclassroom-library'));
     }
 
     private static function post_detail($post_id, $fallback_label) {
@@ -321,7 +321,7 @@ class TSOL_Library_Content_Access_Column {
         if ('' === $title) {
             $title = sprintf(
                 /* translators: 1: object label, 2: WordPress post ID. */
-                __('%1$s #%2$d', 'tomschooloflife-plugin'),
+                __('%1$s #%2$d', 'libertyclassroom-library'),
                 $fallback_label,
                 (int) $post_id
             );
@@ -337,7 +337,7 @@ class TSOL_Library_Content_Access_Column {
     private static function summary_label($membership_count, $other_count) {
         $membership_label = sprintf(
             /* translators: %s: number of memberships. */
-            _n('%s membership', '%s memberships', $membership_count, 'tomschooloflife-plugin'),
+            _n('%s membership', '%s memberships', $membership_count, 'libertyclassroom-library'),
             number_format_i18n($membership_count)
         );
         if ($membership_count > 0 && $other_count <= 0) {
@@ -345,7 +345,7 @@ class TSOL_Library_Content_Access_Column {
         }
         $condition_label = sprintf(
             /* translators: %s: number of non-membership conditions. */
-            _n('%s condition', '%s conditions', $other_count, 'tomschooloflife-plugin'),
+            _n('%s condition', '%s conditions', $other_count, 'libertyclassroom-library'),
             number_format_i18n($other_count)
         );
         if ($membership_count <= 0) {
@@ -353,7 +353,7 @@ class TSOL_Library_Content_Access_Column {
         }
         return sprintf(
             /* translators: 1: membership count label, 2: other-condition count. */
-            __('%1$s + %2$d other', 'tomschooloflife-plugin'),
+            __('%1$s + %2$d other', 'libertyclassroom-library'),
             $membership_label,
             $other_count
         );
@@ -361,11 +361,11 @@ class TSOL_Library_Content_Access_Column {
 
     private static function condition_type_label($type) {
         $labels = array(
-            'logged_in' => __('Logged-in status', 'tomschooloflife-plugin'),
-            'role' => __('WordPress role', 'tomschooloflife-plugin'),
-            'capability' => __('WordPress capability', 'tomschooloflife-plugin'),
-            'member' => __('Member', 'tomschooloflife-plugin'),
-            'course_completed' => __('Completed course', 'tomschooloflife-plugin'),
+            'logged_in' => __('Logged-in status', 'libertyclassroom-library'),
+            'role' => __('WordPress role', 'libertyclassroom-library'),
+            'capability' => __('WordPress capability', 'libertyclassroom-library'),
+            'member' => __('Member', 'libertyclassroom-library'),
+            'course_completed' => __('Completed course', 'libertyclassroom-library'),
         );
         if (isset($labels[$type])) {
             return $labels[$type];

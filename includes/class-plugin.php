@@ -7,12 +7,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TomsSchoolOfLifePlugin {
+class LibertyClassroomLibraryPlugin {
 
     private static $instance = null;
     private $admin_settings = null;
-    private $accountability_modal_admin = null;
-    private $cookie_consent_admin = null;
     private $library_auth = null;
     private $features = array();
     private $admin_page_hooks = array();
@@ -34,14 +32,10 @@ class TomsSchoolOfLifePlugin {
     }
 
     public function init() {
-        load_plugin_textdomain('tomschooloflife-plugin', false, dirname(TSOL_SITE_PLUGIN_BASENAME) . '/languages');
+        load_plugin_textdomain('libertyclassroom-library', false, dirname(TSOL_SITE_PLUGIN_BASENAME) . '/languages');
 
         $this->admin_settings = new TSOL_Site_Admin_Settings();
         $this->admin_settings->init();
-        $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
-        $this->accountability_modal_admin->init();
-        $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
-        $this->cookie_consent_admin->init();
         $this->library_auth = new TSOL_Library_Auth();
         $this->library_auth->init();
 
@@ -51,15 +45,15 @@ class TomsSchoolOfLifePlugin {
         /**
          * Fires after the site plugin has loaded.
          *
-         * @param TomsSchoolOfLifePlugin $plugin Plugin instance.
+         * @param LibertyClassroomLibraryPlugin $plugin Plugin instance.
          */
         do_action('tsol_site_plugin_loaded', $this);
     }
 
     public function add_admin_menu() {
         $this->admin_page_hooks[] = add_menu_page(
-            __('TSOL (Tom\'s School Of Life)', 'tomschooloflife-plugin'),
-            __('TSOL', 'tomschooloflife-plugin'),
+            __('Liberty Classroom Library', 'libertyclassroom-library'),
+            __('Liberty Library', 'libertyclassroom-library'),
             'manage_options',
             'tsol-site',
             array($this, 'render_settings_page'),
@@ -69,56 +63,18 @@ class TomsSchoolOfLifePlugin {
 
         $this->admin_page_hooks[] = add_submenu_page(
             'tsol-site',
-            __('TSOL Dashboard', 'tomschooloflife-plugin'),
-            __('Dashboard', 'tomschooloflife-plugin'),
+            __('Liberty Classroom Library', 'libertyclassroom-library'),
+            __('Dashboard', 'libertyclassroom-library'),
             'manage_options',
             'tsol-site',
             array($this, 'render_settings_page')
         );
 
-        $this->admin_page_hooks[] = add_submenu_page(
-            'tsol-site',
-            __('Accountability Modal', 'tomschooloflife-plugin'),
-            __('Accountability Modal', 'tomschooloflife-plugin'),
-            'manage_options',
-            TSOL_Accountability_Modal_Admin::PAGE_SLUG,
-            array($this, 'render_accountability_modal_page')
-        );
-
-        $this->admin_page_hooks[] = add_submenu_page(
-            'tsol-site',
-            __('Cookie Consent', 'tomschooloflife-plugin'),
-            __('Cookie Consent', 'tomschooloflife-plugin'),
-            'manage_options',
-            TSOL_Cookie_Consent_Admin::PAGE_SLUG,
-            array($this, 'render_cookie_consent_page')
-        );
     }
 
     public function admin_enqueue_scripts($hook) {
         if (!in_array($hook, $this->admin_page_hooks, true)) {
             return;
-        }
-
-        $code_editor_settings = null;
-        $admin_script_dependencies = array('jquery');
-
-        if (strpos((string) $hook, TSOL_Cookie_Consent_Admin::PAGE_SLUG) !== false && function_exists('wp_enqueue_code_editor')) {
-            $code_editor_settings = wp_enqueue_code_editor(array(
-                'type' => 'application/javascript',
-                'codemirror' => array(
-                    'indentUnit' => 4,
-                    'indentWithTabs' => false,
-                    'lint' => false,
-                    'lineNumbers' => true,
-                    'lineWrapping' => true,
-                    'styleActiveLine' => true,
-                ),
-            ));
-
-            if ($code_editor_settings) {
-                $admin_script_dependencies[] = 'code-editor';
-            }
         }
 
         wp_enqueue_style(
@@ -128,33 +84,6 @@ class TomsSchoolOfLifePlugin {
             TSOL_SITE_PLUGIN_VERSION
         );
 
-        wp_enqueue_script(
-            'tsol-site-admin',
-            TSOL_SITE_PLUGIN_URL . 'assets/admin/admin.js',
-            $admin_script_dependencies,
-            TSOL_SITE_PLUGIN_VERSION,
-            true
-        );
-
-        wp_localize_script('tsol-site-admin', 'tsolSitePluginAdmin', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('tsol_site_plugin_nonce'),
-            'codeEditor' => $code_editor_settings ? $code_editor_settings : null,
-            'strings' => array(
-                'scriptUrlPlaceholder' => __('https://example.com/script.js', 'tomschooloflife-plugin'),
-                'removeUrl' => __('Remove URL', 'tomschooloflife-plugin'),
-                'removeScriptUrl' => __('Remove this script URL', 'tomschooloflife-plugin'),
-                'scriptUrlCountSingular' => __('1 URL', 'tomschooloflife-plugin'),
-                'scriptUrlCountPlural' => __('%d URLs', 'tomschooloflife-plugin'),
-                'snippetLabel' => __('Snippet', 'tomschooloflife-plugin'),
-                'snippetCountSingular' => __('1 snippet', 'tomschooloflife-plugin'),
-                'snippetCountPlural' => __('%d snippets', 'tomschooloflife-plugin'),
-                'formatSnippet' => __('Format', 'tomschooloflife-plugin'),
-                'removeSnippet' => __('Remove snippet', 'tomschooloflife-plugin'),
-                'removeSnippetAria' => __('Remove this JavaScript snippet', 'tomschooloflife-plugin'),
-                'snippetSyntaxError' => __('JavaScript syntax error:', 'tomschooloflife-plugin'),
-            ),
-        ));
     }
 
     public function render_settings_page() {
@@ -169,37 +98,13 @@ class TomsSchoolOfLifePlugin {
         $this->admin_settings->display_page();
     }
 
-    public function render_accountability_modal_page() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        if (!$this->accountability_modal_admin) {
-            $this->accountability_modal_admin = new TSOL_Accountability_Modal_Admin();
-        }
-
-        $this->accountability_modal_admin->display_page();
-    }
-
-    public function render_cookie_consent_page() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        if (!$this->cookie_consent_admin) {
-            $this->cookie_consent_admin = new TSOL_Cookie_Consent_Admin();
-        }
-
-        $this->cookie_consent_admin->display_page();
-    }
-
     public function render_dependency_admin_notice() {
         if ($this->dependencies_met() || !current_user_can('activate_plugins')) {
             return;
         }
 
         echo '<div class="notice notice-info"><p>';
-        echo esc_html__('Access Platform SSO is not active. The TSOL plugin and Library authentication bridge still work, but Access-origin members need another way to establish their WordPress login.', 'tomschooloflife-plugin');
+        echo esc_html__('Access Platform SSO is not active. The Library authentication bridge remains available, but Access-origin members need another way to establish their WordPress login.', 'libertyclassroom-library');
         echo '</p></div>';
     }
 
@@ -207,7 +112,7 @@ class TomsSchoolOfLifePlugin {
         $settings_link = sprintf(
             '<a href="%s">%s</a>',
             esc_url(admin_url('admin.php?page=tsol-site')),
-            esc_html__('Settings', 'tomschooloflife-plugin')
+            esc_html__('Settings', 'libertyclassroom-library')
         );
 
         array_unshift($links, $settings_link);
@@ -236,8 +141,6 @@ class TomsSchoolOfLifePlugin {
 
     private function register_features() {
         $this->features = array(
-            new TSOL_Accountability_Modal(),
-            new TSOL_Cookie_Consent(),
             new TSOL_Library_Content(),
             new TSOL_Library_Announcements(),
         );

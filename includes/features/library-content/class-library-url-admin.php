@@ -77,15 +77,15 @@ class TSOL_Library_URL_Admin {
             data-library-post-type="<?php echo esc_attr((string) $post->post_type); ?>"
             data-library-auto-slug="<?php echo '' === $stored_slug ? '1' : '0'; ?>"
         >
-            <strong><?php esc_html_e('Library path:', 'tomschooloflife-plugin'); ?></strong>
+            <strong><?php esc_html_e('Library path:', 'libertyclassroom-library'); ?></strong>
             <span class="tsol-library-url-editor__path" data-library-path>
                 <span data-library-url-prefix><?php echo esc_html(self::url_prefix($path, $display_slug)); ?></span><span data-library-slug-text><?php echo esc_html($display_slug); ?></span>
             </span>
             <span data-library-slug-view-controls>
-                <button type="button" class="edit-slug button button-small" data-library-slug-edit><?php esc_html_e('Edit', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="edit-slug button button-small" data-library-slug-edit><?php esc_html_e('Edit', 'libertyclassroom-library'); ?></button>
             </span>
             <span class="tsol-library-url-editor__edit-controls" data-library-slug-edit-controls hidden>
-                <label class="screen-reader-text" for="tsol-library-slug"><?php esc_html_e('Library slug', 'tomschooloflife-plugin'); ?></label>
+                <label class="screen-reader-text" for="tsol-library-slug"><?php esc_html_e('Library slug', 'libertyclassroom-library'); ?></label>
                 <input
                     type="text"
                     id="tsol-library-slug"
@@ -97,15 +97,15 @@ class TSOL_Library_URL_Admin {
                     aria-describedby="tsol-library-url-description"
                     data-library-slug
                 />
-                <button type="button" class="button button-small" data-library-slug-confirm><?php esc_html_e('OK', 'tomschooloflife-plugin'); ?></button>
-                <button type="button" class="button-link" data-library-slug-cancel><?php esc_html_e('Cancel', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-small" data-library-slug-confirm><?php esc_html_e('OK', 'libertyclassroom-library'); ?></button>
+                <button type="button" class="button-link" data-library-slug-cancel><?php esc_html_e('Cancel', 'libertyclassroom-library'); ?></button>
             </span>
             <span id="tsol-library-url-description" class="screen-reader-text">
-                <?php esc_html_e('Only the final path segment is editable. WordPress normalizes it when you save.', 'tomschooloflife-plugin'); ?>
+                <?php esc_html_e('Only the final path segment is editable. WordPress normalizes it when you save.', 'libertyclassroom-library'); ?>
             </span>
             <?php if ($is_published) : ?>
                 <span class="tsol-library-url-editor__warning" data-library-slug-warning hidden>
-                    <?php esc_html_e('Changing a published slug changes its sharing URL. Existing links will not redirect automatically.', 'tomschooloflife-plugin'); ?>
+                    <?php esc_html_e('Changing a published slug changes its sharing URL. Existing links will not redirect automatically.', 'libertyclassroom-library'); ?>
                 </span>
             <?php endif; ?>
         </div>

@@ -1,4 +1,4 @@
-# TSOL Library Content
+# Liberty Classroom Library Content
 
 This feature is the permanent WordPress back office for the standalone Library.
 It is deliberately separate from the legacy MemberPress Courses system.
@@ -16,7 +16,7 @@ It is deliberately separate from the legacy MemberPress Courses system.
 
 ## Environment migration
 
-**TSOL Library → Migration** exports and imports only this WordPress-owned
+**Liberty Classroom Library → Migration** exports and imports only this WordPress-owned
 Library model and its portable Access Groups configuration. Relationships use
 content UUIDs, membership assignments use MemberPress product slugs, and media
 uses upload-path references backed by checksum-verified files inside the ZIP.
@@ -235,7 +235,7 @@ determine Series membership or order.
 
 ## Admin experience
 
-`TSOL Library` is a dedicated top-level menu containing:
+`Liberty Classroom Library` is a dedicated top-level menu containing:
 
 - Dashboard
 - Courses
@@ -313,7 +313,7 @@ no-JavaScript fallback for direct mode.
 
 The access panel and compact list column remain read-only projections of the
 live MemberPress rules. Administrators standardize membership access under
-**TSOL Library → Access Groups** rather than maintaining a growing set of
+**Liberty Classroom Library → Access Groups** rather than maintaining a growing set of
 membership conditions by hand. Administrators create and name only the
 packages they need, then select the broad Library areas, Collections, Courses,
 or Series each package unlocks. A **Library Access Groups** panel on every
@@ -326,7 +326,7 @@ MemberPress rules, verifies their structure, and compares every current user
 against every current Library authorization target. Every published rule that
 affects Library content must be owned by the Access Groups baseline;
 publication is blocked while any unmanaged Library rule remains. A guarded
-reconciliation can bring separately shipped TSOL-owned rules into the draft,
+reconciliation can bring separately shipped Liberty-owned rules into the draft,
 but arbitrary MemberPress rules are never modified automatically. Publication
 is also blocked on any allow-to-deny change, requires the exact
 `publish-access-groups` phrase, and swaps the complete managed Library rule set.
@@ -356,7 +356,7 @@ is activated and recovery-tested; this does not authorize production use.
 ## Clone-only import
 
 The guarded importer lives in `includes/migrations/library-catalogue-import`.
-It creates TSOL-owned drafts only. It never creates or edits MemberPress
+It creates Liberty-owned drafts only. It never creates or edits MemberPress
 Courses, lessons, sections, rules, products, users, transactions, or
 subscriptions, and it never changes a legacy source.
 

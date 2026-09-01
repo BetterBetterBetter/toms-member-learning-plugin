@@ -23,7 +23,7 @@ class TSOL_Library_Auth_Rate_Limiter {
         }
         if ((int) $state['count'] > $limit) {
             $retry_after = max(1, (int) $state['expires_at'] - $now);
-            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'tomschooloflife-plugin'), array('retry_after' => $retry_after));
+            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'libertyclassroom-library'), array('retry_after' => $retry_after));
         }
         return true;
     }

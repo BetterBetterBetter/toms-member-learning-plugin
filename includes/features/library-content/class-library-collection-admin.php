@@ -22,6 +22,7 @@ class TSOL_Library_Collection_Admin {
         add_action('created_term', array($this, 'save_fields'), 20, 3);
         add_action('edited_term', array($this, 'save_fields'), 20, 3);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        add_action('admin_notices', array($this, 'render_color_notice'));
     }
 
     public function render_add_fields($taxonomy) {
@@ -29,11 +30,12 @@ class TSOL_Library_Collection_Admin {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
         ?>
         <div class="form-field tsol-library-collection-editor" data-collection-editor>
-            <label for="tsol-library-collection-overview"><?php esc_html_e('Landing page overview', 'tomschooloflife-plugin'); ?></label>
+            <label for="tsol-library-collection-overview"><?php esc_html_e('Landing page overview', 'libertyclassroom-library'); ?></label>
             <textarea id="tsol-library-collection-overview" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[overview_html]" rows="7"></textarea>
-            <p><?php esc_html_e('Optional long-form introduction shown above the Course directory. Use the native Description field for the short hero introduction.', 'tomschooloflife-plugin'); ?></p>
+            <p><?php esc_html_e('Optional long-form introduction shown above the Course directory. Use the native Description field for the short hero introduction.', 'libertyclassroom-library'); ?></p>
             <?php $this->render_image_control(0); ?>
-            <p><?php esc_html_e('After creating the Collection and assigning Courses, edit it again to choose a featured Course.', 'tomschooloflife-plugin'); ?></p>
+            <?php $this->render_color_control(0); ?>
+            <p><?php esc_html_e('After creating the Collection and assigning Courses, edit it again to choose a featured Course.', 'libertyclassroom-library'); ?></p>
         </div>
         <?php
     }
@@ -47,7 +49,7 @@ class TSOL_Library_Collection_Admin {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
         ?>
         <tr class="form-field tsol-library-collection-editor-wrap">
-            <th scope="row"><label for="tsol-library-collection-overview-<?php echo esc_attr($term_id); ?>"><?php esc_html_e('Landing page overview', 'tomschooloflife-plugin'); ?></label></th>
+            <th scope="row"><label for="tsol-library-collection-overview-<?php echo esc_attr($term_id); ?>"><?php esc_html_e('Landing page overview', 'libertyclassroom-library'); ?></label></th>
             <td>
                 <?php wp_editor($overview, 'tsol-library-collection-overview-' . $term_id, array(
                     'textarea_name' => self::PAYLOAD_NAME . '[overview_html]',
@@ -56,23 +58,27 @@ class TSOL_Library_Collection_Admin {
                     'teeny' => true,
                     'quicktags' => true,
                 )); ?>
-                <p class="description"><?php esc_html_e('Long-form public introduction shown above the Course directory. Use the native Description field for the short hero introduction.', 'tomschooloflife-plugin'); ?></p>
+                <p class="description"><?php esc_html_e('Long-form public introduction shown above the Course directory. Use the native Description field for the short hero introduction.', 'libertyclassroom-library'); ?></p>
             </td>
         </tr>
         <tr class="form-field tsol-library-collection-editor-wrap" data-collection-editor>
-            <th scope="row"><?php esc_html_e('Hero artwork', 'tomschooloflife-plugin'); ?></th>
+            <th scope="row"><?php esc_html_e('Hero artwork', 'libertyclassroom-library'); ?></th>
             <td><?php $this->render_image_control($hero_image_id); ?></td>
         </tr>
         <tr class="form-field tsol-library-collection-editor-wrap">
-            <th scope="row"><label for="tsol-library-collection-featured-course"><?php esc_html_e('Featured Course', 'tomschooloflife-plugin'); ?></label></th>
+            <th scope="row"><?php esc_html_e('Collection colors', 'libertyclassroom-library'); ?></th>
+            <td><?php $this->render_color_control($term_id); ?></td>
+        </tr>
+        <tr class="form-field tsol-library-collection-editor-wrap">
+            <th scope="row"><label for="tsol-library-collection-featured-course"><?php esc_html_e('Featured Course', 'libertyclassroom-library'); ?></label></th>
             <td>
                 <select id="tsol-library-collection-featured-course" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[featured_course_id]">
-                    <option value="0"><?php esc_html_e('No featured Course', 'tomschooloflife-plugin'); ?></option>
+                    <option value="0"><?php esc_html_e('No featured Course', 'libertyclassroom-library'); ?></option>
                     <?php foreach ($this->collection_courses($term_id) as $course) : ?>
                         <option value="<?php echo esc_attr($course->ID); ?>" <?php selected($featured_course_id, (int) $course->ID); ?>><?php echo esc_html($course->post_title); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <p class="description"><?php esc_html_e('Optional. The Course must already belong to this Collection.', 'tomschooloflife-plugin'); ?></p>
+                <p class="description"><?php esc_html_e('Optional. The Course must already belong to this Collection.', 'libertyclassroom-library'); ?></p>
             </td>
         </tr>
         <?php
@@ -89,11 +95,41 @@ class TSOL_Library_Collection_Admin {
                 <?php endif; ?>
             </div>
             <p class="tsol-library-collection-image__actions">
-                <button type="button" class="button" data-collection-image-choose><?php esc_html_e('Choose hero artwork', 'tomschooloflife-plugin'); ?></button>
-                <button type="button" class="button-link-delete<?php echo $image_id > 0 ? '' : ' hidden'; ?>" data-collection-image-remove><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button" data-collection-image-choose><?php esc_html_e('Choose hero artwork', 'libertyclassroom-library'); ?></button>
+                <button type="button" class="button-link-delete<?php echo $image_id > 0 ? '' : ' hidden'; ?>" data-collection-image-remove><?php esc_html_e('Remove', 'libertyclassroom-library'); ?></button>
             </p>
-            <p class="description"><?php esc_html_e('Optional wide artwork used in the public Collection hero.', 'tomschooloflife-plugin'); ?></p>
+            <p class="description"><?php esc_html_e('Optional wide artwork used in the public Collection hero.', 'libertyclassroom-library'); ?></p>
         </div>
+        <?php
+    }
+
+    private function render_color_control($term_id) {
+        $appearance = $term_id > 0 ? TSOL_Library_Content_Model::collection_appearance($term_id) : null;
+        $colors = $appearance ?: array(
+            'light_background' => '#1f4e79',
+            'light_foreground' => '#ffffff',
+            'dark_background' => '#8fc8f0',
+            'dark_foreground' => '#10263a',
+        );
+        ?>
+        <fieldset class="tsol-library-collection-colors" data-collection-colors>
+            <legend class="screen-reader-text"><?php esc_html_e('Collection colors', 'libertyclassroom-library'); ?></legend>
+            <label class="tsol-library-collection-colors__toggle">
+                <input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[appearance_enabled]" value="1" data-collection-colors-enabled <?php checked(null !== $appearance); ?> />
+                <?php esc_html_e('Use custom colors for this Collection', 'libertyclassroom-library'); ?>
+            </label>
+            <div class="tsol-library-collection-colors__themes" data-collection-colors-fields>
+                <?php foreach (array('light' => __('Light mode', 'libertyclassroom-library'), 'dark' => __('Dark mode', 'libertyclassroom-library')) as $theme => $label) : ?>
+                    <div class="tsol-library-collection-colors__theme" data-collection-color-pair="<?php echo esc_attr($theme); ?>">
+                        <strong><?php echo esc_html($label); ?></strong>
+                        <label><span><?php esc_html_e('Background', 'libertyclassroom-library'); ?></span><input type="color" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[<?php echo esc_attr($theme); ?>_background]" value="<?php echo esc_attr($colors[$theme . '_background']); ?>" data-collection-color="background" /></label>
+                        <label><span><?php esc_html_e('Text', 'libertyclassroom-library'); ?></span><input type="color" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[<?php echo esc_attr($theme); ?>_foreground]" value="<?php echo esc_attr($colors[$theme . '_foreground']); ?>" data-collection-color="foreground" /></label>
+                        <output class="tsol-library-collection-colors__contrast" data-collection-contrast></output>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <p class="description"><?php esc_html_e('Applied to Collection pages, Course badges, breadcrumbs, and Course-card labels. Each pair must meet WCAG AA contrast (4.5:1). Disable this setting to use the School brand colors.', 'libertyclassroom-library'); ?></p>
+        </fieldset>
         <?php
     }
 
@@ -126,6 +162,42 @@ class TSOL_Library_Collection_Admin {
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, $overview);
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_image_id);
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, $featured_course_id);
+        $this->save_color_fields($term_id, $payload);
+    }
+
+    private function save_color_fields($term_id, $payload) {
+        $keys = TSOL_Library_Content_Model::collection_appearance_meta_keys();
+        if (empty($payload['appearance_enabled'])) {
+            foreach ($keys as $key) {
+                delete_term_meta((int) $term_id, $key);
+            }
+            return;
+        }
+        $values = array(
+            sanitize_hex_color((string) ($payload['light_background'] ?? '')),
+            sanitize_hex_color((string) ($payload['light_foreground'] ?? '')),
+            sanitize_hex_color((string) ($payload['dark_background'] ?? '')),
+            sanitize_hex_color((string) ($payload['dark_foreground'] ?? '')),
+        );
+        if (in_array('', $values, true)
+            || TSOL_Library_Content_Model::collection_color_contrast($values[0], $values[1]) < 4.5
+            || TSOL_Library_Content_Model::collection_color_contrast($values[2], $values[3]) < 4.5
+        ) {
+            set_transient('tsol_library_collection_color_error_' . get_current_user_id(), 1, 60);
+            return;
+        }
+        foreach ($keys as $index => $key) {
+            update_term_meta((int) $term_id, $key, strtolower($values[$index]));
+        }
+    }
+
+    public function render_color_notice() {
+        $key = 'tsol_library_collection_color_error_' . get_current_user_id();
+        if (!get_transient($key)) {
+            return;
+        }
+        delete_transient($key);
+        echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Collection colors were not changed because both light and dark color pairs must be valid and meet WCAG AA contrast (4.5:1).', 'libertyclassroom-library') . '</p></div>';
     }
 
     public function enqueue_assets($hook) {
@@ -140,8 +212,11 @@ class TSOL_Library_Collection_Admin {
         wp_enqueue_style('tsol-library-collection-admin', TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-collection-admin.css', array(), TSOL_SITE_PLUGIN_VERSION);
         wp_enqueue_script('tsol-library-collection-admin', TSOL_SITE_PLUGIN_URL . 'assets/features/library-content/library-collection-admin.js', array('jquery', 'media-editor'), TSOL_SITE_PLUGIN_VERSION, true);
         wp_localize_script('tsol-library-collection-admin', 'tsolLibraryCollectionAdmin', array(
-            'frameTitle' => __('Choose Collection hero artwork', 'tomschooloflife-plugin'),
-            'useImage' => __('Use this artwork', 'tomschooloflife-plugin'),
+            'frameTitle' => __('Choose Collection hero artwork', 'libertyclassroom-library'),
+            'useImage' => __('Use this artwork', 'libertyclassroom-library'),
+            'contrastPass' => __('Pass', 'libertyclassroom-library'),
+            'contrastFail' => __('Needs more contrast', 'libertyclassroom-library'),
+            'contrastError' => __('Choose colors with at least 4.5:1 contrast.', 'libertyclassroom-library'),
         ));
     }
 

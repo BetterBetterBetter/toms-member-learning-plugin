@@ -1,6 +1,6 @@
 <?php
 /**
- * Canonical WordPress content types and metadata for the TSOL Library.
+ * Canonical WordPress content types and metadata for the Liberty Classroom Library.
  */
 
 if (!defined('ABSPATH')) {
@@ -65,6 +65,10 @@ class TSOL_Library_Content_Model {
     const COLLECTION_META_OVERVIEW = '_tsol_library_collection_overview';
     const COLLECTION_META_HERO_IMAGE_ID = '_tsol_library_collection_hero_image_id';
     const COLLECTION_META_FEATURED_COURSE_ID = '_tsol_library_collection_featured_course_id';
+    const COLLECTION_META_LIGHT_BACKGROUND = '_tsol_library_collection_light_background';
+    const COLLECTION_META_LIGHT_FOREGROUND = '_tsol_library_collection_light_foreground';
+    const COLLECTION_META_DARK_BACKGROUND = '_tsol_library_collection_dark_background';
+    const COLLECTION_META_DARK_FOREGROUND = '_tsol_library_collection_dark_foreground';
 
     const AVAILABILITY_AVAILABLE = 'available';
     const AVAILABILITY_COMING_SOON = 'coming_soon';
@@ -228,7 +232,7 @@ class TSOL_Library_Content_Model {
             return array(
                 'id' => $course_id,
                 'source' => 'course',
-                'label' => __('Course', 'tomschooloflife-plugin'),
+                'label' => __('Course', 'libertyclassroom-library'),
             );
         }
 
@@ -237,7 +241,7 @@ class TSOL_Library_Content_Model {
             return array(
                 'id' => $series_id,
                 'source' => 'series',
-                'label' => __('Series', 'tomschooloflife-plugin'),
+                'label' => __('Series', 'libertyclassroom-library'),
             );
         }
 
@@ -311,15 +315,15 @@ class TSOL_Library_Content_Model {
 
     public static function speaker_social_platforms() {
         return array(
-            'linkedin' => __('LinkedIn', 'tomschooloflife-plugin'),
-            'x' => __('X / Twitter', 'tomschooloflife-plugin'),
-            'youtube' => __('YouTube', 'tomschooloflife-plugin'),
-            'instagram' => __('Instagram', 'tomschooloflife-plugin'),
-            'facebook' => __('Facebook', 'tomschooloflife-plugin'),
-            'tiktok' => __('TikTok', 'tomschooloflife-plugin'),
-            'bluesky' => __('Bluesky', 'tomschooloflife-plugin'),
-            'podcast' => __('Podcast', 'tomschooloflife-plugin'),
-            'other' => __('Other', 'tomschooloflife-plugin'),
+            'linkedin' => __('LinkedIn', 'libertyclassroom-library'),
+            'x' => __('X / Twitter', 'libertyclassroom-library'),
+            'youtube' => __('YouTube', 'libertyclassroom-library'),
+            'instagram' => __('Instagram', 'libertyclassroom-library'),
+            'facebook' => __('Facebook', 'libertyclassroom-library'),
+            'tiktok' => __('TikTok', 'libertyclassroom-library'),
+            'bluesky' => __('Bluesky', 'libertyclassroom-library'),
+            'podcast' => __('Podcast', 'libertyclassroom-library'),
+            'other' => __('Other', 'libertyclassroom-library'),
         );
     }
 
@@ -574,16 +578,16 @@ class TSOL_Library_Content_Model {
     private static function register_post_types() {
         register_post_type(self::COURSE_POST_TYPE, array(
             'labels' => array(
-                'name' => __('Library Courses', 'tomschooloflife-plugin'),
-                'singular_name' => __('Library Course', 'tomschooloflife-plugin'),
-                'menu_name' => __('Courses', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add New Library Course', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit Library Course', 'tomschooloflife-plugin'),
-                'new_item' => __('New Library Course', 'tomschooloflife-plugin'),
-                'view_item' => __('Preview Library Course', 'tomschooloflife-plugin'),
-                'search_items' => __('Search Library Courses', 'tomschooloflife-plugin'),
-                'not_found' => __('No Library Courses found.', 'tomschooloflife-plugin'),
-                'not_found_in_trash' => __('No Library Courses found in Trash.', 'tomschooloflife-plugin'),
+                'name' => __('Library Courses', 'libertyclassroom-library'),
+                'singular_name' => __('Library Course', 'libertyclassroom-library'),
+                'menu_name' => __('Courses', 'libertyclassroom-library'),
+                'add_new_item' => __('Add New Library Course', 'libertyclassroom-library'),
+                'edit_item' => __('Edit Library Course', 'libertyclassroom-library'),
+                'new_item' => __('New Library Course', 'libertyclassroom-library'),
+                'view_item' => __('Preview Library Course', 'libertyclassroom-library'),
+                'search_items' => __('Search Library Courses', 'libertyclassroom-library'),
+                'not_found' => __('No Library Courses found.', 'libertyclassroom-library'),
+                'not_found_in_trash' => __('No Library Courses found in Trash.', 'libertyclassroom-library'),
             ),
             'public' => false,
             'publicly_queryable' => false,
@@ -603,16 +607,16 @@ class TSOL_Library_Content_Model {
 
         register_post_type(self::SERIES_POST_TYPE, array(
             'labels' => array(
-                'name' => __('Library Series', 'tomschooloflife-plugin'),
-                'singular_name' => __('Library Series', 'tomschooloflife-plugin'),
-                'menu_name' => __('Series', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add New Library Series', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit Library Series', 'tomschooloflife-plugin'),
-                'new_item' => __('New Library Series', 'tomschooloflife-plugin'),
-                'view_item' => __('Preview Library Series', 'tomschooloflife-plugin'),
-                'search_items' => __('Search Library Series', 'tomschooloflife-plugin'),
-                'not_found' => __('No Library Series found.', 'tomschooloflife-plugin'),
-                'not_found_in_trash' => __('No Library Series found in Trash.', 'tomschooloflife-plugin'),
+                'name' => __('Library Series', 'libertyclassroom-library'),
+                'singular_name' => __('Library Series', 'libertyclassroom-library'),
+                'menu_name' => __('Series', 'libertyclassroom-library'),
+                'add_new_item' => __('Add New Library Series', 'libertyclassroom-library'),
+                'edit_item' => __('Edit Library Series', 'libertyclassroom-library'),
+                'new_item' => __('New Library Series', 'libertyclassroom-library'),
+                'view_item' => __('Preview Library Series', 'libertyclassroom-library'),
+                'search_items' => __('Search Library Series', 'libertyclassroom-library'),
+                'not_found' => __('No Library Series found.', 'libertyclassroom-library'),
+                'not_found_in_trash' => __('No Library Series found in Trash.', 'libertyclassroom-library'),
             ),
             'public' => false,
             'publicly_queryable' => false,
@@ -632,16 +636,16 @@ class TSOL_Library_Content_Model {
 
         register_post_type(self::ITEM_POST_TYPE, array(
             'labels' => array(
-                'name' => __('Library Content', 'tomschooloflife-plugin'),
-                'singular_name' => __('Library Content Item', 'tomschooloflife-plugin'),
-                'menu_name' => __('Content', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add New Library Item', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit Library Item', 'tomschooloflife-plugin'),
-                'new_item' => __('New Library Item', 'tomschooloflife-plugin'),
-                'view_item' => __('View Library Item', 'tomschooloflife-plugin'),
-                'search_items' => __('Search Library Items', 'tomschooloflife-plugin'),
-                'not_found' => __('No Library Items found.', 'tomschooloflife-plugin'),
-                'not_found_in_trash' => __('No Library Items found in Trash.', 'tomschooloflife-plugin'),
+                'name' => __('Library Content', 'libertyclassroom-library'),
+                'singular_name' => __('Library Content Item', 'libertyclassroom-library'),
+                'menu_name' => __('Content', 'libertyclassroom-library'),
+                'add_new_item' => __('Add New Library Item', 'libertyclassroom-library'),
+                'edit_item' => __('Edit Library Item', 'libertyclassroom-library'),
+                'new_item' => __('New Library Item', 'libertyclassroom-library'),
+                'view_item' => __('View Library Item', 'libertyclassroom-library'),
+                'search_items' => __('Search Library Items', 'libertyclassroom-library'),
+                'not_found' => __('No Library Items found.', 'libertyclassroom-library'),
+                'not_found_in_trash' => __('No Library Items found in Trash.', 'libertyclassroom-library'),
             ),
             // Protected content is served by the authenticated Library contract,
             // never by an unauthenticated WordPress single-post route.
@@ -663,20 +667,20 @@ class TSOL_Library_Content_Model {
 
         register_post_type(self::SPEAKER_POST_TYPE, array(
             'labels' => array(
-                'name' => __('Library Speakers', 'tomschooloflife-plugin'),
-                'singular_name' => __('Library Speaker', 'tomschooloflife-plugin'),
-                'menu_name' => __('Speakers', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add New Speaker', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit Speaker', 'tomschooloflife-plugin'),
-                'new_item' => __('New Speaker', 'tomschooloflife-plugin'),
-                'view_item' => __('Preview Speaker', 'tomschooloflife-plugin'),
-                'search_items' => __('Search Speakers', 'tomschooloflife-plugin'),
-                'not_found' => __('No Speakers found.', 'tomschooloflife-plugin'),
-                'not_found_in_trash' => __('No Speakers found in Trash.', 'tomschooloflife-plugin'),
-                'featured_image' => __('Headshot', 'tomschooloflife-plugin'),
-                'set_featured_image' => __('Choose headshot', 'tomschooloflife-plugin'),
-                'remove_featured_image' => __('Remove headshot', 'tomschooloflife-plugin'),
-                'use_featured_image' => __('Use as headshot', 'tomschooloflife-plugin'),
+                'name' => __('Library Speakers', 'libertyclassroom-library'),
+                'singular_name' => __('Library Speaker', 'libertyclassroom-library'),
+                'menu_name' => __('Speakers', 'libertyclassroom-library'),
+                'add_new_item' => __('Add New Speaker', 'libertyclassroom-library'),
+                'edit_item' => __('Edit Speaker', 'libertyclassroom-library'),
+                'new_item' => __('New Speaker', 'libertyclassroom-library'),
+                'view_item' => __('Preview Speaker', 'libertyclassroom-library'),
+                'search_items' => __('Search Speakers', 'libertyclassroom-library'),
+                'not_found' => __('No Speakers found.', 'libertyclassroom-library'),
+                'not_found_in_trash' => __('No Speakers found in Trash.', 'libertyclassroom-library'),
+                'featured_image' => __('Headshot', 'libertyclassroom-library'),
+                'set_featured_image' => __('Choose headshot', 'libertyclassroom-library'),
+                'remove_featured_image' => __('Remove headshot', 'libertyclassroom-library'),
+                'use_featured_image' => __('Use as headshot', 'libertyclassroom-library'),
             ),
             'public' => false,
             'publicly_queryable' => false,
@@ -697,12 +701,12 @@ class TSOL_Library_Content_Model {
     private static function register_taxonomies() {
         register_taxonomy(self::COURSE_COLLECTION_TAXONOMY, array(self::COURSE_POST_TYPE), array(
             'labels' => array(
-                'name' => __('Collections', 'tomschooloflife-plugin'),
-                'singular_name' => __('Collection', 'tomschooloflife-plugin'),
-                'menu_name' => __('Collections', 'tomschooloflife-plugin'),
-                'all_items' => __('All Collections', 'tomschooloflife-plugin'),
-                'edit_item' => __('Edit Collection', 'tomschooloflife-plugin'),
-                'add_new_item' => __('Add New Collection', 'tomschooloflife-plugin'),
+                'name' => __('Collections', 'libertyclassroom-library'),
+                'singular_name' => __('Collection', 'libertyclassroom-library'),
+                'menu_name' => __('Collections', 'libertyclassroom-library'),
+                'all_items' => __('All Collections', 'libertyclassroom-library'),
+                'edit_item' => __('Edit Collection', 'libertyclassroom-library'),
+                'add_new_item' => __('Add New Collection', 'libertyclassroom-library'),
             ),
             // MemberPress discovers custom-taxonomy rule targets through the
             // public flag. The attached Course CPT remains private and this
@@ -720,8 +724,8 @@ class TSOL_Library_Content_Model {
 
         register_taxonomy(self::TOPIC_TAXONOMY, self::post_types(), array(
             'labels' => array(
-                'name' => __('Library Topics', 'tomschooloflife-plugin'),
-                'singular_name' => __('Library Topic', 'tomschooloflife-plugin'),
+                'name' => __('Library Topics', 'libertyclassroom-library'),
+                'singular_name' => __('Library Topic', 'libertyclassroom-library'),
             ),
             'public' => false,
             'show_ui' => true,
@@ -810,6 +814,17 @@ class TSOL_Library_Content_Model {
                 },
             ));
         }
+        foreach (self::collection_appearance_meta_keys() as $meta_key) {
+            register_term_meta(self::COURSE_COLLECTION_TAXONOMY, $meta_key, array(
+                'type' => 'string',
+                'single' => true,
+                'show_in_rest' => false,
+                'sanitize_callback' => 'sanitize_hex_color',
+                'auth_callback' => static function () {
+                    return current_user_can('manage_categories');
+                },
+            ));
+        }
 
         self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_CONTENT, 'string', array(__CLASS__, 'sanitize_transcript_vtt'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_HASH, 'string', 'sanitize_text_field');
@@ -822,6 +837,51 @@ class TSOL_Library_Content_Model {
     public static function sanitize_transcript_vtt($value) {
         $value = is_string($value) ? str_replace("\0", '', $value) : '';
         return 0 === strpos(ltrim($value, "\xEF\xBB\xBF"), 'WEBVTT') ? $value : '';
+    }
+
+    public static function collection_appearance_meta_keys() {
+        return array(
+            self::COLLECTION_META_LIGHT_BACKGROUND,
+            self::COLLECTION_META_LIGHT_FOREGROUND,
+            self::COLLECTION_META_DARK_BACKGROUND,
+            self::COLLECTION_META_DARK_FOREGROUND,
+        );
+    }
+
+    public static function collection_appearance($term_id) {
+        $values = array_values(array_map(static function ($key) use ($term_id) {
+            return sanitize_hex_color((string) get_term_meta((int) $term_id, $key, true));
+        }, self::collection_appearance_meta_keys()));
+        if (in_array('', $values, true)
+            || in_array(null, $values, true)
+            || self::collection_color_contrast($values[0], $values[1]) < 4.5
+            || self::collection_color_contrast($values[2], $values[3]) < 4.5
+        ) {
+            return null;
+        }
+        return array(
+            'light_background' => strtolower($values[0]),
+            'light_foreground' => strtolower($values[1]),
+            'dark_background' => strtolower($values[2]),
+            'dark_foreground' => strtolower($values[3]),
+        );
+    }
+
+    public static function collection_color_contrast($background, $foreground) {
+        $luminance = static function ($hex) {
+            $hex = ltrim((string) $hex, '#');
+            if (6 !== strlen($hex) || !ctype_xdigit($hex)) {
+                return 0.0;
+            }
+            $channels = array_map(static function ($offset) use ($hex) {
+                $value = hexdec(substr($hex, $offset, 2)) / 255;
+                return $value <= 0.04045 ? $value / 12.92 : pow(($value + 0.055) / 1.055, 2.4);
+            }, array(0, 2, 4));
+            return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+        };
+        $first = $luminance($background);
+        $second = $luminance($foreground);
+        return (max($first, $second) + 0.05) / (min($first, $second) + 0.05);
     }
 
     private static function register_meta($post_type, $key, $type, $sanitize_callback) {

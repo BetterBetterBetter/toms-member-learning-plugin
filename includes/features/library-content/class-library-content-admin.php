@@ -70,12 +70,12 @@ class TSOL_Library_Content_Admin {
         foreach ($columns as $column => $label) {
             $with_course[$column] = $label;
             if ('title' === $column) {
-                $with_course[self::COURSE_COLUMN] = __('Course', 'tomschooloflife-plugin');
+                $with_course[self::COURSE_COLUMN] = __('Course', 'libertyclassroom-library');
             }
         }
 
         if (!isset($with_course[self::COURSE_COLUMN])) {
-            $with_course[self::COURSE_COLUMN] = __('Course', 'tomschooloflife-plugin');
+            $with_course[self::COURSE_COLUMN] = __('Course', 'libertyclassroom-library');
         }
 
         return $with_course;
@@ -90,7 +90,7 @@ class TSOL_Library_Content_Admin {
         foreach ($columns as $column => $label) {
             $result[$column] = $label;
             if ('title' === $column) {
-                $result[self::AVAILABILITY_COLUMN] = __('Availability', 'tomschooloflife-plugin');
+                $result[self::AVAILABILITY_COLUMN] = __('Availability', 'libertyclassroom-library');
             }
         }
         return $result;
@@ -103,11 +103,11 @@ class TSOL_Library_Content_Admin {
 
         $availability = TSOL_Library_Content_Model::availability($post_id);
         if (TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON !== $availability) {
-            esc_html_e('Available', 'tomschooloflife-plugin');
+            esc_html_e('Available', 'libertyclassroom-library');
             return;
         }
 
-        esc_html_e('Coming soon', 'tomschooloflife-plugin');
+        esc_html_e('Coming soon', 'libertyclassroom-library');
         $release_at_gmt = TSOL_Library_Content_Model::release_at_gmt($post_id);
         if ('' !== $release_at_gmt) {
             printf(
@@ -124,7 +124,7 @@ class TSOL_Library_Content_Admin {
         if (!is_array($columns) || isset($columns[self::CONTENT_COUNT_COLUMN])) {
             return $columns;
         }
-        $columns[self::CONTENT_COUNT_COLUMN] = __('Content', 'tomschooloflife-plugin');
+        $columns[self::CONTENT_COUNT_COLUMN] = __('Content', 'libertyclassroom-library');
         return $columns;
     }
 
@@ -151,7 +151,7 @@ class TSOL_Library_Content_Admin {
             '<a href="%s" aria-label="%s">%s</a>',
             esc_url($url),
             esc_attr(sprintf(
-                _n('View %1$s content item in %2$s', 'View %1$s content items in %2$s', $count, 'tomschooloflife-plugin'),
+                _n('View %1$s content item in %2$s', 'View %1$s content items in %2$s', $count, 'libertyclassroom-library'),
                 number_format_i18n($count),
                 $parent_title
             )),
@@ -168,7 +168,7 @@ class TSOL_Library_Content_Admin {
         if ($course_id <= 0) {
             echo '<span class="tsol-library-course-column__empty" aria-hidden="true">&#8212;</span>';
             echo '<span class="screen-reader-text">';
-            esc_html_e('No course', 'tomschooloflife-plugin');
+            esc_html_e('No course', 'libertyclassroom-library');
             echo '</span>';
             return;
         }
@@ -176,14 +176,14 @@ class TSOL_Library_Content_Admin {
         $course = get_post($course_id);
         if (!$course instanceof WP_Post || TSOL_Library_Content_Model::COURSE_POST_TYPE !== $course->post_type) {
             echo '<span class="tsol-library-course-column__unavailable">';
-            esc_html_e('Unavailable', 'tomschooloflife-plugin');
+            esc_html_e('Unavailable', 'libertyclassroom-library');
             echo '</span>';
             return;
         }
 
         $title = '' !== trim((string) $course->post_title)
             ? (string) $course->post_title
-            : __('(no title)', 'tomschooloflife-plugin');
+            : __('(no title)', 'libertyclassroom-library');
         $edit_url = get_edit_post_link($course_id, 'raw');
         if ('' === (string) $edit_url) {
             echo esc_html($title);
@@ -206,11 +206,11 @@ class TSOL_Library_Content_Admin {
         foreach ($columns as $column => $label) {
             $with_series[$column] = $label;
             if (self::COURSE_COLUMN === $column) {
-                $with_series[self::SERIES_COLUMN] = __('Series', 'tomschooloflife-plugin');
+                $with_series[self::SERIES_COLUMN] = __('Series', 'libertyclassroom-library');
             }
         }
         if (!isset($with_series[self::SERIES_COLUMN])) {
-            $with_series[self::SERIES_COLUMN] = __('Series', 'tomschooloflife-plugin');
+            $with_series[self::SERIES_COLUMN] = __('Series', 'libertyclassroom-library');
         }
         return $with_series;
     }
@@ -223,11 +223,11 @@ class TSOL_Library_Content_Admin {
         $series = $series_id > 0 ? get_post($series_id) : null;
         if (!$series instanceof WP_Post || TSOL_Library_Content_Model::SERIES_POST_TYPE !== $series->post_type) {
             echo '<span aria-hidden="true">&#8212;</span><span class="screen-reader-text">';
-            esc_html_e('No series', 'tomschooloflife-plugin');
+            esc_html_e('No series', 'libertyclassroom-library');
             echo '</span>';
             return;
         }
-        $title = '' !== trim((string) $series->post_title) ? (string) $series->post_title : __('(no title)', 'tomschooloflife-plugin');
+        $title = '' !== trim((string) $series->post_title) ? (string) $series->post_title : __('(no title)', 'libertyclassroom-library');
         $edit_url = get_edit_post_link($series_id, 'raw');
         echo $edit_url ? '<a href="' . esc_url($edit_url) . '">' . esc_html($title) . '</a>' : esc_html($title);
     }
@@ -238,8 +238,8 @@ class TSOL_Library_Content_Admin {
         }
 
         $labels = array(
-            'taxonomy-' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY => __('Collections', 'tomschooloflife-plugin'),
-            'taxonomy-' . TSOL_Library_Content_Model::TOPIC_TAXONOMY => __('Topics', 'tomschooloflife-plugin'),
+            'taxonomy-' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY => __('Collections', 'libertyclassroom-library'),
+            'taxonomy-' . TSOL_Library_Content_Model::TOPIC_TAXONOMY => __('Topics', 'libertyclassroom-library'),
         );
         foreach ($labels as $column => $label) {
             if (isset($columns[$column])) {
@@ -259,11 +259,11 @@ class TSOL_Library_Content_Admin {
         foreach ($columns as $column => $label) {
             $with_speakers[$column] = $label;
             if ('title' === $column) {
-                $with_speakers[self::SPEAKERS_COLUMN] = __('Speakers', 'tomschooloflife-plugin');
+                $with_speakers[self::SPEAKERS_COLUMN] = __('Speakers', 'libertyclassroom-library');
             }
         }
         if (!isset($with_speakers[self::SPEAKERS_COLUMN])) {
-            $with_speakers[self::SPEAKERS_COLUMN] = __('Speakers', 'tomschooloflife-plugin');
+            $with_speakers[self::SPEAKERS_COLUMN] = __('Speakers', 'libertyclassroom-library');
         }
         return $with_speakers;
     }
@@ -281,7 +281,7 @@ class TSOL_Library_Content_Admin {
             if (!$speaker instanceof WP_Post || TSOL_Library_Content_Model::SPEAKER_POST_TYPE !== $speaker->post_type || 'trash' === $speaker->post_status) {
                 continue;
             }
-            $name = '' !== trim((string) $speaker->post_title) ? (string) $speaker->post_title : __('(no name)', 'tomschooloflife-plugin');
+            $name = '' !== trim((string) $speaker->post_title) ? (string) $speaker->post_title : __('(no name)', 'libertyclassroom-library');
             $edit_url = get_edit_post_link($speaker_id, 'raw');
             $links[] = $edit_url
                 ? '<a href="' . esc_url($edit_url) . '">' . esc_html($name) . '</a>'
@@ -289,7 +289,7 @@ class TSOL_Library_Content_Admin {
         }
 
         if (empty($links)) {
-            echo '<span aria-hidden="true">&#8212;</span><span class="screen-reader-text">' . esc_html__('No speakers', 'tomschooloflife-plugin') . '</span>';
+            echo '<span aria-hidden="true">&#8212;</span><span class="screen-reader-text">' . esc_html__('No speakers', 'libertyclassroom-library') . '</span>';
             return;
         }
         echo wp_kses_post(implode(', ', $links));
@@ -298,11 +298,11 @@ class TSOL_Library_Content_Admin {
             printf(
                 '<span class="tsol-library-speaker-source" title="%1$s">%2$s</span>',
                 esc_attr(sprintf(
-                    __('Inherited from %1$s: %2$s', 'tomschooloflife-plugin'),
+                    __('Inherited from %1$s: %2$s', 'libertyclassroom-library'),
                     (string) $speaker_context['parent_label'],
                     $parent_title
                 )),
-                esc_html__('Inherited', 'tomschooloflife-plugin')
+                esc_html__('Inherited', 'libertyclassroom-library')
             );
         }
     }
@@ -386,16 +386,16 @@ class TSOL_Library_Content_Admin {
         $scope = $this->requested_content_scope();
         $parent_id = $this->requested_parent_content_id($scope);
         ?>
-        <label class="screen-reader-text" for="tsol-content-scope"><?php esc_html_e('Filter by content scope', 'tomschooloflife-plugin'); ?></label>
+        <label class="screen-reader-text" for="tsol-content-scope"><?php esc_html_e('Filter by content scope', 'libertyclassroom-library'); ?></label>
         <select name="<?php echo esc_attr(self::CONTENT_SCOPE_FILTER); ?>" id="tsol-content-scope">
-            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_STANDALONE); ?>" <?php selected($scope, self::CONTENT_SCOPE_STANDALONE); ?>><?php echo esc_html(sprintf(__('Standalone content (%s)', 'tomschooloflife-plugin'), number_format_i18n($counts['standalone']))); ?></option>
-            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_COURSE); ?>" <?php selected($scope, self::CONTENT_SCOPE_COURSE); ?>><?php echo esc_html(sprintf(__('Course lessons (%s)', 'tomschooloflife-plugin'), number_format_i18n($counts['course']))); ?></option>
-            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_SERIES); ?>" <?php selected($scope, self::CONTENT_SCOPE_SERIES); ?>><?php echo esc_html(sprintf(__('Series episodes (%s)', 'tomschooloflife-plugin'), number_format_i18n($counts['series']))); ?></option>
-            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_ALL); ?>" <?php selected($scope, self::CONTENT_SCOPE_ALL); ?>><?php echo esc_html(sprintf(__('All content (%s)', 'tomschooloflife-plugin'), number_format_i18n($counts['all']))); ?></option>
+            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_STANDALONE); ?>" <?php selected($scope, self::CONTENT_SCOPE_STANDALONE); ?>><?php echo esc_html(sprintf(__('Standalone content (%s)', 'libertyclassroom-library'), number_format_i18n($counts['standalone']))); ?></option>
+            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_COURSE); ?>" <?php selected($scope, self::CONTENT_SCOPE_COURSE); ?>><?php echo esc_html(sprintf(__('Course lessons (%s)', 'libertyclassroom-library'), number_format_i18n($counts['course']))); ?></option>
+            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_SERIES); ?>" <?php selected($scope, self::CONTENT_SCOPE_SERIES); ?>><?php echo esc_html(sprintf(__('Series episodes (%s)', 'libertyclassroom-library'), number_format_i18n($counts['series']))); ?></option>
+            <option value="<?php echo esc_attr(self::CONTENT_SCOPE_ALL); ?>" <?php selected($scope, self::CONTENT_SCOPE_ALL); ?>><?php echo esc_html(sprintf(__('All content (%s)', 'libertyclassroom-library'), number_format_i18n($counts['all']))); ?></option>
         </select>
         <?php if ($parent_id > 0) : ?>
             <input type="hidden" name="<?php echo esc_attr(self::PARENT_FILTER); ?>" value="<?php echo esc_attr($parent_id); ?>" />
-            <span class="description"><?php echo esc_html(sprintf(__('Filtered by: %s', 'tomschooloflife-plugin'), get_the_title($parent_id))); ?></span>
+            <span class="description"><?php echo esc_html(sprintf(__('Filtered by: %s', 'libertyclassroom-library'), get_the_title($parent_id))); ?></span>
         <?php endif; ?>
         <?php
     }
@@ -459,7 +459,7 @@ class TSOL_Library_Content_Admin {
         if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
             add_meta_box(
                 'tsol-library-placement',
-                __('Library placement', 'tomschooloflife-plugin'),
+                __('Library placement', 'libertyclassroom-library'),
                 array($this, 'render_details_meta_box'),
                 $post_type,
                 'normal',
@@ -470,7 +470,7 @@ class TSOL_Library_Content_Admin {
         if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
             add_meta_box(
                 'tsol-library-series-settings',
-                __('Series settings', 'tomschooloflife-plugin'),
+                __('Series settings', 'libertyclassroom-library'),
                 array($this, 'render_details_meta_box'),
                 $post_type,
                 'normal',
@@ -481,7 +481,7 @@ class TSOL_Library_Content_Admin {
         if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post_type) {
             add_meta_box(
                 'tsol-library-media',
-                __('Media', 'tomschooloflife-plugin'),
+                __('Media', 'libertyclassroom-library'),
                 array($this, 'render_media_meta_box'),
                 $post_type,
                 'normal',
@@ -490,7 +490,7 @@ class TSOL_Library_Content_Admin {
 
             add_meta_box(
                 'tsol-library-resources',
-                __('Library resources', 'tomschooloflife-plugin'),
+                __('Library resources', 'libertyclassroom-library'),
                 array($this, 'render_resources_meta_box'),
                 $post_type,
                 'normal',
@@ -501,7 +501,7 @@ class TSOL_Library_Content_Admin {
         if (TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type) {
             add_meta_box(
                 'tsol-library-course-page-content',
-                __('What you’ll learn', 'tomschooloflife-plugin'),
+                __('What you’ll learn', 'libertyclassroom-library'),
                 array($this, 'render_course_page_content_meta_box'),
                 $post_type,
                 'normal',
@@ -510,7 +510,7 @@ class TSOL_Library_Content_Admin {
 
             add_meta_box(
                 'tsol-library-curriculum',
-                __('Course curriculum', 'tomschooloflife-plugin'),
+                __('Course curriculum', 'libertyclassroom-library'),
                 array($this, 'render_curriculum_meta_box'),
                 $post_type,
                 'normal',
@@ -521,7 +521,7 @@ class TSOL_Library_Content_Admin {
         if (TSOL_Library_Content_Model::SERIES_POST_TYPE === $post_type) {
             add_meta_box(
                 'tsol-library-series-episodes',
-                __('Series episodes', 'tomschooloflife-plugin'),
+                __('Series episodes', 'libertyclassroom-library'),
                 array($this, 'render_series_episodes_meta_box'),
                 $post_type,
                 'normal',
@@ -531,7 +531,7 @@ class TSOL_Library_Content_Admin {
 
         add_meta_box(
             'tsol-library-protection',
-            __('Library access', 'tomschooloflife-plugin'),
+            __('Library access', 'libertyclassroom-library'),
             array($this, 'render_protection_meta_box'),
             $post_type,
             'side',
@@ -544,7 +544,7 @@ class TSOL_Library_Content_Admin {
         ), true)) {
             add_meta_box(
                 'tsol-library-ai-assistant',
-                __('AI assistant', 'tomschooloflife-plugin'),
+                __('AI assistant', 'libertyclassroom-library'),
                 array($this, 'render_ai_assistant_meta_box'),
                 $post_type,
                 'side',
@@ -554,7 +554,7 @@ class TSOL_Library_Content_Admin {
 
         add_meta_box(
             'tsol-library-speakers',
-            __('Speakers', 'tomschooloflife-plugin'),
+            __('Speakers', 'libertyclassroom-library'),
             array($this, 'render_speakers_meta_box'),
             $post_type,
             'side',
@@ -564,7 +564,7 @@ class TSOL_Library_Content_Admin {
         if ($this->has_provenance($post->ID)) {
             add_meta_box(
                 'tsol-library-provenance',
-                __('Legacy import source', 'tomschooloflife-plugin'),
+                __('Legacy import source', 'libertyclassroom-library'),
                 array($this, 'render_provenance_meta_box'),
                 $post_type,
                 'side',
@@ -657,36 +657,36 @@ class TSOL_Library_Content_Admin {
             'requiresMedia' => TSOL_Library_Content_Model::ITEM_POST_TYPE === $screen->post_type,
             'mediaProviders' => $this->media_provider_ui(),
             'strings' => array(
-                'checking' => __('Checking URL…', 'tomschooloflife-plugin'),
-                'empty' => __('Choose a source and enter its media URL.', 'tomschooloflife-plugin'),
-                'error' => __('That media URL could not be recognised.', 'tomschooloflife-plugin'),
-                'remove' => __('Remove media', 'tomschooloflife-plugin'),
-                'providerId' => __('ID', 'tomschooloflife-plugin'),
-                'privateVimeo' => __('Private Vimeo reference detected', 'tomschooloflife-plugin'),
-                'wordpressAttachment' => __('WordPress attachment', 'tomschooloflife-plugin'),
-                'primaryMedia' => __('Primary playback source', 'tomschooloflife-plugin'),
-                'secondaryMedia' => __('Additional playback source', 'tomschooloflife-plugin'),
-                'testPlayback' => __('Test playback', 'tomschooloflife-plugin'),
-                'hidePlayback' => __('Hide test player', 'tomschooloflife-plugin'),
-                'previewTitle' => __('Media playback test', 'tomschooloflife-plugin'),
-                'providerMismatch' => __('This URL resolves to %1$s. Choose that source type or enter a %2$s URL.', 'tomschooloflife-plugin'),
-                'speakerAdded' => __('Speaker added.', 'tomschooloflife-plugin'),
-                'speakerRemoved' => __('Speaker removed.', 'tomschooloflife-plugin'),
-                'speakerMoved' => __('Speaker order updated.', 'tomschooloflife-plugin'),
-                'speakerNoResults' => __('No speakers match that search.', 'tomschooloflife-plugin'),
-                'speakerAdd' => __('Add speaker', 'tomschooloflife-plugin'),
-                'speakerSelectedCount' => __('%d selected', 'tomschooloflife-plugin'),
-                'speakerEdit' => __('Edit', 'tomschooloflife-plugin'),
-                'speakerDrag' => __('Drag to reorder', 'tomschooloflife-plugin'),
-                'speakerMoveUp' => __('Move up', 'tomschooloflife-plugin'),
-                'speakerMoveDown' => __('Move down', 'tomschooloflife-plugin'),
-                'speakerRemove' => __('Remove', 'tomschooloflife-plugin'),
-                'courseBodyTitle' => __('About this course', 'tomschooloflife-plugin'),
-                'contentBodyTitle' => __('Description', 'tomschooloflife-plugin'),
-                'seriesBodyTitle' => __('Description', 'tomschooloflife-plugin'),
-                'excerptDescription' => __('Used as the short introduction on Library cards and pages, and as the preferred search description.', 'tomschooloflife-plugin'),
-                'excerptCountTemplate' => __('%1$d / %2$d recommended', 'tomschooloflife-plugin'),
-                'excerptLongWarning' => __('Search engines may truncate longer descriptions.', 'tomschooloflife-plugin'),
+                'checking' => __('Checking URL…', 'libertyclassroom-library'),
+                'empty' => __('Choose a source and enter its media URL.', 'libertyclassroom-library'),
+                'error' => __('That media URL could not be recognised.', 'libertyclassroom-library'),
+                'remove' => __('Remove media', 'libertyclassroom-library'),
+                'providerId' => __('ID', 'libertyclassroom-library'),
+                'privateVimeo' => __('Private Vimeo reference detected', 'libertyclassroom-library'),
+                'wordpressAttachment' => __('WordPress attachment', 'libertyclassroom-library'),
+                'primaryMedia' => __('Primary playback source', 'libertyclassroom-library'),
+                'secondaryMedia' => __('Additional playback source', 'libertyclassroom-library'),
+                'testPlayback' => __('Test playback', 'libertyclassroom-library'),
+                'hidePlayback' => __('Hide test player', 'libertyclassroom-library'),
+                'previewTitle' => __('Media playback test', 'libertyclassroom-library'),
+                'providerMismatch' => __('This URL resolves to %1$s. Choose that source type or enter a %2$s URL.', 'libertyclassroom-library'),
+                'speakerAdded' => __('Speaker added.', 'libertyclassroom-library'),
+                'speakerRemoved' => __('Speaker removed.', 'libertyclassroom-library'),
+                'speakerMoved' => __('Speaker order updated.', 'libertyclassroom-library'),
+                'speakerNoResults' => __('No speakers match that search.', 'libertyclassroom-library'),
+                'speakerAdd' => __('Add speaker', 'libertyclassroom-library'),
+                'speakerSelectedCount' => __('%d selected', 'libertyclassroom-library'),
+                'speakerEdit' => __('Edit', 'libertyclassroom-library'),
+                'speakerDrag' => __('Drag to reorder', 'libertyclassroom-library'),
+                'speakerMoveUp' => __('Move up', 'libertyclassroom-library'),
+                'speakerMoveDown' => __('Move down', 'libertyclassroom-library'),
+                'speakerRemove' => __('Remove', 'libertyclassroom-library'),
+                'courseBodyTitle' => __('About this course', 'libertyclassroom-library'),
+                'contentBodyTitle' => __('Description', 'libertyclassroom-library'),
+                'seriesBodyTitle' => __('Description', 'libertyclassroom-library'),
+                'excerptDescription' => __('Used as the short introduction on Library cards and pages, and as the preferred search description.', 'libertyclassroom-library'),
+                'excerptCountTemplate' => __('%1$d / %2$d recommended', 'libertyclassroom-library'),
+                'excerptLongWarning' => __('Search engines may truncate longer descriptions.', 'libertyclassroom-library'),
             ),
         ));
     }
@@ -704,22 +704,22 @@ class TSOL_Library_Content_Admin {
                 ?>
                 <div class="tsol-library-field-grid">
                     <div class="tsol-library-field">
-                        <label for="tsol-library-series-item-label"><?php esc_html_e('Item label', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-series-item-label"><?php esc_html_e('Item label', 'libertyclassroom-library'); ?></label>
                         <input type="text" id="tsol-library-series-item-label" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_item_label]" value="<?php echo esc_attr($item_label); ?>" />
                     </div>
                     <div class="tsol-library-field">
-                        <label for="tsol-library-series-item-label-plural"><?php esc_html_e('Plural label', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-series-item-label-plural"><?php esc_html_e('Plural label', 'libertyclassroom-library'); ?></label>
                         <input type="text" id="tsol-library-series-item-label-plural" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_item_label_plural]" value="<?php echo esc_attr($item_label_plural); ?>" />
                     </div>
                     <div class="tsol-library-field">
-                        <label for="tsol-library-series-sort"><?php esc_html_e('Library page order', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-series-sort"><?php esc_html_e('Library page order', 'libertyclassroom-library'); ?></label>
                         <select id="tsol-library-series-sort" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_sort]">
-                            <option value="desc" <?php selected($series_sort, 'desc'); ?>><?php esc_html_e('Newest first', 'tomschooloflife-plugin'); ?></option>
-                            <option value="asc" <?php selected($series_sort, 'asc'); ?>><?php esc_html_e('Oldest first', 'tomschooloflife-plugin'); ?></option>
+                            <option value="desc" <?php selected($series_sort, 'desc'); ?>><?php esc_html_e('Newest first', 'libertyclassroom-library'); ?></option>
+                            <option value="asc" <?php selected($series_sort, 'asc'); ?>><?php esc_html_e('Oldest first', 'libertyclassroom-library'); ?></option>
                         </select>
                     </div>
                 </div>
-                <label><input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_ongoing]" value="1" <?php checked($ongoing); ?> /> <?php esc_html_e('This is an ongoing series', 'tomschooloflife-plugin'); ?></label>
+                <label><input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_ongoing]" value="1" <?php checked($ongoing); ?> /> <?php esc_html_e('This is an ongoing series', 'libertyclassroom-library'); ?></label>
             <?php endif; ?>
 
             <?php if (TSOL_Library_Content_Model::ITEM_POST_TYPE === $post->post_type) : ?>
@@ -777,55 +777,55 @@ class TSOL_Library_Content_Admin {
                 }
                 $placement_type = $course_id > 0 ? 'course' : ($series_id > 0 ? 'series' : 'standalone');
                 ?>
-                <p class="description"><?php esc_html_e('Choose where this content appears. Ordering and group names are managed in the parent structure builder.', 'tomschooloflife-plugin'); ?></p>
+                <p class="description"><?php esc_html_e('Choose where this content appears. Ordering and group names are managed in the parent structure builder.', 'libertyclassroom-library'); ?></p>
                 <div class="tsol-library-placement" data-library-placement data-saved-placement="<?php echo esc_attr($placement_type); ?>" data-saved-parent-id="<?php echo esc_attr((string) ($course_id > 0 ? $course_id : $series_id)); ?>">
                     <div class="tsol-library-field">
-                        <label for="tsol-library-placement-type"><?php esc_html_e('Placement', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-placement-type"><?php esc_html_e('Placement', 'libertyclassroom-library'); ?></label>
                         <select id="tsol-library-placement-type" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[placement_type]" data-placement-type>
-                            <option value="standalone" <?php selected($placement_type, 'standalone'); ?>><?php esc_html_e('Standalone content', 'tomschooloflife-plugin'); ?></option>
-                            <option value="course" <?php selected($placement_type, 'course'); ?>><?php esc_html_e('Course lesson', 'tomschooloflife-plugin'); ?></option>
-                            <option value="series" <?php selected($placement_type, 'series'); ?>><?php esc_html_e('Series episode', 'tomschooloflife-plugin'); ?></option>
+                            <option value="standalone" <?php selected($placement_type, 'standalone'); ?>><?php esc_html_e('Standalone content', 'libertyclassroom-library'); ?></option>
+                            <option value="course" <?php selected($placement_type, 'course'); ?>><?php esc_html_e('Course lesson', 'libertyclassroom-library'); ?></option>
+                            <option value="series" <?php selected($placement_type, 'series'); ?>><?php esc_html_e('Series episode', 'libertyclassroom-library'); ?></option>
                         </select>
                     </div>
 
                     <div class="tsol-library-placement__panel" data-placement-panel="course">
                         <div class="tsol-library-field">
-                            <label for="tsol-library-course-id"><?php esc_html_e('Course', 'tomschooloflife-plugin'); ?></label>
+                            <label for="tsol-library-course-id"><?php esc_html_e('Course', 'libertyclassroom-library'); ?></label>
                             <select id="tsol-library-course-id" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[course_id]" data-placement-parent="course">
-                                <option value="0"><?php esc_html_e('Select a course', 'tomschooloflife-plugin'); ?></option>
+                                <option value="0"><?php esc_html_e('Select a course', 'libertyclassroom-library'); ?></option>
                                 <?php foreach ($courses as $course) : ?>
                                     <option value="<?php echo esc_attr((string) $course->ID); ?>" data-library-parent-slug="<?php echo esc_attr((string) ($course->post_name ?: sanitize_title($course->post_title))); ?>" <?php selected($course_id, (int) $course->ID); ?>><?php echo esc_html($course->post_title); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="tsol-library-field">
-                            <label for="tsol-library-section-key"><?php esc_html_e('Section', 'tomschooloflife-plugin'); ?></label>
+                            <label for="tsol-library-section-key"><?php esc_html_e('Section', 'libertyclassroom-library'); ?></label>
                             <select id="tsol-library-section-key" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[section_key]" data-placement-group="course" data-selected-key="<?php echo esc_attr($section_key); ?>"></select>
-                            <p class="description" data-placement-empty="course" hidden><?php esc_html_e('A “Course content” section will be created when this item is saved.', 'tomschooloflife-plugin'); ?></p>
+                            <p class="description" data-placement-empty="course" hidden><?php esc_html_e('A “Course content” section will be created when this item is saved.', 'libertyclassroom-library'); ?></p>
                         </div>
                     </div>
 
                     <div class="tsol-library-placement__panel" data-placement-panel="series">
                         <div class="tsol-library-field">
-                            <label for="tsol-library-series-id"><?php esc_html_e('Series', 'tomschooloflife-plugin'); ?></label>
+                            <label for="tsol-library-series-id"><?php esc_html_e('Series', 'libertyclassroom-library'); ?></label>
                             <select id="tsol-library-series-id" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_id]" data-placement-parent="series">
-                                <option value="0"><?php esc_html_e('Select a series', 'tomschooloflife-plugin'); ?></option>
+                                <option value="0"><?php esc_html_e('Select a series', 'libertyclassroom-library'); ?></option>
                                 <?php foreach ($series as $series_entry) : ?>
                                     <option value="<?php echo esc_attr((string) $series_entry->ID); ?>" data-library-parent-slug="<?php echo esc_attr((string) ($series_entry->post_name ?: sanitize_title($series_entry->post_title))); ?>" <?php selected($series_id, (int) $series_entry->ID); ?>><?php echo esc_html($series_entry->post_title); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="tsol-library-field">
-                            <label for="tsol-library-series-group-key"><?php esc_html_e('Group', 'tomschooloflife-plugin'); ?></label>
+                            <label for="tsol-library-series-group-key"><?php esc_html_e('Group', 'libertyclassroom-library'); ?></label>
                             <select id="tsol-library-series-group-key" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[series_group_key]" data-placement-group="series" data-selected-key="<?php echo esc_attr($series_group_key); ?>"></select>
-                            <p class="description" data-placement-empty="series" hidden><?php esc_html_e('A “Series episodes” group will be created when this item is saved.', 'tomschooloflife-plugin'); ?></p>
+                            <p class="description" data-placement-empty="series" hidden><?php esc_html_e('A “Series episodes” group will be created when this item is saved.', 'libertyclassroom-library'); ?></p>
                         </div>
                     </div>
 
                     <div class="notice notice-warning inline tsol-library-placement__warning" data-placement-warning hidden>
-                        <p><?php esc_html_e('Changing the parent also changes which Library post MemberPress evaluates. Review the effective access panel before publishing.', 'tomschooloflife-plugin'); ?></p>
+                        <p><?php esc_html_e('Changing the parent also changes which Library post MemberPress evaluates. Review the effective access panel before publishing.', 'libertyclassroom-library'); ?></p>
                     </div>
-                    <p data-placement-manage hidden><a class="button" href="#"><?php esc_html_e('Open parent structure builder', 'tomschooloflife-plugin'); ?></a></p>
+                    <p data-placement-manage hidden><a class="button" href="#"><?php esc_html_e('Open parent structure builder', 'libertyclassroom-library'); ?></a></p>
                     <script type="application/json" data-placement-options><?php echo wp_json_encode(array('course' => $course_groups, 'series' => $series_groups)); ?></script>
                 </div>
             <?php endif; ?>
@@ -889,7 +889,7 @@ class TSOL_Library_Content_Admin {
         >
             <?php if ($is_item) : ?>
                 <fieldset class="tsol-library-speaker-picker__mode" data-speaker-mode-controls>
-                    <legend><?php esc_html_e('Speaker source', 'tomschooloflife-plugin'); ?></legend>
+                    <legend><?php esc_html_e('Speaker source', 'libertyclassroom-library'); ?></legend>
                     <label>
                         <input
                             type="radio"
@@ -901,8 +901,8 @@ class TSOL_Library_Content_Admin {
                             <?php disabled(0 === $parent_id); ?>
                         />
                         <span>
-                            <strong><?php esc_html_e('Inherit from parent', 'tomschooloflife-plugin'); ?></strong>
-                            <small><?php esc_html_e('Uses the ordered Speakers assigned to the saved Course or Series.', 'tomschooloflife-plugin'); ?></small>
+                            <strong><?php esc_html_e('Inherit from parent', 'libertyclassroom-library'); ?></strong>
+                            <small><?php esc_html_e('Uses the ordered Speakers assigned to the saved Course or Series.', 'libertyclassroom-library'); ?></small>
                         </span>
                     </label>
                     <label>
@@ -914,8 +914,8 @@ class TSOL_Library_Content_Admin {
                             <?php checked(TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT, $speaker_mode); ?>
                         />
                         <span>
-                            <strong><?php esc_html_e('Choose speakers for this content', 'tomschooloflife-plugin'); ?></strong>
-                            <small><?php esc_html_e('Overrides the parent for this video. Select every presenter in display order.', 'tomschooloflife-plugin'); ?></small>
+                            <strong><?php esc_html_e('Choose speakers for this content', 'libertyclassroom-library'); ?></strong>
+                            <small><?php esc_html_e('Overrides the parent for this video. Select every presenter in display order.', 'libertyclassroom-library'); ?></small>
                         </span>
                     </label>
                     <label>
@@ -927,8 +927,8 @@ class TSOL_Library_Content_Admin {
                             <?php checked(TSOL_Library_Content_Model::SPEAKER_MODE_NONE, $speaker_mode); ?>
                         />
                         <span>
-                            <strong><?php esc_html_e('No presenter', 'tomschooloflife-plugin'); ?></strong>
-                            <small><?php esc_html_e('Explicitly suppresses inherited attribution for this video.', 'tomschooloflife-plugin'); ?></small>
+                            <strong><?php esc_html_e('No presenter', 'libertyclassroom-library'); ?></strong>
+                            <small><?php esc_html_e('Explicitly suppresses inherited attribution for this video.', 'libertyclassroom-library'); ?></small>
                         </span>
                     </label>
                 </fieldset>
@@ -938,22 +938,22 @@ class TSOL_Library_Content_Admin {
                         <span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
                         <span>
                             <?php if ($parent_id > 0) : ?>
-                                <strong><?php echo esc_html(sprintf(__('Inherited from %s', 'tomschooloflife-plugin'), (string) $speaker_context['parent_label'])); ?></strong>
+                                <strong><?php echo esc_html(sprintf(__('Inherited from %s', 'libertyclassroom-library'), (string) $speaker_context['parent_label'])); ?></strong>
                                 <?php if ($parent_edit_url) : ?>
                                     <a href="<?php echo esc_url($parent_edit_url); ?>" target="_blank" rel="noopener noreferrer">
                                         <?php echo esc_html($parent_title); ?>
-                                        <span class="screen-reader-text"><?php esc_html_e('(opens in a new tab)', 'tomschooloflife-plugin'); ?></span>
+                                        <span class="screen-reader-text"><?php esc_html_e('(opens in a new tab)', 'libertyclassroom-library'); ?></span>
                                     </a>
                                 <?php else : ?>
                                     <span><?php echo esc_html($parent_title); ?></span>
                                 <?php endif; ?>
                             <?php else : ?>
-                                <strong><?php esc_html_e('No saved parent', 'tomschooloflife-plugin'); ?></strong>
+                                <strong><?php esc_html_e('No saved parent', 'libertyclassroom-library'); ?></strong>
                             <?php endif; ?>
                         </span>
                     </div>
                     <p class="tsol-library-speaker-picker__refresh" hidden data-speaker-inherited-refresh>
-                        <?php esc_html_e('Save this content to refresh Speakers from the selected parent.', 'tomschooloflife-plugin'); ?>
+                        <?php esc_html_e('Save this content to refresh Speakers from the selected parent.', 'libertyclassroom-library'); ?>
                     </p>
                     <div data-speaker-inherited-preview>
                         <?php if (!empty($inherited_speakers)) : ?>
@@ -964,7 +964,7 @@ class TSOL_Library_Content_Admin {
                             </ul>
                         <?php else : ?>
                             <p class="tsol-library-speaker-picker__none">
-                                <?php esc_html_e('The saved parent has no Speakers. Add them to the parent or choose an override here.', 'tomschooloflife-plugin'); ?>
+                                <?php esc_html_e('The saved parent has no Speakers. Add them to the parent or choose an override here.', 'libertyclassroom-library'); ?>
                             </p>
                         <?php endif; ?>
                     </div>
@@ -972,18 +972,18 @@ class TSOL_Library_Content_Admin {
 
                 <div class="tsol-library-speaker-picker__suppressed" data-speaker-none-panel<?php echo TSOL_Library_Content_Model::SPEAKER_MODE_NONE === $speaker_mode ? '' : ' hidden'; ?>>
                     <span class="dashicons dashicons-hidden" aria-hidden="true"></span>
-                    <p><strong><?php esc_html_e('No presenter will be shown.', 'tomschooloflife-plugin'); ?></strong><br /><?php esc_html_e('This content will not inherit Speakers even when its parent has them.', 'tomschooloflife-plugin'); ?></p>
+                    <p><strong><?php esc_html_e('No presenter will be shown.', 'libertyclassroom-library'); ?></strong><br /><?php esc_html_e('This content will not inherit Speakers even when its parent has them.', 'libertyclassroom-library'); ?></p>
                 </div>
             <?php endif; ?>
 
             <div data-speaker-direct-panel<?php echo !$is_item || TSOL_Library_Content_Model::SPEAKER_MODE_DIRECT === $speaker_mode ? '' : ' hidden'; ?>>
                 <?php if (empty($speakers)) : ?>
-                    <p class="tsol-library-speaker-picker__empty"><?php esc_html_e('No speaker profiles exist yet.', 'tomschooloflife-plugin'); ?></p>
+                    <p class="tsol-library-speaker-picker__empty"><?php esc_html_e('No speaker profiles exist yet.', 'libertyclassroom-library'); ?></p>
                 <?php endif; ?>
 
                 <?php if (!empty($speakers)) : ?>
                     <div class="tsol-library-speaker-picker__native" data-speaker-native>
-                        <label for="tsol-library-speaker-ids"><?php esc_html_e('Select speakers', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-speaker-ids"><?php esc_html_e('Select speakers', 'libertyclassroom-library'); ?></label>
                         <select id="tsol-library-speaker-ids" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[speaker_ids][]" multiple size="6">
                         <?php foreach ($ordered_speakers as $speaker) : ?>
                             <?php
@@ -1010,20 +1010,20 @@ class TSOL_Library_Content_Admin {
                             </option>
                         <?php endforeach; ?>
                         </select>
-                        <p class="description"><?php esc_html_e('Hold Command (Mac) or Control (Windows) to select more than one.', 'tomschooloflife-plugin'); ?></p>
+                        <p class="description"><?php esc_html_e('Hold Command (Mac) or Control (Windows) to select more than one.', 'libertyclassroom-library'); ?></p>
                     </div>
                 <?php endif; ?>
 
                 <?php if (!empty($speakers)) : ?>
                     <div class="tsol-library-speaker-picker__enhanced" data-speaker-enhanced>
-                        <label for="<?php echo esc_attr($search_id); ?>"><?php esc_html_e('Search speakers', 'tomschooloflife-plugin'); ?></label>
+                        <label for="<?php echo esc_attr($search_id); ?>"><?php esc_html_e('Search speakers', 'libertyclassroom-library'); ?></label>
                         <div class="tsol-library-speaker-picker__search-wrap">
                             <span class="dashicons dashicons-search" aria-hidden="true"></span>
                             <input
                                 type="search"
                                 id="<?php echo esc_attr($search_id); ?>"
                                 class="tsol-library-speaker-picker__search"
-                                placeholder="<?php esc_attr_e('Search by name, job title, or organisation…', 'tomschooloflife-plugin'); ?>"
+                                placeholder="<?php esc_attr_e('Search by name, job title, or organisation…', 'libertyclassroom-library'); ?>"
                                 autocomplete="off"
                                 role="combobox"
                                 aria-autocomplete="list"
@@ -1041,10 +1041,10 @@ class TSOL_Library_Content_Admin {
                         ></div>
 
                         <div class="tsol-library-speaker-picker__selected-heading">
-                            <strong><?php esc_html_e('Selected speakers', 'tomschooloflife-plugin'); ?></strong>
+                            <strong><?php esc_html_e('Selected speakers', 'libertyclassroom-library'); ?></strong>
                             <span data-speaker-count></span>
                         </div>
-                        <p class="tsol-library-speaker-picker__none" data-speaker-none><?php esc_html_e('No speakers selected.', 'tomschooloflife-plugin'); ?></p>
+                        <p class="tsol-library-speaker-picker__none" data-speaker-none><?php esc_html_e('No speakers selected.', 'libertyclassroom-library'); ?></p>
                         <ul class="tsol-library-speaker-picker__selected" data-speaker-selected></ul>
                         <span class="screen-reader-text" aria-live="polite" aria-atomic="true" data-speaker-announcer></span>
                     </div>
@@ -1054,8 +1054,8 @@ class TSOL_Library_Content_Admin {
             <?php if (current_user_can('edit_pages')) : ?>
                 <p class="tsol-library-speaker-picker__add">
                     <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::SPEAKER_POST_TYPE)); ?>" target="_blank" rel="noopener noreferrer">
-                        <?php esc_html_e('Add new speaker', 'tomschooloflife-plugin'); ?>
-                        <span class="screen-reader-text"><?php esc_html_e('(opens in a new tab)', 'tomschooloflife-plugin'); ?></span>
+                        <?php esc_html_e('Add new speaker', 'libertyclassroom-library'); ?>
+                        <span class="screen-reader-text"><?php esc_html_e('(opens in a new tab)', 'libertyclassroom-library'); ?></span>
                     </a>
                 </p>
             <?php endif; ?>
@@ -1065,7 +1065,7 @@ class TSOL_Library_Content_Admin {
 
     private function render_inherited_speaker_card(WP_Post $speaker) {
         $speaker_id = (int) $speaker->ID;
-        $name = '' !== trim((string) $speaker->post_title) ? (string) $speaker->post_title : __('(no name)', 'tomschooloflife-plugin');
+        $name = '' !== trim((string) $speaker->post_title) ? (string) $speaker->post_title : __('(no name)', 'libertyclassroom-library');
         $status = get_post_status_object($speaker->post_status);
         $status_label = 'publish' === $speaker->post_status || !$status ? '' : (string) $status->label;
         $thumbnail_id = (int) get_post_thumbnail_id($speaker_id);
@@ -1101,8 +1101,8 @@ class TSOL_Library_Content_Admin {
             <?php if ($edit_url) : ?>
                 <span class="tsol-library-speaker-picker__actions">
                     <a href="<?php echo esc_url($edit_url); ?>" target="_blank" rel="noopener noreferrer">
-                        <?php esc_html_e('Edit', 'tomschooloflife-plugin'); ?>
-                        <span class="screen-reader-text"><?php echo esc_html(sprintf(__(' %s (opens in a new tab)', 'tomschooloflife-plugin'), $name)); ?></span>
+                        <?php esc_html_e('Edit', 'libertyclassroom-library'); ?>
+                        <span class="screen-reader-text"><?php echo esc_html(sprintf(__(' %s (opens in a new tab)', 'libertyclassroom-library'), $name)); ?></span>
                     </a>
                 </span>
             <?php endif; ?>
@@ -1127,9 +1127,9 @@ class TSOL_Library_Content_Admin {
         ?>
         <div class="tsol-library-course-page-editor" data-library-course-page-editor>
             <input type="hidden" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[course_learning_outcomes_present]" value="1" />
-            <section class="tsol-library-course-page-editor__section" aria-label="<?php esc_attr_e('Learning outcomes', 'tomschooloflife-plugin'); ?>">
+            <section class="tsol-library-course-page-editor__section" aria-label="<?php esc_attr_e('Learning outcomes', 'libertyclassroom-library'); ?>">
                 <div class="tsol-library-section-intro">
-                    <p class="description"><?php esc_html_e('Add four to six concise outcomes. Titles appear prominently, with optional supporting text beneath each one.', 'tomschooloflife-plugin'); ?></p>
+                    <p class="description"><?php esc_html_e('Add four to six concise outcomes. Titles appear prominently, with optional supporting text beneath each one.', 'libertyclassroom-library'); ?></p>
                 </div>
 
                 <div class="tsol-library-outcome-list" data-outcome-rows>
@@ -1143,8 +1143,8 @@ class TSOL_Library_Content_Admin {
                 </script>
 
                 <div class="tsol-library-outcome-add">
-                    <button type="button" class="button button-secondary" data-outcome-add><?php esc_html_e('Add outcome', 'tomschooloflife-plugin'); ?></button>
-                    <span class="description"><?php esc_html_e('Up to 12 outcomes.', 'tomschooloflife-plugin'); ?></span>
+                    <button type="button" class="button button-secondary" data-outcome-add><?php esc_html_e('Add outcome', 'libertyclassroom-library'); ?></button>
+                    <span class="description"><?php esc_html_e('Up to 12 outcomes.', 'libertyclassroom-library'); ?></span>
                 </div>
             </section>
         </div>
@@ -1174,29 +1174,29 @@ class TSOL_Library_Content_Admin {
             <div class="tsol-library-availability" data-library-availability>
                 <div class="tsol-library-field-grid">
                     <div class="tsol-library-field">
-                        <label for="tsol-library-availability"><?php esc_html_e('Availability', 'tomschooloflife-plugin'); ?></label>
+                        <label for="tsol-library-availability"><?php esc_html_e('Availability', 'libertyclassroom-library'); ?></label>
                         <select id="tsol-library-availability" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[availability]" data-library-availability-select>
-                            <option value="available" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE); ?>><?php esc_html_e('Available now', 'tomschooloflife-plugin'); ?></option>
-                            <option value="coming_soon" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON); ?>><?php esc_html_e('Coming soon', 'tomschooloflife-plugin'); ?></option>
+                            <option value="available" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE); ?>><?php esc_html_e('Available now', 'libertyclassroom-library'); ?></option>
+                            <option value="coming_soon" <?php selected($availability, TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON); ?>><?php esc_html_e('Coming soon', 'libertyclassroom-library'); ?></option>
                         </select>
-                        <p class="description"><?php esc_html_e('Coming-soon content appears in its course or series but cannot be played by members.', 'tomschooloflife-plugin'); ?></p>
+                        <p class="description"><?php esc_html_e('Coming-soon content appears in its course or series but cannot be played by members.', 'libertyclassroom-library'); ?></p>
                     </div>
                     <div class="tsol-library-field" data-library-release-field>
-                        <label for="tsol-library-release-date"><?php esc_html_e('Release date', 'tomschooloflife-plugin'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'tomschooloflife-plugin'); ?></span></label>
+                        <label for="tsol-library-release-date"><?php esc_html_e('Release date', 'libertyclassroom-library'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'libertyclassroom-library'); ?></span></label>
                         <input type="date" id="tsol-library-release-date" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[release_date_local]" value="<?php echo esc_attr($release_date_local); ?>" />
-                        <p class="description"><?php esc_html_e('Displayed as a date only. Reaching this date does not automatically publish or unlock the video.', 'tomschooloflife-plugin'); ?></p>
+                        <p class="description"><?php esc_html_e('Displayed as a date only. Reaching this date does not automatically publish or unlock the video.', 'libertyclassroom-library'); ?></p>
                         <?php if ($release_is_past && TSOL_Library_Content_Model::AVAILABILITY_COMING_SOON === $availability) : ?>
-                            <p class="notice notice-warning inline"><strong><?php esc_html_e('This release date has passed.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('The video remains Coming soon until an administrator attaches its media and changes Availability to Available now.', 'tomschooloflife-plugin'); ?></p>
+                            <p class="notice notice-warning inline"><strong><?php esc_html_e('This release date has passed.', 'libertyclassroom-library'); ?></strong> <?php esc_html_e('The video remains Coming soon until an administrator attaches its media and changes Availability to Available now.', 'libertyclassroom-library'); ?></p>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
             <div class="tsol-library-section-intro">
                 <div>
-                    <p><?php esc_html_e('Choose where the media lives, then add its stable URL. The first row is the primary playback source used by the Library.', 'tomschooloflife-plugin'); ?></p>
-                    <p class="description"><?php esc_html_e('Additional rows play in the order shown. Do not paste temporary signed playback URLs.', 'tomschooloflife-plugin'); ?></p>
+                    <p><?php esc_html_e('Choose where the media lives, then add its stable URL. The first row is the primary playback source used by the Library.', 'libertyclassroom-library'); ?></p>
+                    <p class="description"><?php esc_html_e('Additional rows play in the order shown. Do not paste temporary signed playback URLs.', 'libertyclassroom-library'); ?></p>
                 </div>
-                <button type="button" class="button button-secondary" data-media-add><?php esc_html_e('Add media', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-secondary" data-media-add><?php esc_html_e('Add media', 'libertyclassroom-library'); ?></button>
             </div>
 
             <div class="tsol-library-repeater" data-media-rows>
@@ -1221,10 +1221,10 @@ class TSOL_Library_Content_Admin {
         <div class="tsol-library-resource-editor" data-library-resource-editor>
             <div class="tsol-library-section-intro">
                 <div>
-                    <p><?php esc_html_e('Add worksheets, downloads, reference links, or other supporting material.', 'tomschooloflife-plugin'); ?></p>
-                    <p class="description"><?php esc_html_e('Resources are returned only through the protected Library content endpoint.', 'tomschooloflife-plugin'); ?></p>
+                    <p><?php esc_html_e('Add worksheets, downloads, reference links, or other supporting material.', 'libertyclassroom-library'); ?></p>
+                    <p class="description"><?php esc_html_e('Resources are returned only through the protected Library content endpoint.', 'libertyclassroom-library'); ?></p>
                 </div>
-                <button type="button" class="button button-secondary" data-resource-add><?php esc_html_e('Add resource', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button button-secondary" data-resource-add><?php esc_html_e('Add resource', 'libertyclassroom-library'); ?></button>
             </div>
 
             <div class="tsol-library-repeater" data-resource-rows>
@@ -1255,11 +1255,11 @@ class TSOL_Library_Content_Admin {
         <div class="tsol-library-protection <?php echo $is_protected ? 'is-protected' : 'is-open'; ?>">
             <span class="tsol-library-protection__status">
                 <span class="dashicons <?php echo $is_protected ? 'dashicons-lock' : 'dashicons-unlock'; ?>" aria-hidden="true"></span>
-                <?php echo $is_protected ? esc_html__('Protected by MemberPress', 'tomschooloflife-plugin') : esc_html__('No MemberPress rule applies', 'tomschooloflife-plugin'); ?>
+                <?php echo $is_protected ? esc_html__('Protected by MemberPress', 'libertyclassroom-library') : esc_html__('No MemberPress rule applies', 'libertyclassroom-library'); ?>
             </span>
 
             <?php if ($is_protected) : ?>
-                <p><?php esc_html_e('The Library asks WordPress to evaluate these effective rules at access time:', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('The Library asks WordPress to evaluate these effective rules at access time:', 'libertyclassroom-library'); ?></p>
                 <ul>
                     <?php foreach ($rules as $rule) : ?>
                         <li>
@@ -1273,13 +1273,13 @@ class TSOL_Library_Content_Admin {
                     <?php endforeach; ?>
                 </ul>
             <?php else : ?>
-                <p><?php esc_html_e('WordPress and MemberPress currently treat this content as unrestricted. Any signed-in Library user can open its full media.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('WordPress and MemberPress currently treat this content as unrestricted. Any signed-in Library user can open its full media.', 'libertyclassroom-library'); ?></p>
                 <?php if (current_user_can('manage_options')) : ?>
-                    <p><a class="button button-small" href="<?php echo esc_url(admin_url('edit.php?post_type=memberpressrule')); ?>"><?php esc_html_e('Manage MemberPress rules', 'tomschooloflife-plugin'); ?></a></p>
+                    <p><a class="button button-small" href="<?php echo esc_url(admin_url('edit.php?post_type=memberpressrule')); ?>"><?php esc_html_e('Manage MemberPress rules', 'libertyclassroom-library'); ?></a></p>
                 <?php endif; ?>
             <?php endif; ?>
 
-            <p class="description"><?php esc_html_e('Administrators retain access through their WordPress capability. Access is not configured in this box.', 'tomschooloflife-plugin'); ?></p>
+            <p class="description"><?php esc_html_e('Administrators retain access through their WordPress capability. Access is not configured in this box.', 'libertyclassroom-library'); ?></p>
         </div>
         <?php
     }
@@ -1303,14 +1303,14 @@ class TSOL_Library_Content_Admin {
                 value="1"
                 <?php checked($enabled); ?>
             />
-            <strong><?php esc_html_e('Enable AI assistant', 'tomschooloflife-plugin'); ?></strong>
+            <strong><?php esc_html_e('Enable AI assistant', 'libertyclassroom-library'); ?></strong>
         </label>
-        <p class="description"><?php esc_html_e('Allow enrolled users to ask transcript-grounded questions across this collection.', 'tomschooloflife-plugin'); ?></p>
-        <p><strong><?php esc_html_e('Starter questions', 'tomschooloflife-plugin'); ?></strong></p>
+        <p class="description"><?php esc_html_e('Allow enrolled users to ask transcript-grounded questions across this collection.', 'libertyclassroom-library'); ?></p>
+        <p><strong><?php esc_html_e('Starter questions', 'libertyclassroom-library'); ?></strong></p>
         <?php for ($index = 0; $index < 3; $index++) : ?>
             <p>
                 <label class="screen-reader-text" for="tsol-ai-question-<?php echo esc_attr((string) $index); ?>">
-                    <?php echo esc_html(sprintf(__('Starter question %d', 'tomschooloflife-plugin'), $index + 1)); ?>
+                    <?php echo esc_html(sprintf(__('Starter question %d', 'libertyclassroom-library'), $index + 1)); ?>
                 </label>
                 <input
                     id="tsol-ai-question-<?php echo esc_attr((string) $index); ?>"
@@ -1319,14 +1319,14 @@ class TSOL_Library_Content_Admin {
                     maxlength="120"
                     name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[ai_assistant_questions][]"
                     value="<?php echo esc_attr($questions[$index] ?? ''); ?>"
-                    placeholder="<?php echo esc_attr(sprintf(__('Question %d', 'tomschooloflife-plugin'), $index + 1)); ?>"
+                    placeholder="<?php echo esc_attr(sprintf(__('Question %d', 'libertyclassroom-library'), $index + 1)); ?>"
                 />
             </p>
         <?php endfor; ?>
-        <p class="description"><?php esc_html_e('Shown when the conversation is empty. Add up to three questions, each no longer than 120 characters.', 'tomschooloflife-plugin'); ?></p>
+        <p class="description"><?php esc_html_e('Shown when the conversation is empty. Add up to three questions, each no longer than 120 characters.', 'libertyclassroom-library'); ?></p>
         <?php if ($enabled) : ?>
             <div class="notice notice-warning inline">
-                <p><?php esc_html_e('Confirm that every playable lesson or episode has a synchronized transcript and completed search index. Missing coverage limits the answers and citations available to members.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Confirm that every playable lesson or episode has a synchronized transcript and completed search index. Missing coverage limits the answers and citations available to members.', 'libertyclassroom-library'); ?></p>
             </div>
         <?php endif; ?>
         <?php
@@ -1339,14 +1339,14 @@ class TSOL_Library_Content_Admin {
         $source_edit_url = $source_id > 0 && current_user_can('edit_post', $source_id) ? get_edit_post_link($source_id) : '';
         ?>
         <dl class="tsol-library-provenance">
-            <div><dt><?php esc_html_e('Source ID', 'tomschooloflife-plugin'); ?></dt><dd><code><?php echo esc_html((string) $source_id); ?></code></dd></div>
-            <div><dt><?php esc_html_e('Source type', 'tomschooloflife-plugin'); ?></dt><dd><?php echo esc_html($source_type); ?></dd></div>
-            <div><dt><?php esc_html_e('Migration version', 'tomschooloflife-plugin'); ?></dt><dd><?php echo esc_html($migration_version); ?></dd></div>
+            <div><dt><?php esc_html_e('Source ID', 'libertyclassroom-library'); ?></dt><dd><code><?php echo esc_html((string) $source_id); ?></code></dd></div>
+            <div><dt><?php esc_html_e('Source type', 'libertyclassroom-library'); ?></dt><dd><?php echo esc_html($source_type); ?></dd></div>
+            <div><dt><?php esc_html_e('Migration version', 'libertyclassroom-library'); ?></dt><dd><?php echo esc_html($migration_version); ?></dd></div>
         </dl>
         <?php if ($source_edit_url) : ?>
-            <p><a class="button button-small" href="<?php echo esc_url($source_edit_url); ?>"><?php esc_html_e('Edit legacy source', 'tomschooloflife-plugin'); ?></a></p>
+            <p><a class="button button-small" href="<?php echo esc_url($source_edit_url); ?>"><?php esc_html_e('Edit legacy source', 'libertyclassroom-library'); ?></a></p>
         <?php endif; ?>
-        <p class="description"><?php esc_html_e('Read-only migration provenance. Titles and slugs are never used as identity.', 'tomschooloflife-plugin'); ?></p>
+        <p class="description"><?php esc_html_e('Read-only migration provenance. Titles and slugs are never used as identity.', 'libertyclassroom-library'); ?></p>
         <?php
     }
 
@@ -1380,7 +1380,7 @@ class TSOL_Library_Content_Admin {
             $release_date = DateTimeImmutable::createFromFormat('!Y-m-d', $release_date_local, wp_timezone());
             $date_errors = DateTimeImmutable::getLastErrors();
             if (!$release_date || (is_array($date_errors) && ((int) $date_errors['warning_count'] > 0 || (int) $date_errors['error_count'] > 0))) {
-                $errors[] = __('Enter a valid release date.', 'tomschooloflife-plugin');
+                $errors[] = __('Enter a valid release date.', 'libertyclassroom-library');
             } else {
                 $release_at_gmt = $release_date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
             }
@@ -1392,7 +1392,7 @@ class TSOL_Library_Content_Admin {
             && TSOL_Library_Content_Model::AVAILABILITY_AVAILABLE === $availability
             && empty($media_result['items'])
         ) {
-            $errors[] = __('Published Library Items and lessons require at least one valid media URL.', 'tomschooloflife-plugin');
+            $errors[] = __('Published Library Items and lessons require at least one valid media URL.', 'libertyclassroom-library');
         }
 
         if (!metadata_exists('post', $post_id, TSOL_Library_Content_Model::META_UUID)) {
@@ -1519,7 +1519,7 @@ class TSOL_Library_Content_Admin {
                 $series_id = 0;
             }
             if ($course_id > 0 && $series_id > 0) {
-                $errors[] = __('Content cannot belong to a course and a series at the same time. The series placement was removed.', 'tomschooloflife-plugin');
+                $errors[] = __('Content cannot belong to a course and a series at the same time. The series placement was removed.', 'libertyclassroom-library');
                 $series_id = 0;
             }
             $section_key = isset($payload['section_key'])
@@ -1533,7 +1533,7 @@ class TSOL_Library_Content_Admin {
                 $this->ensure_legacy_structure_group(
                     $course_id,
                     $section_key,
-                    '' !== $legacy_title ? $legacy_title : __('Course content', 'tomschooloflife-plugin'),
+                    '' !== $legacy_title ? $legacy_title : __('Course content', 'libertyclassroom-library'),
                     isset($payload['section_position']) ? absint($payload['section_position']) : 1
                 );
             }
@@ -1562,7 +1562,7 @@ class TSOL_Library_Content_Admin {
                 $this->ensure_legacy_structure_group(
                     $series_id,
                     $series_group_key,
-                    '' !== $legacy_title ? $legacy_title : __('Series episodes', 'tomschooloflife-plugin'),
+                    '' !== $legacy_title ? $legacy_title : __('Series episodes', 'libertyclassroom-library'),
                     isset($payload['series_group_position']) ? absint($payload['series_group_position']) : 1
                 );
             }
@@ -1620,7 +1620,7 @@ class TSOL_Library_Content_Admin {
             $authorization_post_id = (int) get_post_meta($post_id, TSOL_Library_Content_Model::META_AUTHORIZATION_POST_ID, true);
             $authorization_post = get_post($authorization_post_id > 0 ? $authorization_post_id : $post_id);
             if (!$authorization_post instanceof WP_Post || empty(MeprRule::get_rules($authorization_post))) {
-                $errors[] = __('Add a published MemberPress rule before publishing full Library content.', 'tomschooloflife-plugin');
+                $errors[] = __('Add a published MemberPress rule before publishing full Library content.', 'libertyclassroom-library');
             }
         }
 
@@ -1629,7 +1629,7 @@ class TSOL_Library_Content_Admin {
                 self::$updating_status = true;
                 wp_update_post(array('ID' => $post_id, 'post_status' => 'draft'));
                 self::$updating_status = false;
-                array_unshift($errors, __('This entry was kept as a draft because its Library metadata is incomplete.', 'tomschooloflife-plugin'));
+                array_unshift($errors, __('This entry was kept as a draft because its Library metadata is incomplete.', 'libertyclassroom-library'));
             }
             $this->store_notice($post_id, $errors);
         }
@@ -1653,7 +1653,7 @@ class TSOL_Library_Content_Admin {
         delete_transient($key);
 
         echo '<div class="notice notice-error is-dismissible"><p><strong>';
-        echo esc_html__('TSOL Library metadata needs attention:', 'tomschooloflife-plugin');
+        echo esc_html__('Liberty Classroom Library metadata needs attention:', 'libertyclassroom-library');
         echo '</strong></p><ul class="ul-disc">';
         foreach ($errors as $error) {
             echo '<li>' . esc_html($error) . '</li>';
@@ -1666,7 +1666,7 @@ class TSOL_Library_Content_Admin {
 
         $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
         if (($post_id > 0 && !current_user_can('edit_post', $post_id)) || ($post_id <= 0 && !current_user_can('edit_pages'))) {
-            wp_send_json_error(array('message' => __('You cannot edit this Library content.', 'tomschooloflife-plugin')), 403);
+            wp_send_json_error(array('message' => __('You cannot edit this Library content.', 'libertyclassroom-library')), 403);
         }
 
         $url = isset($_POST['url']) ? esc_url_raw(wp_unslash($_POST['url'])) : '';
@@ -1858,18 +1858,18 @@ class TSOL_Library_Content_Admin {
         <div class="tsol-library-row tsol-library-media-row <?php echo '' !== $provider ? 'is-normalized' : ''; ?>" data-media-row data-original-url="<?php echo esc_attr($url); ?>">
             <div class="tsol-library-row__toolbar">
                 <span class="tsol-library-row__handle dashicons dashicons-menu" aria-hidden="true"></span>
-                <strong data-media-summary><?php echo esc_html($label ?: __('Untitled media', 'tomschooloflife-plugin')); ?></strong>
+                <strong data-media-summary><?php echo esc_html($label ?: __('Untitled media', 'libertyclassroom-library')); ?></strong>
                 <span class="tsol-library-media-role" data-media-role></span>
                 <div class="tsol-library-row__actions">
-                    <button type="button" class="button-link" data-row-up aria-label="<?php esc_attr_e('Move media up', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button-link" data-row-down aria-label="<?php esc_attr_e('Move media down', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button-link-delete" data-media-remove><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+                    <button type="button" class="button-link" data-row-up aria-label="<?php esc_attr_e('Move media up', 'libertyclassroom-library'); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button-link" data-row-down aria-label="<?php esc_attr_e('Move media down', 'libertyclassroom-library'); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button-link-delete" data-media-remove><?php esc_html_e('Remove', 'libertyclassroom-library'); ?></button>
                 </div>
             </div>
 
             <div class="tsol-library-row__body">
                 <div class="tsol-library-field tsol-library-media-source">
-                    <label for="<?php echo esc_attr($field_id); ?>-provider"><?php esc_html_e('Video source', 'tomschooloflife-plugin'); ?></label>
+                    <label for="<?php echo esc_attr($field_id); ?>-provider"><?php esc_html_e('Video source', 'libertyclassroom-library'); ?></label>
                     <select id="<?php echo esc_attr($field_id); ?>-provider" data-media-provider>
                         <?php foreach ($provider_ui as $provider_key => $provider_config) : ?>
                             <option value="<?php echo esc_attr($provider_key); ?>" <?php selected($selected_provider, $provider_key); ?>><?php echo esc_html($provider_config['label']); ?></option>
@@ -1882,7 +1882,7 @@ class TSOL_Library_Content_Admin {
                     <label for="<?php echo esc_attr($field_id); ?>-url" data-media-url-label><?php echo esc_html($provider_ui[$selected_provider]['urlLabel']); ?></label>
                     <div class="tsol-library-url-control">
                         <input type="url" id="<?php echo esc_attr($field_id); ?>-url" name="<?php echo esc_attr($name); ?>[source_url]" value="<?php echo esc_attr($url); ?>" placeholder="<?php echo esc_attr($provider_ui[$selected_provider]['placeholder']); ?>" inputmode="url" data-media-url />
-                        <button type="button" class="button" data-media-library <?php echo 'wordpress' === $selected_provider ? '' : 'hidden'; ?>><?php esc_html_e('Choose from Media Library', 'tomschooloflife-plugin'); ?></button>
+                        <button type="button" class="button" data-media-library <?php echo 'wordpress' === $selected_provider ? '' : 'hidden'; ?>><?php esc_html_e('Choose from Media Library', 'libertyclassroom-library'); ?></button>
                     </div>
                     <p class="description" data-media-url-help><?php echo esc_html($provider_ui[$selected_provider]['urlHelp']); ?></p>
                 </div>
@@ -1891,23 +1891,23 @@ class TSOL_Library_Content_Admin {
                 <input type="hidden" name="<?php echo esc_attr($name); ?>[preview]" value="<?php echo $preview ? '1' : '0'; ?>" />
 
                 <div class="notice notice-warning inline tsol-library-media-replacement" data-media-replacement-warning hidden>
-                    <p><strong><?php esc_html_e('This replaces the current media identity.', 'tomschooloflife-plugin'); ?></strong> <?php esc_html_e('Existing progress and notes remain attached to the previous source and will not carry over.', 'tomschooloflife-plugin'); ?></p>
+                    <p><strong><?php esc_html_e('This replaces the current media identity.', 'libertyclassroom-library'); ?></strong> <?php esc_html_e('Existing progress and notes remain attached to the previous source and will not carry over.', 'libertyclassroom-library'); ?></p>
                 </div>
 
                 <div class="tsol-library-media-result" data-media-result role="status" aria-live="polite">
                     <?php if ('' !== $provider) : ?>
                         <span class="tsol-library-provider-badge"><?php echo esc_html($this->provider_label($provider)); ?></span>
-                        <?php if ('' !== $provider_id) : ?><span><?php esc_html_e('ID', 'tomschooloflife-plugin'); ?> <code><?php echo esc_html($provider_id); ?></code></span><?php endif; ?>
-                        <?php if ('' !== $privacy_hash) : ?><span><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e('Private Vimeo reference detected', 'tomschooloflife-plugin'); ?></span><?php endif; ?>
-                        <?php if ($attachment_id > 0) : ?><span><?php esc_html_e('WordPress attachment', 'tomschooloflife-plugin'); ?> <code>#<?php echo esc_html((string) $attachment_id); ?></code></span><?php endif; ?>
+                        <?php if ('' !== $provider_id) : ?><span><?php esc_html_e('ID', 'libertyclassroom-library'); ?> <code><?php echo esc_html($provider_id); ?></code></span><?php endif; ?>
+                        <?php if ('' !== $privacy_hash) : ?><span><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e('Private Vimeo reference detected', 'libertyclassroom-library'); ?></span><?php endif; ?>
+                        <?php if ($attachment_id > 0) : ?><span><?php esc_html_e('WordPress attachment', 'libertyclassroom-library'); ?> <code>#<?php echo esc_html((string) $attachment_id); ?></code></span><?php endif; ?>
                     <?php else : ?>
-                        <span><?php esc_html_e('Paste a URL to infer its provider details.', 'tomschooloflife-plugin'); ?></span>
+                        <span><?php esc_html_e('Paste a URL to infer its provider details.', 'libertyclassroom-library'); ?></span>
                     <?php endif; ?>
                 </div>
 
                 <div class="tsol-library-media-test-actions">
-                    <button type="button" class="button button-secondary" data-media-test aria-controls="<?php echo esc_attr($field_id); ?>-test-player" aria-expanded="false" disabled><?php esc_html_e('Test playback', 'tomschooloflife-plugin'); ?></button>
-                    <span class="description"><?php esc_html_e('Loads the selected source only when you request it.', 'tomschooloflife-plugin'); ?></span>
+                    <button type="button" class="button button-secondary" data-media-test aria-controls="<?php echo esc_attr($field_id); ?>-test-player" aria-expanded="false" disabled><?php esc_html_e('Test playback', 'libertyclassroom-library'); ?></button>
+                    <span class="description"><?php esc_html_e('Loads the selected source only when you request it.', 'libertyclassroom-library'); ?></span>
                 </div>
                 <div class="tsol-library-media-test" id="<?php echo esc_attr($field_id); ?>-test-player" data-media-test-player hidden></div>
 
@@ -1930,32 +1930,32 @@ class TSOL_Library_Content_Admin {
             <div class="tsol-library-outcome-row__order">
                 <button type="button" class="button-link tsol-library-outcome-row__handle" data-outcome-handle>
                     <span class="dashicons dashicons-menu" aria-hidden="true"></span>
-                    <span class="screen-reader-text"><?php esc_html_e('Drag to reorder outcome', 'tomschooloflife-plugin'); ?></span>
+                    <span class="screen-reader-text"><?php esc_html_e('Drag to reorder outcome', 'libertyclassroom-library'); ?></span>
                 </button>
                 <strong class="tsol-library-outcome-row__number" data-outcome-position><?php echo esc_html((string) ((int) $index + 1)); ?></strong>
             </div>
             <div class="tsol-library-outcome-row__content">
                 <div class="tsol-library-field tsol-library-outcome-row__title">
-                    <label for="<?php echo esc_attr($title_id); ?>"><?php esc_html_e('Outcome title', 'tomschooloflife-plugin'); ?></label>
-                    <input id="<?php echo esc_attr($title_id); ?>" type="text" name="<?php echo esc_attr($name); ?>[title]" value="<?php echo esc_attr($title); ?>" placeholder="<?php esc_attr_e('e.g. Choose the right working weight', 'tomschooloflife-plugin'); ?>" data-outcome-title />
+                    <label for="<?php echo esc_attr($title_id); ?>"><?php esc_html_e('Outcome title', 'libertyclassroom-library'); ?></label>
+                    <input id="<?php echo esc_attr($title_id); ?>" type="text" name="<?php echo esc_attr($name); ?>[title]" value="<?php echo esc_attr($title); ?>" placeholder="<?php esc_attr_e('e.g. Choose the right working weight', 'libertyclassroom-library'); ?>" data-outcome-title />
                 </div>
                 <div class="tsol-library-field tsol-library-outcome-row__description">
-                    <label for="<?php echo esc_attr($description_id); ?>"><?php esc_html_e('Supporting text', 'tomschooloflife-plugin'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'tomschooloflife-plugin'); ?></span></label>
-                    <textarea id="<?php echo esc_attr($description_id); ?>" name="<?php echo esc_attr($name); ?>[description]" rows="2" placeholder="<?php esc_attr_e('e.g. Calculate the correct starting weight instead of guessing.', 'tomschooloflife-plugin'); ?>" data-outcome-description><?php echo esc_textarea($description); ?></textarea>
+                    <label for="<?php echo esc_attr($description_id); ?>"><?php esc_html_e('Supporting text', 'libertyclassroom-library'); ?> <span class="tsol-library-field__optional"><?php esc_html_e('(optional)', 'libertyclassroom-library'); ?></span></label>
+                    <textarea id="<?php echo esc_attr($description_id); ?>" name="<?php echo esc_attr($name); ?>[description]" rows="2" placeholder="<?php esc_attr_e('e.g. Calculate the correct starting weight instead of guessing.', 'libertyclassroom-library'); ?>" data-outcome-description><?php echo esc_textarea($description); ?></textarea>
                 </div>
             </div>
             <div class="tsol-library-outcome-row__actions">
                 <div class="tsol-library-outcome-row__move-actions">
                     <button type="button" class="button-link" data-row-up>
                         <span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span>
-                        <span class="screen-reader-text"><?php esc_html_e('Move outcome up', 'tomschooloflife-plugin'); ?></span>
+                        <span class="screen-reader-text"><?php esc_html_e('Move outcome up', 'libertyclassroom-library'); ?></span>
                     </button>
                     <button type="button" class="button-link" data-row-down>
                         <span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
-                        <span class="screen-reader-text"><?php esc_html_e('Move outcome down', 'tomschooloflife-plugin'); ?></span>
+                        <span class="screen-reader-text"><?php esc_html_e('Move outcome down', 'libertyclassroom-library'); ?></span>
                     </button>
                 </div>
-                <button type="button" class="button-link button-link-delete" data-outcome-remove><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+                <button type="button" class="button-link button-link-delete" data-outcome-remove><?php esc_html_e('Remove', 'libertyclassroom-library'); ?></button>
             </div>
         </div>
         <?php
@@ -1971,33 +1971,33 @@ class TSOL_Library_Content_Admin {
         <div class="tsol-library-row tsol-library-resource-row" data-resource-row>
             <div class="tsol-library-row__toolbar">
                 <span class="tsol-library-row__handle dashicons dashicons-menu" aria-hidden="true"></span>
-                <strong data-resource-summary><?php echo esc_html($label ?: __('Untitled resource', 'tomschooloflife-plugin')); ?></strong>
+                <strong data-resource-summary><?php echo esc_html($label ?: __('Untitled resource', 'libertyclassroom-library')); ?></strong>
                 <div class="tsol-library-row__actions">
-                    <button type="button" class="button-link" data-row-up aria-label="<?php esc_attr_e('Move resource up', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button-link" data-row-down aria-label="<?php esc_attr_e('Move resource down', 'tomschooloflife-plugin'); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
-                    <button type="button" class="button-link-delete" data-resource-remove><?php esc_html_e('Remove', 'tomschooloflife-plugin'); ?></button>
+                    <button type="button" class="button-link" data-row-up aria-label="<?php esc_attr_e('Move resource up', 'libertyclassroom-library'); ?>"><span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button-link" data-row-down aria-label="<?php esc_attr_e('Move resource down', 'libertyclassroom-library'); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></button>
+                    <button type="button" class="button-link-delete" data-resource-remove><?php esc_html_e('Remove', 'libertyclassroom-library'); ?></button>
                 </div>
             </div>
             <div class="tsol-library-row__body">
                 <div class="tsol-library-field-grid">
                     <div class="tsol-library-field">
-                        <label><?php esc_html_e('Label', 'tomschooloflife-plugin'); ?></label>
-                        <input type="text" name="<?php echo esc_attr($name); ?>[label]" value="<?php echo esc_attr($label); ?>" placeholder="<?php esc_attr_e('Worksheet or reference name', 'tomschooloflife-plugin'); ?>" data-resource-label />
+                        <label><?php esc_html_e('Label', 'libertyclassroom-library'); ?></label>
+                        <input type="text" name="<?php echo esc_attr($name); ?>[label]" value="<?php echo esc_attr($label); ?>" placeholder="<?php esc_attr_e('Worksheet or reference name', 'libertyclassroom-library'); ?>" data-resource-label />
                     </div>
                     <div class="tsol-library-field">
-                        <label><?php esc_html_e('Resource type', 'tomschooloflife-plugin'); ?></label>
+                        <label><?php esc_html_e('Resource type', 'libertyclassroom-library'); ?></label>
                         <select name="<?php echo esc_attr($name); ?>[type]">
-                            <option value="link" <?php selected($type, 'link'); ?>><?php esc_html_e('Reference link', 'tomschooloflife-plugin'); ?></option>
-                            <option value="download" <?php selected($type, 'download'); ?>><?php esc_html_e('Download', 'tomschooloflife-plugin'); ?></option>
+                            <option value="link" <?php selected($type, 'link'); ?>><?php esc_html_e('Reference link', 'libertyclassroom-library'); ?></option>
+                            <option value="download" <?php selected($type, 'download'); ?>><?php esc_html_e('Download', 'libertyclassroom-library'); ?></option>
                         </select>
                     </div>
                 </div>
                 <div class="tsol-library-field tsol-library-field--wide">
-                    <label><?php esc_html_e('Resource URL', 'tomschooloflife-plugin'); ?></label>
+                    <label><?php esc_html_e('Resource URL', 'libertyclassroom-library'); ?></label>
                     <div class="tsol-library-url-control">
                         <input type="url" name="<?php echo esc_attr($name); ?>[url]" value="<?php echo esc_attr($url); ?>" placeholder="https://…" data-resource-url />
                         <input type="hidden" name="<?php echo esc_attr($name); ?>[attachment_id]" value="<?php echo esc_attr($attachment_id); ?>" data-resource-attachment />
-                        <button type="button" class="button" data-resource-library><?php esc_html_e('Choose file', 'tomschooloflife-plugin'); ?></button>
+                        <button type="button" class="button" data-resource-library><?php esc_html_e('Choose file', 'libertyclassroom-library'); ?></button>
                     </div>
                 </div>
             </div>
@@ -2024,7 +2024,7 @@ class TSOL_Library_Content_Admin {
             $row['position'] = count($items) + 1;
             $normalized = TSOL_Library_Media_Normalizer::normalize_asset($row, count($items) + 1);
             if (is_wp_error($normalized)) {
-                $errors[] = sprintf(__('Media row %1$d: %2$s', 'tomschooloflife-plugin'), $index + 1, $normalized->get_error_message());
+                $errors[] = sprintf(__('Media row %1$d: %2$s', 'libertyclassroom-library'), $index + 1, $normalized->get_error_message());
                 continue;
             }
             $items[] = $normalized;
@@ -2051,7 +2051,7 @@ class TSOL_Library_Content_Admin {
                 continue;
             }
             if ('' === $url || !$this->is_absolute_http_url($url)) {
-                $errors[] = sprintf(__('Resource row %d requires a valid absolute URL.', 'tomschooloflife-plugin'), $index + 1);
+                $errors[] = sprintf(__('Resource row %d requires a valid absolute URL.', 'libertyclassroom-library'), $index + 1);
                 continue;
             }
 
@@ -2095,8 +2095,8 @@ class TSOL_Library_Content_Admin {
                 TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type ? 'course-content' : 'episodes'
             ),
             'title' => TSOL_Library_Content_Model::COURSE_POST_TYPE === $post_type
-                ? __('Course content', 'tomschooloflife-plugin')
-                : __('Series episodes', 'tomschooloflife-plugin'),
+                ? __('Course content', 'libertyclassroom-library')
+                : __('Series episodes', 'libertyclassroom-library'),
             'position' => 1,
         );
         update_post_meta($parent_id, TSOL_Library_Structure::registry_meta_key($post_type), array($group));
@@ -2180,10 +2180,10 @@ class TSOL_Library_Content_Admin {
 
     private function provider_label($provider) {
         $labels = array(
-            'vimeo' => __('Vimeo', 'tomschooloflife-plugin'),
-            'youtube' => __('YouTube', 'tomschooloflife-plugin'),
-            'wordpress' => __('WordPress media', 'tomschooloflife-plugin'),
-            'external' => __('External media', 'tomschooloflife-plugin'),
+            'vimeo' => __('Vimeo', 'libertyclassroom-library'),
+            'youtube' => __('YouTube', 'libertyclassroom-library'),
+            'wordpress' => __('WordPress media', 'libertyclassroom-library'),
+            'external' => __('External media', 'libertyclassroom-library'),
         );
         return isset($labels[$provider]) ? $labels[$provider] : ucfirst((string) $provider);
     }
@@ -2191,32 +2191,32 @@ class TSOL_Library_Content_Admin {
     private function media_provider_ui() {
         return array(
             'vimeo' => array(
-                'label' => __('Vimeo', 'tomschooloflife-plugin'),
-                'urlLabel' => __('Vimeo video URL', 'tomschooloflife-plugin'),
+                'label' => __('Vimeo', 'libertyclassroom-library'),
+                'urlLabel' => __('Vimeo video URL', 'libertyclassroom-library'),
                 'placeholder' => 'https://vimeo.com/123456789/abcdef12',
-                'help' => __('Use the public or private Vimeo page URL, including its privacy reference when present.', 'tomschooloflife-plugin'),
-                'urlHelp' => __('Vimeo page and player URLs are supported.', 'tomschooloflife-plugin'),
+                'help' => __('Use the public or private Vimeo page URL, including its privacy reference when present.', 'libertyclassroom-library'),
+                'urlHelp' => __('Vimeo page and player URLs are supported.', 'libertyclassroom-library'),
             ),
             'youtube' => array(
-                'label' => __('YouTube', 'tomschooloflife-plugin'),
-                'urlLabel' => __('YouTube video URL', 'tomschooloflife-plugin'),
+                'label' => __('YouTube', 'libertyclassroom-library'),
+                'urlLabel' => __('YouTube video URL', 'libertyclassroom-library'),
                 'placeholder' => 'https://www.youtube.com/watch?v=…',
-                'help' => __('Use a standard YouTube, youtu.be, Shorts, or embed URL.', 'tomschooloflife-plugin'),
-                'urlHelp' => __('Playback uses YouTube privacy-enhanced mode in the Library.', 'tomschooloflife-plugin'),
+                'help' => __('Use a standard YouTube, youtu.be, Shorts, or embed URL.', 'libertyclassroom-library'),
+                'urlHelp' => __('Playback uses YouTube privacy-enhanced mode in the Library.', 'libertyclassroom-library'),
             ),
             'wordpress' => array(
-                'label' => __('WordPress Media Library', 'tomschooloflife-plugin'),
-                'urlLabel' => __('WordPress video or audio URL', 'tomschooloflife-plugin'),
-                'placeholder' => __('Choose an uploaded video or audio file', 'tomschooloflife-plugin'),
-                'help' => __('Choose a permanent video or audio attachment from this site’s Media Library.', 'tomschooloflife-plugin'),
-                'urlHelp' => __('The attachment must remain available at this URL.', 'tomschooloflife-plugin'),
+                'label' => __('WordPress Media Library', 'libertyclassroom-library'),
+                'urlLabel' => __('WordPress video or audio URL', 'libertyclassroom-library'),
+                'placeholder' => __('Choose an uploaded video or audio file', 'libertyclassroom-library'),
+                'help' => __('Choose a permanent video or audio attachment from this site’s Media Library.', 'libertyclassroom-library'),
+                'urlHelp' => __('The attachment must remain available at this URL.', 'libertyclassroom-library'),
             ),
             'external' => array(
-                'label' => __('Direct video or audio URL', 'tomschooloflife-plugin'),
-                'urlLabel' => __('Direct media URL', 'tomschooloflife-plugin'),
+                'label' => __('Direct video or audio URL', 'libertyclassroom-library'),
+                'urlLabel' => __('Direct media URL', 'libertyclassroom-library'),
                 'placeholder' => 'https://media.example.com/video.mp4',
-                'help' => __('Use a permanent HTTPS URL ending in a supported video or audio file extension.', 'tomschooloflife-plugin'),
-                'urlHelp' => __('Do not use expiring, signed, download-page, or document URLs.', 'tomschooloflife-plugin'),
+                'help' => __('Use a permanent HTTPS URL ending in a supported video or audio file extension.', 'libertyclassroom-library'),
+                'urlHelp' => __('Do not use expiring, signed, download-page, or document URLs.', 'libertyclassroom-library'),
             ),
         );
     }

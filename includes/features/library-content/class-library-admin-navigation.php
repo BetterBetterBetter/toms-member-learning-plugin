@@ -39,8 +39,8 @@ class TSOL_Library_Admin_Navigation {
 
     public function add_root_menu() {
         add_menu_page(
-            __('TSOL Library', 'tomschooloflife-plugin'),
-            __('TSOL Library', 'tomschooloflife-plugin'),
+            __('Liberty Classroom Library', 'libertyclassroom-library'),
+            __('Liberty Classroom Library', 'libertyclassroom-library'),
             'edit_pages',
             self::MENU_SLUG,
             array($this, 'render_dashboard'),
@@ -49,8 +49,8 @@ class TSOL_Library_Admin_Navigation {
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('Library Dashboard', 'tomschooloflife-plugin'),
-            __('Dashboard', 'tomschooloflife-plugin'),
+            __('Library Dashboard', 'libertyclassroom-library'),
+            __('Dashboard', 'libertyclassroom-library'),
             'edit_pages',
             self::MENU_SLUG,
             array($this, 'render_dashboard')
@@ -60,22 +60,22 @@ class TSOL_Library_Admin_Navigation {
     public function add_submenus() {
         add_submenu_page(
             self::MENU_SLUG,
-            __('Collections', 'tomschooloflife-plugin'),
-            __('Collections', 'tomschooloflife-plugin'),
+            __('Collections', 'libertyclassroom-library'),
+            __('Collections', 'libertyclassroom-library'),
             'manage_categories',
             'edit-tags.php?taxonomy=' . TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY . '&post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('Library Topics', 'tomschooloflife-plugin'),
-            __('Topics', 'tomschooloflife-plugin'),
+            __('Library Topics', 'libertyclassroom-library'),
+            __('Topics', 'libertyclassroom-library'),
             'manage_categories',
             'edit-tags.php?taxonomy=' . TSOL_Library_Content_Model::TOPIC_TAXONOMY . '&post_type=' . TSOL_Library_Content_Model::ITEM_POST_TYPE
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('TSOL Library Settings', 'tomschooloflife-plugin'),
-            __('Settings', 'tomschooloflife-plugin'),
+            __('Liberty Classroom Library Settings', 'libertyclassroom-library'),
+            __('Settings', 'libertyclassroom-library'),
             'edit_pages',
             self::SETTINGS_SLUG,
             array($this, 'render_settings')
@@ -83,17 +83,17 @@ class TSOL_Library_Admin_Navigation {
 
         $this->add_hidden_legacy_settings_page(
             self::AUTH_SLUG,
-            __('Library Authentication', 'tomschooloflife-plugin'),
+            __('Library Authentication', 'libertyclassroom-library'),
             'manage_options'
         );
         $this->add_hidden_legacy_settings_page(
             self::IMPORT_SLUG,
-            __('Import & Legacy', 'tomschooloflife-plugin'),
+            __('Import & Legacy', 'libertyclassroom-library'),
             'manage_options'
         );
         $this->add_hidden_legacy_settings_page(
             self::ACCESS_SLUG,
-            __('Library Access Overview', 'tomschooloflife-plugin'),
+            __('Library Access Overview', 'libertyclassroom-library'),
             'edit_pages'
         );
     }
@@ -167,7 +167,7 @@ class TSOL_Library_Admin_Navigation {
         $filtered = array();
         foreach ($columns as $column => $label) {
             if ('posts' === $column) {
-                $filtered[self::RECORD_COUNT_COLUMN] = _x('Count', 'Number/count of Library records', 'tomschooloflife-plugin');
+                $filtered[self::RECORD_COUNT_COLUMN] = _x('Count', 'Number/count of Library records', 'libertyclassroom-library');
                 continue;
             }
             $filtered[$column] = $label;
@@ -189,7 +189,7 @@ class TSOL_Library_Admin_Navigation {
         $counts = $this->taxonomy_record_counts($taxonomy);
         $count = isset($counts[(int) $term_id]) ? (int) $counts[(int) $term_id] : 0;
         $formatted_count = number_format_i18n($count);
-        $description = __('Includes draft Library records.', 'tomschooloflife-plugin');
+        $description = __('Includes draft Library records.', 'libertyclassroom-library');
         $term = get_term((int) $term_id, $taxonomy);
         $post_types = isset($this->taxonomy_record_post_types[$taxonomy][(int) $term_id])
             ? $this->taxonomy_record_post_types[$taxonomy][(int) $term_id]
@@ -240,34 +240,34 @@ class TSOL_Library_Admin_Navigation {
         ), admin_url('edit.php'));
         ?>
         <div class="wrap tsol-library-admin-page">
-            <h1><?php esc_html_e('TSOL Library', 'tomschooloflife-plugin'); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'tomschooloflife-plugin'); ?></p>
+            <h1><?php esc_html_e('Liberty Classroom Library', 'libertyclassroom-library'); ?></h1>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'libertyclassroom-library'); ?></p>
 
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Courses', 'tomschooloflife-plugin'), $counts['courses'], $course_url); ?>
-                <?php $this->render_stat(__('Series', 'tomschooloflife-plugin'), $counts['series'], $series_url); ?>
-                <?php $this->render_stat(__('Content', 'tomschooloflife-plugin'), $counts['content'], $content_url); ?>
-                <?php $this->render_stat(__('Published', 'tomschooloflife-plugin'), $counts['published'], $content_url); ?>
-                <?php $this->render_stat(__('Drafts', 'tomschooloflife-plugin'), $counts['drafts'], $content_url); ?>
+                <?php $this->render_stat(__('Courses', 'libertyclassroom-library'), $counts['courses'], $course_url); ?>
+                <?php $this->render_stat(__('Series', 'libertyclassroom-library'), $counts['series'], $series_url); ?>
+                <?php $this->render_stat(__('Content', 'libertyclassroom-library'), $counts['content'], $content_url); ?>
+                <?php $this->render_stat(__('Published', 'libertyclassroom-library'), $counts['published'], $content_url); ?>
+                <?php $this->render_stat(__('Drafts', 'libertyclassroom-library'), $counts['drafts'], $content_url); ?>
             </div>
 
             <div class="tsol-library-admin-grid">
                 <section class="card">
-                    <h2><?php esc_html_e('Create and organize', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Courses own intentional curricula. Series own related ordered videos, whether recurring or finite. Content may remain standalone only when it has no meaningful parent.', 'tomschooloflife-plugin'); ?></p>
+                    <h2><?php esc_html_e('Create and organize', 'libertyclassroom-library'); ?></h2>
+                    <p><?php esc_html_e('Courses own intentional curricula. Series own related ordered videos, whether recurring or finite. Content may remain standalone only when it has no meaningful parent.', 'libertyclassroom-library'); ?></p>
                     <p>
-                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('Add course', 'tomschooloflife-plugin'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('Add series', 'tomschooloflife-plugin'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('Add content', 'tomschooloflife-plugin'); ?></a>
+                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('Add course', 'libertyclassroom-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('Add series', 'libertyclassroom-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . TSOL_Library_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('Add content', 'libertyclassroom-library'); ?></a>
                     </p>
                 </section>
                 <section class="card">
-                    <h2><?php esc_html_e('Access Groups', 'tomschooloflife-plugin'); ?></h2>
-                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'tomschooloflife-plugin'); ?></p>
+                    <h2><?php esc_html_e('Access Groups', 'libertyclassroom-library'); ?></h2>
+                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'libertyclassroom-library'); ?></p>
                     <?php if (current_user_can('manage_options')) : ?>
-                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'libertyclassroom-library'); ?></a></p>
                     <?php else : ?>
-                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'tomschooloflife-plugin'); ?></a></p>
+                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'libertyclassroom-library'); ?></a></p>
                     <?php endif; ?>
                 </section>
             </div>
@@ -290,8 +290,8 @@ class TSOL_Library_Admin_Navigation {
         }
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-settings-page">
-            <h1><?php esc_html_e('TSOL Library Settings', 'tomschooloflife-plugin'); ?></h1>
-            <nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e('Library settings sections', 'tomschooloflife-plugin'); ?>">
+            <h1><?php esc_html_e('Liberty Classroom Library Settings', 'libertyclassroom-library'); ?></h1>
+            <nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e('Library settings sections', 'libertyclassroom-library'); ?>">
                 <?php foreach ($tabs as $tab => $label) : ?>
                     <a
                         class="nav-tab <?php echo $active_tab === $tab ? 'nav-tab-active' : ''; ?>"
@@ -329,39 +329,39 @@ class TSOL_Library_Admin_Navigation {
         ?>
         <?php if (!$embedded) : ?><div class="wrap tsol-library-admin-page"><?php endif; ?>
             <?php if ($embedded) : ?>
-                <h2><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Library Access', 'libertyclassroom-library'); ?></h2>
             <?php else : ?>
-                <h1><?php esc_html_e('Library Access', 'tomschooloflife-plugin'); ?></h1>
+                <h1><?php esc_html_e('Library Access', 'libertyclassroom-library'); ?></h1>
             <?php endif; ?>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('MemberPress remains the live permission engine. Access Groups provide the standard way to manage which memberships unlock each part of the Library.', 'tomschooloflife-plugin'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('MemberPress remains the live permission engine. Access Groups provide the standard way to manage which memberships unlock each part of the Library.', 'libertyclassroom-library'); ?></p>
             <?php if ('staged' === $access_phase) : ?>
                 <div class="notice notice-info inline">
-                    <p><strong><?php esc_html_e('Modern Library access rules are staged for review.', 'tomschooloflife-plugin'); ?></strong></p>
+                    <p><strong><?php esc_html_e('Modern Library access rules are staged for review.', 'libertyclassroom-library'); ?></strong></p>
                     <p><?php echo esc_html(sprintf(
                         /* translators: %d is the number of inactive MemberPress rules. */
-                        _n('%d new MemberPress rule is still a draft. Legacy delegation remains active.', '%d new MemberPress rules are still drafts. Legacy delegation remains active.', $staged_rule_count, 'tomschooloflife-plugin'),
+                        _n('%d new MemberPress rule is still a draft. Legacy delegation remains active.', '%d new MemberPress rules are still drafts. Legacy delegation remains active.', $staged_rule_count, 'libertyclassroom-library'),
                         $staged_rule_count
                     )); ?></p>
                 </div>
             <?php elseif ('activated' === $access_phase) : ?>
-                <div class="notice notice-success inline"><p><strong><?php esc_html_e('Native Course, Series, and Collection access is active.', 'tomschooloflife-plugin'); ?></strong></p></div>
+                <div class="notice notice-success inline"><p><strong><?php esc_html_e('Native Course, Series, and Collection access is active.', 'libertyclassroom-library'); ?></strong></p></div>
             <?php endif; ?>
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Protected', 'tomschooloflife-plugin'), $summary['protected']); ?>
-                <?php $this->render_stat(__('All signed-in users', 'tomschooloflife-plugin'), $summary['open']); ?>
-                <?php $this->render_stat(__('Legacy delegated', 'tomschooloflife-plugin'), $summary['legacy']); ?>
-                <?php $this->render_stat(__('Native Library access', 'tomschooloflife-plugin'), $summary['native']); ?>
+                <?php $this->render_stat(__('Protected', 'libertyclassroom-library'), $summary['protected']); ?>
+                <?php $this->render_stat(__('All signed-in users', 'libertyclassroom-library'), $summary['open']); ?>
+                <?php $this->render_stat(__('Legacy delegated', 'libertyclassroom-library'), $summary['legacy']); ?>
+                <?php $this->render_stat(__('Native Library access', 'libertyclassroom-library'), $summary['native']); ?>
             </div>
             <section class="card tsol-library-admin-card--wide">
-                <h2><?php esc_html_e('How to control Library access', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('How to control Library access', 'libertyclassroom-library'); ?></h2>
                 <ol>
-                    <li><?php esc_html_e('Create a reusable Access Group and choose the Library content it unlocks.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Assign that group from the relevant MemberPress membership editor.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Check the full access comparison, then publish the change from Access Groups.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Create a reusable Access Group and choose the Library content it unlocks.', 'libertyclassroom-library'); ?></li>
+                    <li><?php esc_html_e('Assign that group from the relevant MemberPress membership editor.', 'libertyclassroom-library'); ?></li>
+                    <li><?php esc_html_e('Check the full access comparison, then publish the change from Access Groups.', 'libertyclassroom-library'); ?></li>
                 </ol>
-                <p><?php esc_html_e('Publishing compiles the groups into native MemberPress Rules. Membership billing and all non-Library MemberPress rules remain unchanged.', 'tomschooloflife-plugin'); ?></p>
+                <p><?php esc_html_e('Publishing compiles the groups into native MemberPress Rules. Membership billing and all non-Library MemberPress rules remain unchanged.', 'libertyclassroom-library'); ?></p>
                 <?php if (current_user_can('manage_options')) : ?>
-                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'tomschooloflife-plugin'); ?></a></p>
+                    <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=' . TSOL_Library_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'libertyclassroom-library'); ?></a></p>
                 <?php endif; ?>
             </section>
         <?php if (!$embedded) : ?></div><?php endif; ?>
@@ -379,24 +379,24 @@ class TSOL_Library_Admin_Navigation {
         ?>
         <?php if (!$embedded) : ?><div class="wrap tsol-library-admin-page"><?php endif; ?>
             <?php if ($embedded) : ?>
-                <h2><?php esc_html_e('Import & Legacy', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Import & Legacy', 'libertyclassroom-library'); ?></h2>
             <?php else : ?>
-                <h1><?php esc_html_e('Import & Legacy', 'tomschooloflife-plugin'); ?></h1>
+                <h1><?php esc_html_e('Import & Legacy', 'libertyclassroom-library'); ?></h1>
             <?php endif; ?>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('The import is a guarded clone operation. It never converts, hides, unpublishes, or rewrites the legacy MemberPress Courses system.', 'tomschooloflife-plugin'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('The import is a guarded clone operation. It never converts, hides, unpublishes, or rewrites the legacy MemberPress Courses system.', 'libertyclassroom-library'); ?></p>
             <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Legacy MP Courses', 'tomschooloflife-plugin'), $legacy_count, admin_url('edit.php?post_type=mpcs-course')); ?>
-                <?php $this->render_stat(__('Cloned courses', 'tomschooloflife-plugin'), $counts['courses']); ?>
-                <?php $this->render_stat(__('Cloned content', 'tomschooloflife-plugin'), $counts['content']); ?>
-                <?php $this->render_stat(__('Import phase', 'tomschooloflife-plugin'), (string) ($state['phase'] ?? 'not started')); ?>
+                <?php $this->render_stat(__('Legacy MP Courses', 'libertyclassroom-library'), $legacy_count, admin_url('edit.php?post_type=mpcs-course')); ?>
+                <?php $this->render_stat(__('Cloned courses', 'libertyclassroom-library'), $counts['courses']); ?>
+                <?php $this->render_stat(__('Cloned content', 'libertyclassroom-library'), $counts['content']); ?>
+                <?php $this->render_stat(__('Import phase', 'libertyclassroom-library'), (string) ($state['phase'] ?? 'not started')); ?>
             </div>
             <section class="card tsol-library-admin-card--wide">
-                <h2><?php esc_html_e('Safety boundary', 'tomschooloflife-plugin'); ?></h2>
+                <h2><?php esc_html_e('Safety boundary', 'libertyclassroom-library'); ?></h2>
                 <ul class="ul-disc">
-                    <li><?php esc_html_e('Legacy post content, statuses, URLs, metadata, rules, and progress remain untouched.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Imported Library records begin as drafts and move through a separate administrator review and publication process.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Imported records delegate live access checks to their original source.', 'tomschooloflife-plugin'); ?></li>
-                    <li><?php esc_html_e('Apply and rollback stay in the guarded WP-CLI workflow; this page intentionally provides no destructive browser button.', 'tomschooloflife-plugin'); ?></li>
+                    <li><?php esc_html_e('Legacy post content, statuses, URLs, metadata, rules, and progress remain untouched.', 'libertyclassroom-library'); ?></li>
+                    <li><?php esc_html_e('Imported Library records begin as drafts and move through a separate administrator review and publication process.', 'libertyclassroom-library'); ?></li>
+                    <li><?php esc_html_e('Imported records delegate live access checks to their original source.', 'libertyclassroom-library'); ?></li>
+                    <li><?php esc_html_e('Apply and rollback stay in the guarded WP-CLI workflow; this page intentionally provides no destructive browser button.', 'libertyclassroom-library'); ?></li>
                 </ul>
             </section>
         <?php if (!$embedded) : ?></div><?php endif; ?>
@@ -413,11 +413,11 @@ class TSOL_Library_Admin_Navigation {
     private function available_settings_tabs() {
         $tabs = array();
         if (current_user_can('manage_options')) {
-            $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'tomschooloflife-plugin');
-            $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_AUTHENTICATION] = __('Authentication', 'libertyclassroom-library');
+            $tabs[self::SETTINGS_TAB_SYNC] = __('Sync Status', 'libertyclassroom-library');
         }
         if (current_user_can('edit_pages')) {
-            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access', 'tomschooloflife-plugin');
+            $tabs[self::SETTINGS_TAB_ACCESS] = __('Access', 'libertyclassroom-library');
         }
         return $tabs;
     }

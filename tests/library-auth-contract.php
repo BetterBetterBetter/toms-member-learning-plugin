@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI contract checks for the TSOL Library authentication bridge.
+ * WP-CLI contract checks for the Liberty Classroom Library authentication bridge.
  *
  * Run: wp eval-file tests/library-auth-contract.php --skip-themes
  */
@@ -22,6 +22,9 @@ $assert(class_exists('TSOL_Library_Auth_Entitlements'), 'MemberPress content aut
 $assert(has_action('admin_post_tsol_library_authorize') !== false, 'Authorization action is not registered.');
 $assert(has_action('admin_post_tsol_library_logout') !== false, 'Signed logout action is not registered.');
 $assert(wp_next_scheduled('tsol_library_auth_cleanup') !== false, 'Authorization-code cleanup is not scheduled.');
+$registered_navigation_locations = get_registered_nav_menus();
+$assert(isset($registered_navigation_locations['tsol_library_header']), 'The editable Library header menu location is not registered.');
+$assert(isset($registered_navigation_locations['tsol_library_footer']), 'The editable Library footer menu location is not registered.');
 
 if (!defined('TSOL_LIBRARY_CLIENT_SECRET')) {
     $previous_client_secret = get_option(TSOL_Library_Auth_Settings::CLIENT_SECRET_OPTION, null);
@@ -110,7 +113,7 @@ foreach (array(
 }
 
 $registered_menus = get_registered_nav_menus();
-$assert(isset($registered_menus['tsol_library_footer']), 'The TSOL Library Footer menu location is not registered.');
+$assert(isset($registered_menus['tsol_library_footer']), 'The Liberty Classroom Library Footer menu location is not registered.');
 
 global $wpdb;
 $table = TSOL_Library_Auth_Repository::table();
@@ -187,6 +190,16 @@ if (TSOL_Library_Auth_Settings::configured()) {
     $header_navigation_data = $header_navigation_response->get_data();
     $assert($header_navigation_response->get_status() === 200, 'The header navigation endpoint did not accept valid Library credentials.');
     $assert(is_array($header_navigation_data) && isset($header_navigation_data['items']) && is_array($header_navigation_data['items']), 'The header navigation endpoint returned an invalid payload.');
+    $menu_locations = get_nav_menu_locations();
+    if (!empty($menu_locations['tsol_library_header'])) {
+        $assigned_header_menu = wp_get_nav_menu_items((int) $menu_locations['tsol_library_header'], array('post_status' => 'publish'));
+        $assigned_header_menu_ids = array_map('absint', wp_list_pluck(is_array($assigned_header_menu) ? $assigned_header_menu : array(), 'ID'));
+        $returned_header_menu_ids = array_map('absint', wp_list_pluck((array) ($header_navigation_data['items'] ?? array()), 'id'));
+        $assert(
+            empty(array_diff($returned_header_menu_ids, $assigned_header_menu_ids)),
+            'The header navigation endpoint did not use the explicitly assigned Library header menu.'
+        );
+    }
     foreach ((array) ($header_navigation_data['items'] ?? array()) as $header_navigation_item) {
         $assert(
             is_array($header_navigation_item)
@@ -266,4 +279,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", $failures));
 }
 
-WP_CLI::success('TSOL Library authentication contract checks passed.');
+WP_CLI::success('Liberty Classroom Library authentication contract checks passed.');

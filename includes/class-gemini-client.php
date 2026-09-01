@@ -22,7 +22,7 @@ class TSOL_Gemini_Client {
         if ($api_key === '') {
             return new WP_Error(
                 'tsol_gemini_not_configured',
-                __('Gemini is not configured.', 'tomschooloflife-plugin')
+                __('Gemini is not configured.', 'libertyclassroom-library')
             );
         }
 
@@ -67,7 +67,7 @@ class TSOL_Gemini_Client {
                 'tsol_gemini_http_error',
                 sprintf(
                     /* translators: %d: HTTP status code. */
-                    __('Gemini returned HTTP %d.', 'tomschooloflife-plugin'),
+                    __('Gemini returned HTTP %d.', 'libertyclassroom-library'),
                     $status_code
                 )
             );
@@ -78,7 +78,7 @@ class TSOL_Gemini_Client {
         if (!is_array($decoded)) {
             return new WP_Error(
                 'tsol_gemini_invalid_response',
-                __('Gemini returned an unreadable response.', 'tomschooloflife-plugin')
+                __('Gemini returned an unreadable response.', 'libertyclassroom-library')
             );
         }
 
@@ -89,7 +89,7 @@ class TSOL_Gemini_Client {
         if ($text === '') {
             return new WP_Error(
                 'tsol_gemini_empty_response',
-                __('Gemini returned an empty response.', 'tomschooloflife-plugin')
+                __('Gemini returned an empty response.', 'libertyclassroom-library')
             );
         }
 
@@ -98,7 +98,7 @@ class TSOL_Gemini_Client {
         if (!is_array($json)) {
             return new WP_Error(
                 'tsol_gemini_invalid_json',
-                __('Gemini returned invalid JSON.', 'tomschooloflife-plugin')
+                __('Gemini returned invalid JSON.', 'libertyclassroom-library')
             );
         }
 
