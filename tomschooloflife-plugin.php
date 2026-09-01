@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name: Tom's School Of Life Plugin
- * Plugin URI: https://github.com/BetterBetterBetter/tomschooloflife-plugin
- * Description: Site-specific functionality for Tom's School Of Life.
- * Version: 0.5.1
+ * Plugin Name: Member Library Platform
+ * Plugin URI: https://github.com/BetterBetterBetter/toms-member-learning-plugin
+ * Description: Canonical member-library platform plugin (multi-brand core + per-install brand config). Serves Tom's School of Life and Liberty Classroom.
+ * Version: 0.6.0
  * Author: Thrice Agency
  * License: GPL v2 or later
  * Text Domain: tomschooloflife-plugin
  * Requires at least: 6.0
  * Requires PHP: 8.0
- * Update URI: https://github.com/BetterBetterBetter/tomschooloflife-plugin
+ * Update URI: https://github.com/BetterBetterBetter/toms-member-learning-plugin
  */
 
 // Prevent direct access.
@@ -18,12 +18,12 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('TSOL_SITE_PLUGIN_VERSION', '0.5.1');
+define('TSOL_SITE_PLUGIN_VERSION', '0.6.0');
 define('TSOL_SITE_PLUGIN_FILE', __FILE__);
 define('TSOL_SITE_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('TSOL_SITE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TSOL_SITE_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('TSOL_SITE_PLUGIN_REPOSITORY_URL', 'https://github.com/BetterBetterBetter/tomschooloflife-plugin');
+define('TSOL_SITE_PLUGIN_REPOSITORY_URL', 'https://github.com/BetterBetterBetter/toms-member-learning-plugin');
 
 // Plugin Update Checker - GitHub integration.
 if (file_exists(TSOL_SITE_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php')) {

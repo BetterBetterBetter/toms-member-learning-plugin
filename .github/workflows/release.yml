@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches plugin version
+        run: |
+          set -e
+          tag="${GITHUB_REF_NAME#v}"
+          header_ver=$(grep -m1 -E '^\s*\*\s*Version:' tomschooloflife-plugin.php | sed -E 's/.*Version:\s*//' | tr -d '[:space:]')
+          const_ver=$(grep -m1 "TSOL_SITE_PLUGIN_VERSION" tomschooloflife-plugin.php | sed -E "s/.*'([0-9.]+)'.*/\1/")
+          echo "tag=$tag header=$header_ver const=$const_ver"
+          if [ "$tag" != "$header_ver" ] || [ "$tag" != "$const_ver" ]; then
+            echo "Version mismatch: tag=$tag header=$header_ver const=$const_ver — bump both the header Version and TSOL_SITE_PLUGIN_VERSION to match the tag."
+            exit 1
+          fi
+
+      - name: Build release ZIP
+        run: |
+          set -e
+          slug="member-library-plugin"
+          mkdir -p "build/$slug"
+          rsync -a --exclude='.git' --exclude='.github' --exclude='build' \
+            --exclude='tests' --exclude='tools' --exclude='*.md' ./ "build/$slug/"
+          (cd build && zip -rq "$slug.zip" "$slug")
+
+      - name: Attach ZIP to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/member-library-plugin.zip
