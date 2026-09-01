@@ -5,6 +5,13 @@ if (!defined('WP_CLI') || !WP_CLI) {
     throw new RuntimeException('Run this contract through WP-CLI.');
 }
 
+// Liberty-only contract: the LearnDash import source exists only on the
+// Liberty site. Skip cleanly where LearnDash is not installed (e.g. TSOL).
+if (!defined('LEARNDASH_VERSION') && !class_exists('SFWD_LMS')) {
+    WP_CLI::success('Skipped: LearnDash is not active (Liberty-only import contract).');
+    return;
+}
+
 $preview = (new Liberty_Classroom_LearnDash_Import())->preview();
 $failures = array();
 $assert = static function ($condition, $message) use (&$failures) {
