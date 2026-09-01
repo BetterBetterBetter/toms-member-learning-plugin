@@ -30,14 +30,23 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTS_DIR="$SCRIPT_DIR/../tests"
 
-pass=0; fail=0; failed_names=()
+pass=0; fail=0; skip=0; failed_names=()
 for f in "$TESTS_DIR"/$ONLY.php; do
   [[ -e "$f" ]] || continue
   name="$(basename "$f")"
+  # Use the EXIT CODE as the authoritative signal: WP_CLI::success exits 0,
+  # WP_CLI::error exits non-zero. Grepping stdout/stderr is unreliable because
+  # WP_DEBUG floods the streams and can bury/split the "Success:" line.
   out="$(wp --path="$WP_PATH" eval-file "$f" --skip-themes 2>&1)"
-  if echo "$out" | grep -q "^Success:"; then
-    echo "PASS  $name"
-    pass=$((pass+1))
+  rc=$?
+  if (( rc == 0 )); then
+    if echo "$out" | grep -q "Skipped:"; then
+      echo "SKIP  $name"
+      skip=$((skip+1))
+    else
+      echo "PASS  $name"
+      pass=$((pass+1))
+    fi
   else
     echo "FAIL  $name"
     echo "$out" | grep -iE "Error|Fatal|failed" | head -3 | sed 's/^/        /'
@@ -47,7 +56,7 @@ for f in "$TESTS_DIR"/$ONLY.php; do
 done
 
 echo "----"
-echo "passed: $pass  failed: $fail"
+echo "passed: $pass  skipped: $skip  failed: $fail"
 if (( fail > 0 )); then
   printf '  - %s\n' "${failed_names[@]}"
   exit 1
