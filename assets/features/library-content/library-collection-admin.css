@@ -15,3 +15,38 @@
     display: flex;
     gap: 12px;
 }
+
+.tsol-library-collection-colors__toggle {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.tsol-library-collection-colors__themes {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-bottom: 10px;
+}
+
+.tsol-library-collection-colors__theme {
+    border: 1px solid #c3c4c7;
+    border-radius: 6px;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.tsol-library-collection-colors__theme label {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.tsol-library-collection-colors__contrast {
+    border-radius: 4px;
+    display: block;
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: center;
+}
