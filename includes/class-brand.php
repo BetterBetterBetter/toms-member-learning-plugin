@@ -30,13 +30,6 @@ class TSOL_Library_Brand {
     }
 
     /**
-     * Short top-level admin menu label.
-     */
-    public static function menu_label() {
-        return self::get('TSOL_LIBRARY_BRAND_MENU_LABEL', 'tsol_library_brand_menu_label', 'TSOL');
-    }
-
-    /**
      * Library admin menu / heading label.
      */
     public static function library_menu_label() {
@@ -76,46 +69,6 @@ class TSOL_Library_Brand {
      */
     public static function client_id_default() {
         return self::get('TSOL_LIBRARY_BRAND_CLIENT_ID', 'tsol_library_brand_client_id', 'tsol-library');
-    }
-
-    /**
-     * Privacy policy URL (cookie-consent default).
-     */
-    public static function privacy_url() {
-        return self::get('TSOL_LIBRARY_BRAND_PRIVACY_URL', 'tsol_library_brand_privacy_url', 'https://access.tomwoods.com/privacy');
-    }
-
-    /**
-     * Terms URL (cookie-consent default).
-     */
-    public static function terms_url() {
-        return self::get('TSOL_LIBRARY_BRAND_TERMS_URL', 'tsol_library_brand_terms_url', 'https://access.tomwoods.com/terms');
-    }
-
-    /**
-     * Whether an optional feature is enabled for this brand. Core features
-     * (library-auth, library-content, library-notifications) are always on;
-     * the site-specific ones (accountability_modal, cookie_consent) default
-     * ON to preserve TSOL, and a brand disables them via constant or option:
-     *
-     *   define('TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL', false);  // wp-config
-     *   update_option('tsol_library_feature_accountability_modal', '0');
-     *
-     * @param string $feature One of: accountability_modal, cookie_consent.
-     */
-    public static function feature_enabled($feature) {
-        $constant = 'TSOL_LIBRARY_FEATURE_' . strtoupper($feature);
-        if (defined($constant)) {
-            $enabled = (bool) constant($constant);
-        } else {
-            // Missing option ('') means unset → default enabled.
-            $stored = get_option('tsol_library_feature_' . $feature, '');
-            $enabled = ('' === (string) $stored) ? true : ('0' !== (string) $stored && false !== $stored);
-        }
-        /**
-         * Filter per-feature enablement. Filter name is the option key.
-         */
-        return (bool) apply_filters('tsol_library_feature_' . $feature, $enabled);
     }
 
     /**
