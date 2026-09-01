@@ -12,6 +12,7 @@ class TSOL_Library_Auth {
     private const TOKEN_TTL = 300;
     private const LOGOUT_TTL = 60;
     private const CLEANUP_HOOK = 'tsol_library_auth_cleanup';
+    private const HEADER_MENU_LOCATION = 'tsol_library_header';
     private const FOOTER_MENU_LOCATION = 'tsol_library_footer';
     private $settings;
     private $suppress_logout_propagation = false;
@@ -171,6 +172,10 @@ class TSOL_Library_Auth {
     }
 
     public function register_navigation_locations() {
+        register_nav_menu(
+            self::HEADER_MENU_LOCATION,
+            __('TSOL Library Header', 'tomschooloflife-plugin')
+        );
         register_nav_menu(
             self::FOOTER_MENU_LOCATION,
             __('TSOL Library Footer', 'tomschooloflife-plugin')
@@ -609,7 +614,13 @@ class TSOL_Library_Auth {
         wp_set_current_user(0);
 
         try {
-            $menu_id = $this->elementor_header_menu_id();
+            $locations = get_nav_menu_locations();
+            $menu_id = isset($locations[self::HEADER_MENU_LOCATION])
+                ? absint($locations[self::HEADER_MENU_LOCATION])
+                : 0;
+            if ($menu_id <= 0) {
+                $menu_id = $this->elementor_header_menu_id();
+            }
             if ($menu_id > 0) {
                 $menu_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'publish'));
                 if (is_array($menu_items)) {
