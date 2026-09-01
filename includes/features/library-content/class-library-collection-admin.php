@@ -22,6 +22,7 @@ class TSOL_Library_Collection_Admin {
         add_action('created_term', array($this, 'save_fields'), 20, 3);
         add_action('edited_term', array($this, 'save_fields'), 20, 3);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        add_action('admin_notices', array($this, 'render_color_notice'));
     }
 
     public function render_add_fields($taxonomy) {
@@ -33,6 +34,7 @@ class TSOL_Library_Collection_Admin {
             <textarea id="tsol-library-collection-overview" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[overview_html]" rows="7"></textarea>
             <p><?php esc_html_e('Optional long-form introduction shown above the Course directory. Use the native Description field for the short hero introduction.', 'tomschooloflife-plugin'); ?></p>
             <?php $this->render_image_control(0); ?>
+            <?php $this->render_color_control(0); ?>
             <p><?php esc_html_e('After creating the Collection and assigning Courses, edit it again to choose a featured Course.', 'tomschooloflife-plugin'); ?></p>
         </div>
         <?php
@@ -62,6 +64,10 @@ class TSOL_Library_Collection_Admin {
         <tr class="form-field tsol-library-collection-editor-wrap" data-collection-editor>
             <th scope="row"><?php esc_html_e('Hero artwork', 'tomschooloflife-plugin'); ?></th>
             <td><?php $this->render_image_control($hero_image_id); ?></td>
+        </tr>
+        <tr class="form-field tsol-library-collection-editor-wrap">
+            <th scope="row"><?php esc_html_e('Collection colors', 'tomschooloflife-plugin'); ?></th>
+            <td><?php $this->render_color_control($term_id); ?></td>
         </tr>
         <tr class="form-field tsol-library-collection-editor-wrap">
             <th scope="row"><label for="tsol-library-collection-featured-course"><?php esc_html_e('Featured Course', 'tomschooloflife-plugin'); ?></label></th>
@@ -97,6 +103,42 @@ class TSOL_Library_Collection_Admin {
         <?php
     }
 
+    private function render_color_control($term_id) {
+        $appearance = $term_id > 0 ? TSOL_Library_Content_Model::collection_appearance($term_id) : null;
+        $colors = $appearance ?: array(
+            'light_background' => '#1f4e79',
+            'light_foreground' => '#ffffff',
+            'dark_background' => '#8fc8f0',
+            'dark_foreground' => '#10263a',
+        );
+        ?>
+        <fieldset class="tsol-library-collection-colors" data-collection-colors>
+            <legend class="screen-reader-text"><?php esc_html_e('Collection colors', 'tomschooloflife-plugin'); ?></legend>
+            <label class="tsol-library-collection-colors__toggle">
+                <input type="checkbox" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[appearance_enabled]" value="1" data-collection-colors-enabled <?php checked(null !== $appearance); ?> />
+                <?php esc_html_e('Use custom colors for this Collection', 'tomschooloflife-plugin'); ?>
+            </label>
+            <div class="tsol-library-collection-colors__themes" data-collection-colors-fields>
+                <?php foreach (array('light' => __('Light mode', 'tomschooloflife-plugin'), 'dark' => __('Dark mode', 'tomschooloflife-plugin')) as $theme => $label) : ?>
+                    <div class="tsol-library-collection-colors__theme" data-collection-color-pair="<?php echo esc_attr($theme); ?>">
+                        <strong><?php echo esc_html($label); ?></strong>
+                        <label>
+                            <span><?php esc_html_e('Background', 'tomschooloflife-plugin'); ?></span>
+                            <input type="color" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[<?php echo esc_attr($theme); ?>_background]" value="<?php echo esc_attr($colors[$theme . '_background']); ?>" data-collection-color="background" />
+                        </label>
+                        <label>
+                            <span><?php esc_html_e('Text', 'tomschooloflife-plugin'); ?></span>
+                            <input type="color" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[<?php echo esc_attr($theme); ?>_foreground]" value="<?php echo esc_attr($colors[$theme . '_foreground']); ?>" data-collection-color="foreground" />
+                        </label>
+                        <output class="tsol-library-collection-colors__contrast" data-collection-contrast></output>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <p class="description"><?php esc_html_e('Applied to Collection pages, Course badges, breadcrumbs, and Course-card labels. Each pair must meet WCAG AA contrast (4.5:1). Disable this setting to use the School brand colors.', 'tomschooloflife-plugin'); ?></p>
+        </fieldset>
+        <?php
+    }
+
     public function save_fields($term_id, $tt_id, $taxonomy) {
         unset($tt_id);
         if (TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY !== (string) $taxonomy
@@ -126,6 +168,42 @@ class TSOL_Library_Collection_Admin {
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_OVERVIEW, $overview);
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, $hero_image_id);
         $this->store_or_delete($term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, $featured_course_id);
+        $this->save_color_fields($term_id, $payload);
+    }
+
+    private function save_color_fields($term_id, $payload) {
+        $keys = TSOL_Library_Content_Model::collection_appearance_meta_keys();
+        if (empty($payload['appearance_enabled'])) {
+            foreach ($keys as $key) {
+                delete_term_meta((int) $term_id, $key);
+            }
+            return;
+        }
+        $values = array(
+            sanitize_hex_color((string) ($payload['light_background'] ?? '')),
+            sanitize_hex_color((string) ($payload['light_foreground'] ?? '')),
+            sanitize_hex_color((string) ($payload['dark_background'] ?? '')),
+            sanitize_hex_color((string) ($payload['dark_foreground'] ?? '')),
+        );
+        if (in_array('', $values, true)
+            || TSOL_Library_Content_Model::collection_color_contrast($values[0], $values[1]) < 4.5
+            || TSOL_Library_Content_Model::collection_color_contrast($values[2], $values[3]) < 4.5
+        ) {
+            set_transient('tsol_library_collection_color_error_' . get_current_user_id(), 1, 60);
+            return;
+        }
+        foreach ($keys as $index => $key) {
+            update_term_meta((int) $term_id, $key, strtolower($values[$index]));
+        }
+    }
+
+    public function render_color_notice() {
+        $key = 'tsol_library_collection_color_error_' . get_current_user_id();
+        if (!get_transient($key)) {
+            return;
+        }
+        delete_transient($key);
+        echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Collection colors were not changed because both light and dark color pairs must be valid and meet WCAG AA contrast (4.5:1).', 'tomschooloflife-plugin') . '</p></div>';
     }
 
     public function enqueue_assets($hook) {
@@ -142,6 +220,9 @@ class TSOL_Library_Collection_Admin {
         wp_localize_script('tsol-library-collection-admin', 'tsolLibraryCollectionAdmin', array(
             'frameTitle' => __('Choose Collection hero artwork', 'tomschooloflife-plugin'),
             'useImage' => __('Use this artwork', 'tomschooloflife-plugin'),
+            'contrastPass' => __('Pass', 'tomschooloflife-plugin'),
+            'contrastFail' => __('Needs more contrast', 'tomschooloflife-plugin'),
+            'contrastError' => __('Choose colors with at least 4.5:1 contrast.', 'tomschooloflife-plugin'),
         ));
     }
 

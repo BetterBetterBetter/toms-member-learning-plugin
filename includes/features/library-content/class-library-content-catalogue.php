@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class TSOL_Library_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260823.1';
+    const SCHEMA_VERSION = '20260830.1';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -531,6 +531,9 @@ class TSOL_Library_Content_Catalogue {
                 'overview_html' => $overview_html,
                 'hero_image' => $hero_image,
                 'featured_course_wordpress_id' => $featured_course_id,
+                'appearance' => TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY === $taxonomy
+                    ? TSOL_Library_Content_Model::collection_appearance((int) $term->term_id)
+                    : null,
             );
         }, $terms));
     }

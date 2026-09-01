@@ -65,6 +65,10 @@ class TSOL_Library_Content_Model {
     const COLLECTION_META_OVERVIEW = '_tsol_library_collection_overview';
     const COLLECTION_META_HERO_IMAGE_ID = '_tsol_library_collection_hero_image_id';
     const COLLECTION_META_FEATURED_COURSE_ID = '_tsol_library_collection_featured_course_id';
+    const COLLECTION_META_LIGHT_BACKGROUND = '_tsol_library_collection_light_background';
+    const COLLECTION_META_LIGHT_FOREGROUND = '_tsol_library_collection_light_foreground';
+    const COLLECTION_META_DARK_BACKGROUND = '_tsol_library_collection_dark_background';
+    const COLLECTION_META_DARK_FOREGROUND = '_tsol_library_collection_dark_foreground';
 
     const AVAILABILITY_AVAILABLE = 'available';
     const AVAILABILITY_COMING_SOON = 'coming_soon';
@@ -810,6 +814,17 @@ class TSOL_Library_Content_Model {
                 },
             ));
         }
+        foreach (self::collection_appearance_meta_keys() as $meta_key) {
+            register_term_meta(self::COURSE_COLLECTION_TAXONOMY, $meta_key, array(
+                'type' => 'string',
+                'single' => true,
+                'show_in_rest' => false,
+                'sanitize_callback' => 'sanitize_hex_color',
+                'auth_callback' => static function () {
+                    return current_user_can('manage_categories');
+                },
+            ));
+        }
 
         self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_CONTENT, 'string', array(__CLASS__, 'sanitize_transcript_vtt'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_TRANSCRIPT_HASH, 'string', 'sanitize_text_field');
@@ -822,6 +837,51 @@ class TSOL_Library_Content_Model {
     public static function sanitize_transcript_vtt($value) {
         $value = is_string($value) ? str_replace("\0", '', $value) : '';
         return 0 === strpos(ltrim($value, "\xEF\xBB\xBF"), 'WEBVTT') ? $value : '';
+    }
+
+    public static function collection_appearance_meta_keys() {
+        return array(
+            self::COLLECTION_META_LIGHT_BACKGROUND,
+            self::COLLECTION_META_LIGHT_FOREGROUND,
+            self::COLLECTION_META_DARK_BACKGROUND,
+            self::COLLECTION_META_DARK_FOREGROUND,
+        );
+    }
+
+    public static function collection_appearance($term_id) {
+        $values = array_values(array_map(static function ($key) use ($term_id) {
+            return sanitize_hex_color((string) get_term_meta((int) $term_id, $key, true));
+        }, self::collection_appearance_meta_keys()));
+        if (in_array('', $values, true)
+            || in_array(null, $values, true)
+            || self::collection_color_contrast($values[0], $values[1]) < 4.5
+            || self::collection_color_contrast($values[2], $values[3]) < 4.5
+        ) {
+            return null;
+        }
+        return array(
+            'light_background' => strtolower($values[0]),
+            'light_foreground' => strtolower($values[1]),
+            'dark_background' => strtolower($values[2]),
+            'dark_foreground' => strtolower($values[3]),
+        );
+    }
+
+    public static function collection_color_contrast($background, $foreground) {
+        $luminance = static function ($hex) {
+            $hex = ltrim((string) $hex, '#');
+            if (6 !== strlen($hex) || !ctype_xdigit($hex)) {
+                return 0.0;
+            }
+            $channels = array_map(static function ($offset) use ($hex) {
+                $value = hexdec(substr($hex, $offset, 2)) / 255;
+                return $value <= 0.04045 ? $value / 12.92 : pow(($value + 0.055) / 1.055, 2.4);
+            }, array(0, 2, 4));
+            return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+        };
+        $first = $luminance($background);
+        $second = $luminance($foreground);
+        return (max($first, $second) + 0.05) / (min($first, $second) + 0.05);
     }
 
     private static function register_meta($post_type, $key, $type, $sanitize_callback) {

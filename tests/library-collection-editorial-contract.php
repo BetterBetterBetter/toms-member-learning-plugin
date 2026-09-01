@@ -58,6 +58,11 @@ try {
             'overview_html' => '<h2>Build real capability</h2><p style="color:red">A safe <strong>overview</strong>.</p><script>alert(1)</script>',
             'hero_image_id' => 999999,
             'featured_course_id' => $created_course_id,
+            'appearance_enabled' => '1',
+            'light_background' => '#1f4e79',
+            'light_foreground' => '#ffffff',
+            'dark_background' => '#8fc8f0',
+            'dark_foreground' => '#10263a',
         ),
     );
     $admin->save_fields($created_term_id, 0, TSOL_Library_Content_Model::COURSE_COLLECTION_TAXONOMY);
@@ -68,6 +73,13 @@ try {
     $assert(false === strpos($stored_overview, '<script'), 'Collection overview retained a script.');
     $assert('' === (string) get_term_meta($created_term_id, TSOL_Library_Content_Model::COLLECTION_META_HERO_IMAGE_ID, true), 'Collection accepted a non-image hero attachment.');
     $assert($created_course_id === (int) get_term_meta($created_term_id, TSOL_Library_Content_Model::COLLECTION_META_FEATURED_COURSE_ID, true), 'Collection did not retain its assigned featured Course.');
+    $expected_appearance = array(
+        'light_background' => '#1f4e79',
+        'light_foreground' => '#ffffff',
+        'dark_background' => '#8fc8f0',
+        'dark_foreground' => '#10263a',
+    );
+    $assert($expected_appearance === TSOL_Library_Content_Model::collection_appearance($created_term_id), 'Collection did not retain its accessible light and dark colors.');
 
     $record = TSOL_Library_Content_Catalogue::record($created_course_id);
     $assert(!is_wp_error($record), 'Collection editorial Course was not exportable.');
@@ -78,6 +90,7 @@ try {
         $assert($stored_overview === (string) $projected_collection['overview_html'], 'Collection overview did not match the sanitized WordPress source.');
         $assert(null === $projected_collection['hero_image'], 'Collection projected an invalid hero image.');
         $assert($created_course_id === (int) $projected_collection['featured_course_wordpress_id'], 'Collection featured Course was not projected.');
+        $assert($expected_appearance === $projected_collection['appearance'], 'Collection appearance was not projected.');
     }
 
     ob_start();
@@ -86,6 +99,7 @@ try {
     $assert(false !== strpos($editor_html, 'Landing page overview'), 'Collection editor omitted its overview field.');
     $assert(false !== strpos($editor_html, 'Hero artwork'), 'Collection editor omitted its hero artwork field.');
     $assert(false !== strpos($editor_html, 'Featured Course'), 'Collection editor omitted its featured Course field.');
+    $assert(false !== strpos($editor_html, 'Collection colors'), 'Collection editor omitted its light and dark color controls.');
     $assert(false !== strpos($editor_html, 'Collection editorial Course'), 'Collection editor did not offer an assigned Course as featured content.');
 } finally {
     $_POST = $original_post;
