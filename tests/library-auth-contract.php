@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI contract checks for the TSOL Library authentication bridge.
+ * WP-CLI contract checks for the Library authentication bridge.
  *
  * Run: wp eval-file tests/library-auth-contract.php --skip-themes
  */
@@ -110,7 +110,7 @@ foreach (array(
 }
 
 $registered_menus = get_registered_nav_menus();
-$assert(isset($registered_menus['tsol_library_footer']), 'The TSOL Library Footer menu location is not registered.');
+$assert(isset($registered_menus['tsol_library_footer']), 'The Library Footer menu location is not registered.');
 
 global $wpdb;
 $table = MemberLibrary_Auth_Repository::table();
@@ -266,4 +266,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", $failures));
 }
 
-WP_CLI::success('TSOL Library authentication contract checks passed.');
+WP_CLI::success('Library authentication contract checks passed.');

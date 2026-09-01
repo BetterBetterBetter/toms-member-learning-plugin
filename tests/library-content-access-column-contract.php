@@ -87,9 +87,9 @@ try {
             'compare' => 'EXISTS',
         )),
     ));
-    $assert(count($library_course_ids) > 0, 'No reviewable TSOL Library Course records were found.');
-    $assert(count($library_item_ids) > 0, 'No reviewable TSOL Library Content records were found.');
-    $assert(empty($discarded_library_ids), 'A TSOL Library record is trashed or auto-drafted.');
+    $assert(count($library_course_ids) > 0, 'No reviewable Library Course records were found.');
+    $assert(count($library_item_ids) > 0, 'No reviewable Library Content records were found.');
+    $assert(empty($discarded_library_ids), 'A Library record is trashed or auto-drafted.');
 
     $target_id = 0;
     $source_id = 0;
@@ -189,4 +189,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
 }
 
-WP_CLI::success('TSOL Library access-column contract passed; native MemberPress and Page screens remained untouched.');
+WP_CLI::success('Library access-column contract passed; native MemberPress and Page screens remained untouched.');

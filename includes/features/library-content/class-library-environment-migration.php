@@ -126,7 +126,7 @@ class MemberLibrary_Environment_Migration {
             }
             $package = $this->decode($package_json);
             if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
-                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+                throw new RuntimeException('This is not a complete Library ZIP package.');
             }
             $expected_entries = array(self::PACKAGE_FILENAME => true);
             $manifest_paths = array();
@@ -187,7 +187,7 @@ class MemberLibrary_Environment_Migration {
             }
             $package = $this->decode($package_json);
             if (self::BUNDLE_FORMAT !== (string) ($package['manifest']['bundle_format'] ?? '')) {
-                throw new RuntimeException('This is not a complete TSOL Library ZIP package.');
+                throw new RuntimeException('This is not a complete Library ZIP package.');
             }
             foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
                 $relative = (string) ($attachment['relative_file'] ?? '');
@@ -222,7 +222,7 @@ class MemberLibrary_Environment_Migration {
             || 'wordpress-library-only' !== (string) ($package['manifest']['scope'] ?? '')
             || !is_array($package['data'] ?? null)
         ) {
-            throw new RuntimeException('This is not a supported TSOL WordPress Library migration package.');
+            throw new RuntimeException('This is not a supported WordPress Library migration package.');
         }
         if (!hash_equals((string) ($package['manifest']['data_sha256'] ?? ''), $this->data_hash($package['data']))) {
             throw new RuntimeException('The migration package checksum is invalid.');

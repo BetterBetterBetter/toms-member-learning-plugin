@@ -161,7 +161,7 @@ try {
         'uuid_changes' => 0,
         'stale_revision_rejected' => true,
     ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    WP_CLI::success('TSOL Library Structure Builder mutation contract passed.');
+    WP_CLI::success('Library Structure Builder mutation contract passed.');
 } finally {
     foreach (array_reverse($created_post_ids) as $post_id) {
         wp_delete_post((int) $post_id, true);

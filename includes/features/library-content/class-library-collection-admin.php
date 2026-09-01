@@ -134,7 +134,7 @@ class MemberLibrary_Collection_Admin {
                     </div>
                 <?php endforeach; ?>
             </div>
-            <p class="description"><?php esc_html_e('Applied to Collection pages, Course badges, breadcrumbs, and Course-card labels. Each pair must meet WCAG AA contrast (4.5:1). Disable this setting to use the School brand colors.', 'member-library'); ?></p>
+            <p class="description"><?php esc_html_e('Applied to Collection pages, Course badges, breadcrumbs, and Course-card labels. Each pair must meet WCAG AA contrast (4.5:1). Disable this setting to use the Library app brand colors.', 'member-library'); ?></p>
         </fieldset>
         <?php
     }

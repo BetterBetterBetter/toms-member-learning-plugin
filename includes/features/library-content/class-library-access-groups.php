@@ -70,7 +70,7 @@ class MemberLibrary_Access_Groups {
 
         $source_rules = $this->source_rules();
         if (empty($source_rules)) {
-            throw new RuntimeException('No activated TSOL-native MemberPress rules were found to bootstrap.');
+            throw new RuntimeException('No activated natively-scoped MemberPress rules were found to bootstrap.');
         }
 
         $scope_assignments = array();
@@ -515,7 +515,7 @@ class MemberLibrary_Access_Groups {
             }
             $current_source_rules = $this->configured_source_rules($configuration);
             if ((string) ($configuration['source_fingerprint'] ?? '') !== $this->rules_fingerprint($current_source_rules)) {
-                throw new RuntimeException('The active TSOL MemberPress rules changed after Access Groups were imported. Reconciliation is required before staging.');
+                throw new RuntimeException('The active MemberPress rules changed after Access Groups were imported. Reconciliation is required before staging.');
             }
             $compiled = $this->compile($configuration);
             $state = array(
@@ -747,14 +747,14 @@ class MemberLibrary_Access_Groups {
     private function rule_target($definition) {
         if ('collection' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Masterclasses', 'member-library'),
+                'title' => __('Access Groups — All Masterclasses', 'member-library'),
                 'type' => 'tax_' . MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY . '||cpt_' . MemberLibrary_Content_Model::COURSE_POST_TYPE,
                 'content' => (string) $definition['target_id'],
             );
         }
         if ('all_series' === $definition['kind']) {
             return array(
-                'title' => __('TSOL Access Groups — All Series', 'member-library'),
+                'title' => __('Access Groups — All Series', 'member-library'),
                 'type' => 'all_' . MemberLibrary_Content_Model::SERIES_POST_TYPE,
                 'content' => '',
             );
@@ -762,7 +762,7 @@ class MemberLibrary_Access_Groups {
         $noun = 'course' === $definition['kind'] ? __('Course', 'member-library') : __('Series', 'member-library');
         $post_type = 'course' === $definition['kind'] ? MemberLibrary_Content_Model::COURSE_POST_TYPE : MemberLibrary_Content_Model::SERIES_POST_TYPE;
         return array(
-            'title' => sprintf(__('TSOL Access Groups — %1$s: %2$s', 'member-library'), $noun, get_the_title((int) $definition['target_id'])),
+            'title' => sprintf(__('Access Groups — %1$s: %2$s', 'member-library'), $noun, get_the_title((int) $definition['target_id'])),
             'type' => 'single_' . $post_type,
             'content' => (string) $definition['target_id'],
         );
@@ -909,7 +909,7 @@ class MemberLibrary_Access_Groups {
         if (in_array('collection:masterclasses', $scope_keys, true)
             && in_array('series:all', $scope_keys, true)
         ) {
-            return __('School of Life Core Library', 'member-library');
+            return __('Core Library', 'member-library');
         }
         return sprintf(__('Imported Library Access %d', 'member-library'), (int) $ordinal);
     }

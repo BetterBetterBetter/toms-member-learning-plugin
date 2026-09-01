@@ -120,7 +120,7 @@ class MemberLibrary_Access_Groups_Admin {
 
     public function render_membership_meta_box($post) {
         if (!$this->service->is_bootstrapped()) {
-            echo '<p>' . esc_html__('Import the current policy under TSOL Library → Access Groups before assigning memberships.', 'member-library') . '</p>';
+            echo '<p>' . esc_html__('Import the current policy under Library → Access Groups before assigning memberships.', 'member-library') . '</p>';
             return;
         }
         $configuration = $this->service->configuration();
@@ -239,7 +239,7 @@ class MemberLibrary_Access_Groups_Admin {
             <?php if (!$preview['bootstrapped']) : ?>
                 <section class="card tsol-library-admin-card--wide">
                     <h2><?php esc_html_e('Import current access safely', 'member-library'); ?></h2>
-                    <p><?php esc_html_e('Turn the current TSOL-native MemberPress policy into named draft groups without changing memberships, subscriptions, legacy courses, rules, or live member access.', 'member-library'); ?></p>
+                    <p><?php esc_html_e('Turn the current natively-scoped MemberPress policy into named draft groups without changing memberships, subscriptions, legacy courses, rules, or live member access.', 'member-library'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_access_groups">
                         <input type="hidden" name="operation" value="bootstrap">

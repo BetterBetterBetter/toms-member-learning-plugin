@@ -202,7 +202,7 @@ class MemberLibrary_Auth_Settings {
                                 </span>
                             </p>
                             <input id="tsol-library-catalogue-webhook-secret" class="regular-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr(self::CATALOGUE_WEBHOOK_SECRET_OPTION); ?>" value="" <?php disabled($catalogue_secret_from_constant); ?> placeholder="<?php echo esc_attr($catalogue_secret_is_present ? __('Enter a new secret to replace the current one', 'member-library') : __('At least 32 characters', 'member-library')); ?>">
-                            <p class="description"><?php echo esc_html($catalogue_secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'member-library') : __('Paste the exact TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET from the School app. Leave blank to keep the current value; the saved value is never displayed.', 'member-library')); ?></p>
+                            <p class="description"><?php echo esc_html($catalogue_secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'member-library') : __('Paste the exact TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET from the Library app. Leave blank to keep the current value; the saved value is never displayed.', 'member-library')); ?></p>
                         </td>
                     </tr>
                 </table>

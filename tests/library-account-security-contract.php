@@ -156,7 +156,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library account security contract failed with ' . count($failures) . ' issue(s).');
+    WP_CLI::error('Library account security contract failed with ' . count($failures) . ' issue(s).');
 }
 
-WP_CLI::success('TSOL Library account security contract passed.');
+WP_CLI::success('Library account security contract passed.');

@@ -74,7 +74,7 @@ class MemberLibrary_Admin_Navigation {
         );
         add_submenu_page(
             self::MENU_SLUG,
-            __('TSOL Library Settings', 'member-library'),
+            __('Library Settings', 'member-library'),
             __('Settings', 'member-library'),
             'edit_pages',
             self::SETTINGS_SLUG,
@@ -240,7 +240,7 @@ class MemberLibrary_Admin_Navigation {
         ), admin_url('edit.php'));
         ?>
         <div class="wrap tsol-library-admin-page">
-            <h1><?php esc_html_e('TSOL Library', 'member-library'); ?></h1>
+            <h1><?php echo esc_html(MemberLibrary_Brand::library_menu_label()); ?></h1>
             <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'member-library'); ?></p>
 
             <div class="tsol-library-admin-stats">
@@ -290,7 +290,7 @@ class MemberLibrary_Admin_Navigation {
         }
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-settings-page">
-            <h1><?php esc_html_e('TSOL Library Settings', 'member-library'); ?></h1>
+            <h1><?php esc_html_e('Library Settings', 'member-library'); ?></h1>
             <nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e('Library settings sections', 'member-library'); ?>">
                 <?php foreach ($tabs as $tab => $label) : ?>
                     <a

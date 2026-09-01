@@ -1,6 +1,6 @@
 <?php
 /**
- * Read-only WordPress/MemberPress half of the School audience resolver.
+ * Read-only WordPress/MemberPress half of the Library app audience resolver.
  */
 
 if (!defined('ABSPATH')) {

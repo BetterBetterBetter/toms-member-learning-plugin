@@ -1,6 +1,6 @@
 <?php
 /**
- * Contract for the TSOL Library wp-admin editor.
+ * Contract for the Library wp-admin editor.
  *
  * This test creates only uniquely named disposable posts and removes them in a
  * finally block. It must run against the working site, never the control clone.
@@ -116,7 +116,7 @@ try {
         }
         $editor->isolate_private_editor_integrations();
         foreach ($leadbox_callbacks as $hook_name => $callback) {
-            $assert(false === has_filter($hook_name, $callback), 'A LeadPages editor callback leaked onto the private TSOL Library editor.');
+            $assert(false === has_filter($hook_name, $callback), 'A LeadPages editor callback leaked onto the private Library editor.');
         }
     }
     foreach (array_merge(MemberLibrary_Content_Model::post_types(), array(MemberLibrary_Content_Model::SPEAKER_POST_TYPE)) as $library_post_type) {
@@ -166,7 +166,7 @@ try {
     $fixture_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'draft',
-        'post_title' => 'TSOL Library editor contract fixture',
+        'post_title' => 'Library editor contract fixture',
         'post_content' => '',
     ), true);
     if (is_wp_error($fixture_id)) {
@@ -178,7 +178,7 @@ try {
     $speaker_fixture_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         'post_status' => 'draft',
-        'post_title' => 'Zulu TSOL Library speaker relationship contract fixture',
+        'post_title' => 'Zulu Library speaker relationship contract fixture',
     ), true);
     if (is_wp_error($speaker_fixture_id)) {
         throw new RuntimeException($speaker_fixture_id->get_error_message());
@@ -191,7 +191,7 @@ try {
     $second_speaker_fixture_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
         'post_status' => 'publish',
-        'post_title' => 'Alpha TSOL Library speaker relationship contract fixture',
+        'post_title' => 'Alpha Library speaker relationship contract fixture',
     ), true);
     if (is_wp_error($second_speaker_fixture_id)) {
         throw new RuntimeException($second_speaker_fixture_id->get_error_message());
@@ -277,7 +277,7 @@ try {
     $course_fixture_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => 'draft',
-        'post_title' => 'TSOL Library course-column contract fixture',
+        'post_title' => 'Library course-column contract fixture',
         'post_content' => '',
     ), true);
     if (is_wp_error($course_fixture_id)) {
@@ -362,13 +362,13 @@ try {
     $assert(false !== strpos($inherited_picker_html, 'Choose speakers for this content'), 'The Content editor omitted direct Speaker override mode.');
     $assert(false !== strpos($inherited_picker_html, 'No presenter'), 'The Content editor omitted explicit no-presenter mode.');
     $assert(false !== strpos($inherited_picker_html, 'Inherited from Course'), 'The inherited Speaker panel did not identify the Course source.');
-    $assert(false !== strpos($inherited_picker_html, 'TSOL Library course-column contract fixture'), 'The inherited Speaker panel omitted the parent Course link.');
-    $assert(false !== strpos($inherited_picker_html, 'Zulu TSOL Library speaker relationship contract fixture'), 'The inherited Speaker panel omitted an effective Speaker card.');
+    $assert(false !== strpos($inherited_picker_html, 'Library course-column contract fixture'), 'The inherited Speaker panel omitted the parent Course link.');
+    $assert(false !== strpos($inherited_picker_html, 'Zulu Library speaker relationship contract fixture'), 'The inherited Speaker panel omitted an effective Speaker card.');
 
     ob_start();
     $editor->render_speakers_column(MemberLibrary_Content_Admin::SPEAKERS_COLUMN, $fixture_id);
     $inherited_column_html = ob_get_clean();
-    $assert(false !== strpos($inherited_column_html, 'Alpha TSOL Library speaker relationship contract fixture'), 'The Content list omitted an inherited Speaker.');
+    $assert(false !== strpos($inherited_column_html, 'Alpha Library speaker relationship contract fixture'), 'The Content list omitted an inherited Speaker.');
     $assert(false !== strpos($inherited_column_html, '>Inherited</span>'), 'The Content list did not distinguish inherited Speakers from direct assignments.');
 
     $speaker_admin = new MemberLibrary_Speaker_Admin();
@@ -389,7 +389,7 @@ try {
     update_post_meta($speaker_fixture_id, MemberLibrary_Content_Model::SPEAKER_META_JOB_TITLE, 'Contract researcher');
 
     $collection_fixture = wp_insert_term(
-        'TSOL Library course-collection contract fixture',
+        'Library course-collection contract fixture',
         MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY,
         array('slug' => 'tsol-library-course-collection-contract-' . strtolower(wp_generate_password(8, false, false)))
     );
@@ -405,7 +405,7 @@ try {
     ob_start();
     $editor->render_course_column(MemberLibrary_Content_Admin::COURSE_COLUMN, $fixture_id);
     $lesson_column = ob_get_clean();
-    $assert(false !== strpos($lesson_column, 'TSOL Library course-column contract fixture'), 'A course lesson did not show its Course title.');
+    $assert(false !== strpos($lesson_column, 'Library course-column contract fixture'), 'A course lesson did not show its Course title.');
     $assert(false !== strpos($lesson_column, 'post.php?post=' . $course_fixture_id), 'The Course column did not link to the Library Course editor.');
 
     ob_start();
@@ -418,7 +418,7 @@ try {
     $series_fixture_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::SERIES_POST_TYPE,
         'post_status' => 'draft',
-        'post_title' => 'TSOL Library series-count contract fixture',
+        'post_title' => 'Library series-count contract fixture',
     ), true);
     if (is_wp_error($series_fixture_id)) {
         throw new RuntimeException($series_fixture_id->get_error_message());
@@ -542,7 +542,7 @@ try {
     $editor->render_details_meta_box(get_post($fixture_id));
     $details_html = ob_get_clean();
     $assert(false === strpos($details_html, 'id="tsol-library-overview-reviewed"'), 'The obsolete per-record Description review control is still present.');
-    $assert(false === strpos($details_html, 'Include in the TSOL Library'), 'The retired editable Library inclusion gate remains in Library details.');
+    $assert(false === strpos($details_html, 'Include in the Library'), 'The retired editable Library inclusion gate remains in Library details.');
     $assert(false === strpos($details_html, 'This controls how the item appears in the Library catalogue'), 'The redundant catalogue/access introduction remains in Library details.');
     $assert(false === strpos($details_html, 'Library text content'), 'The redundant Library text content heading remains in Library details.');
     $assert(false === strpos($details_html, 'The Excerpt is synchronized as the short introduction'), 'The redundant Excerpt/Description helper remains in Library details.');
@@ -634,7 +634,7 @@ try {
     $invalid_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'publish',
-        'post_title' => 'TSOL Library invalid publish contract fixture',
+        'post_title' => 'Library invalid publish contract fixture',
         'post_content' => '',
     ), true);
     if (is_wp_error($invalid_id)) {
@@ -655,7 +655,7 @@ try {
     $assert('draft' === get_post_status($invalid_id), 'Incomplete published Library Item was not forced back to draft.');
 
     $rule = new MeprRule();
-    $rule->post_title = 'TSOL Library availability contract rule';
+    $rule->post_title = 'Library availability contract rule';
     $rule->post_status = 'publish';
     $rule->mepr_type = 'single_' . MemberLibrary_Content_Model::COURSE_POST_TYPE;
     $rule->mepr_content = (string) $course_fixture_id;
@@ -680,7 +680,7 @@ try {
     $coming_soon_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
         'post_status' => 'publish',
-        'post_title' => 'TSOL Library coming-soon contract fixture',
+        'post_title' => 'Library coming-soon contract fixture',
         'post_content' => '',
     ), true);
     if (is_wp_error($coming_soon_id)) {
@@ -712,7 +712,7 @@ try {
     $unprotected_course_id = wp_insert_post(array(
         'post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE,
         'post_status' => 'publish',
-        'post_title' => 'TSOL Library unprotected publish contract fixture',
+        'post_title' => 'Library unprotected publish contract fixture',
     ), true);
     if (is_wp_error($unprotected_course_id)) {
         throw new RuntimeException($unprotected_course_id->get_error_message());
@@ -757,4 +757,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
 }
 
-WP_CLI::success('TSOL Library content admin contract passed; disposable fixtures were removed.');
+WP_CLI::success('Library content admin contract passed; disposable fixtures were removed.');

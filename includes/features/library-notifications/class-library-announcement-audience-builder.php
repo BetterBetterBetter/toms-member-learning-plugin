@@ -98,7 +98,7 @@ class MemberLibrary_Announcement_Audience_Builder {
 
     public static function presets() {
         return array(
-            self::PRESET_ALL_LINKED => __('Everyone signed in to the School', 'member-library'),
+            self::PRESET_ALL_LINKED => __('Everyone signed in to the Library', 'member-library'),
             self::PRESET_CONTENT_ACCESS => __('Everyone with access to the destination', 'member-library'),
             self::PRESET_RELATIONSHIP => __('Enrolled in this Course or following this Series', 'member-library'),
             self::PRESET_MEMBERSHIP => __('Active MemberPress membership', 'member-library'),
@@ -108,7 +108,7 @@ class MemberLibrary_Announcement_Audience_Builder {
 
     public static function destination($post_id) {
         if ($post_id <= 0) {
-            return array('id' => 0, 'type' => 'general', 'uuid' => '', 'title' => __('General School announcement', 'member-library'));
+            return array('id' => 0, 'type' => 'general', 'uuid' => '', 'title' => __('General Library announcement', 'member-library'));
         }
         $post = get_post($post_id);
         $types = array(
@@ -116,11 +116,11 @@ class MemberLibrary_Announcement_Audience_Builder {
             MemberLibrary_Content_Model::SERIES_POST_TYPE => 'series',
         );
         if (!$post instanceof WP_Post || !isset($types[$post->post_type]) || 'publish' !== $post->post_status) {
-            return new WP_Error('announcement_destination_invalid', __('Select a published TSOL Course or Series.', 'member-library'));
+            return new WP_Error('announcement_destination_invalid', __('Select a published Library Course or Series.', 'member-library'));
         }
         $uuid = strtolower(sanitize_text_field((string) get_post_meta($post_id, MemberLibrary_Content_Model::META_UUID, true)));
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid)) {
-            return new WP_Error('announcement_destination_invalid', __('The selected destination has no valid School identity.', 'member-library'));
+            return new WP_Error('announcement_destination_invalid', __('The selected destination has no valid Library identity.', 'member-library'));
         }
         return array(
             'id' => (int) $post_id,
@@ -203,8 +203,8 @@ class MemberLibrary_Announcement_Audience_Builder {
                 return sprintf(_n('1 specifically selected user', '%d specifically selected users', max(1, $user_count), 'member-library'), max(1, $user_count));
             default:
                 return 'general' === $destination['type']
-                    ? __('Everyone signed in to the School', 'member-library')
-                    : sprintf(__('Everyone signed in to the School with current access to %s', 'member-library'), $destination_title);
+                    ? __('Everyone signed in to the Library', 'member-library')
+                    : sprintf(__('Everyone signed in to the Library with current access to %s', 'member-library'), $destination_title);
         }
     }
 }

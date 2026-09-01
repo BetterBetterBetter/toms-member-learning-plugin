@@ -298,7 +298,7 @@ class MemberLibrary_Environment_Migration_Admin {
         ?>
         <div class="wrap tsol-library-admin-page">
             <h1><?php esc_html_e('Test → Production Migration', 'member-library'); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Move only WordPress-owned TSOL Library content and configuration between environments using stable UUIDs and membership slugs.', 'member-library'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Move only WordPress-owned Library content and configuration between environments using stable UUIDs and membership slugs.', 'member-library'); ?></p>
 
             <?php if ('applied' === $result) : ?>
                 <div class="notice notice-success inline"><p><?php esc_html_e('The WordPress Library package was imported. Access Groups remain a draft: check the full matrix before publishing their MemberPress rules.', 'member-library'); ?></p></div>
@@ -403,7 +403,7 @@ class MemberLibrary_Environment_Migration_Admin {
             button.addEventListener('click', async () => {
                 const file = fileInput.files && fileInput.files[0];
                 if (!file || !file.name.toLowerCase().endsWith('.zip')) {
-                    status.textContent = <?php echo wp_json_encode(__('Choose the complete TSOL Library ZIP first.', 'member-library')); ?>;
+                    status.textContent = <?php echo wp_json_encode(__('Choose the complete Library ZIP first.', 'member-library')); ?>;
                     return;
                 }
                 const chunkBytes = <?php echo (int) self::CHUNK_BYTES; ?>;

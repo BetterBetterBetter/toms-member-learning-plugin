@@ -1,6 +1,6 @@
 <?php
 /**
- * Publication-readiness contract for the normalized TSOL Library catalogue.
+ * Publication-readiness contract for the normalized Library catalogue.
  *
  * Hard failures block local publication. Editorial enrichment that is safe to
  * defer is reported as aggregate warnings without exposing protected URLs.
@@ -236,4 +236,4 @@ WP_CLI::line(wp_json_encode(array(
     'protected_urls_emitted' => 0,
     'member_identities_emitted' => 0,
 ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-WP_CLI::success('TSOL Library hard publication-readiness gates passed.');
+WP_CLI::success('Library hard publication-readiness gates passed.');

@@ -130,7 +130,7 @@ class MemberLibrary_Announcement_Audience_Contract {
     public static function explain_condition($condition) {
         switch ($condition['type']) {
             case 'AUTHENTICATED_SCHOOL_USER':
-                return 'Has a linked School account';
+                return 'Has a linked Library account';
             case 'CAN_ACCESS_CONTENT':
                 return 'Can currently access content ' . $condition['contentUuid'];
             case 'ACTIVE_MEMBERSHIP':

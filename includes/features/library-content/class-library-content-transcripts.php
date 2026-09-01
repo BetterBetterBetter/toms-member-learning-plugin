@@ -1,6 +1,6 @@
 <?php
 /**
- * Private WebVTT source editing and signed delivery to the School app.
+ * Private WebVTT source editing and signed delivery to the Library app.
  */
 
 if (!defined('ABSPATH')) {
@@ -63,9 +63,9 @@ class MemberLibrary_Content_Transcripts {
                     </p>
                     <p><code><?php echo esc_html(substr($hash, 0, 12)); ?>&hellip;</code>
                         <?php if ('delivered' === $delivery_status) : ?>
-                            <span class="tsol-library-transcript-status__delivered"><?php esc_html_e('Synchronized with School', 'member-library'); ?></span>
+                            <span class="tsol-library-transcript-status__delivered"><?php esc_html_e('Synchronized with the Library app', 'member-library'); ?></span>
                         <?php else : ?>
-                            <span class="tsol-library-transcript-status__pending"><?php esc_html_e('Waiting to synchronize with School', 'member-library'); ?></span>
+                            <span class="tsol-library-transcript-status__pending"><?php esc_html_e('Waiting to synchronize with the Library app', 'member-library'); ?></span>
                         <?php endif; ?>
                     </p>
                 </div>

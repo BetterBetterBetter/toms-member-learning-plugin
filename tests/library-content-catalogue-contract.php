@@ -531,4 +531,4 @@ if (!empty($failures)) {
     WP_CLI::error(implode("\n", $failures));
 }
 
-WP_CLI::success('TSOL Library protected catalogue contract checks passed.');
+WP_CLI::success('Library protected catalogue contract checks passed.');

@@ -119,7 +119,7 @@ if (!empty($failures)) {
     foreach ($failures as $failure) {
         WP_CLI::warning($failure);
     }
-    WP_CLI::error('TSOL Library catalogue change-event contract failed with ' . count($failures) . ' issue(s).');
+    WP_CLI::error('Library catalogue change-event contract failed with ' . count($failures) . ' issue(s).');
 }
 
-WP_CLI::success('TSOL Library catalogue change-event contract passed.');
+WP_CLI::success('Library catalogue change-event contract passed.');

@@ -174,11 +174,11 @@ class MemberLibrary_Auth {
     public function register_navigation_locations() {
         register_nav_menu(
             self::HEADER_MENU_LOCATION,
-            __('TSOL Library Header', 'member-library')
+            __('Library Header', 'member-library')
         );
         register_nav_menu(
             self::FOOTER_MENU_LOCATION,
-            __('TSOL Library Footer', 'member-library')
+            __('Library Footer', 'member-library')
         );
     }
 
@@ -863,7 +863,7 @@ class MemberLibrary_Auth {
         }
 
         $error_url = add_query_arg('error', $this->public_error_code($code), $app_url . '/auth/error');
-        wp_redirect($error_url, 302, 'TSOL Library Authentication'); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Fixed validated Library origin.
+        wp_redirect($error_url, 302, 'Library Authentication'); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Fixed validated Library origin.
         exit;
     }
 
@@ -876,26 +876,26 @@ class MemberLibrary_Auth {
 
         $copy = array(
             'eyebrow' => __('Sign-in interrupted', 'member-library'),
-            'title' => __('School sign-in unavailable', 'member-library'),
-            'description' => __('We could not complete School sign-in. Return to TSOL and start again.', 'member-library'),
+            'title' => __('Sign-in unavailable', 'member-library'),
+            'description' => __('We could not complete sign-in. Return to the site and start again.', 'member-library'),
         );
 
         if ($code === 'invalid_request') {
             $copy = array(
                 'eyebrow' => __('Sign-in expired', 'member-library'),
                 'title' => __('Let’s try that again', 'member-library'),
-                'description' => __('This sign-in request is invalid or has expired. Return to TSOL and start again.', 'member-library'),
+                'description' => __('This sign-in request is invalid or has expired. Return to the site and start again.', 'member-library'),
             );
         } elseif ($code === 'invalid_sign_out') {
             $copy = array(
                 'eyebrow' => __('Sign-out interrupted', 'member-library'),
                 'title' => __('Unable to complete sign-out', 'member-library'),
-                'description' => __('We could not verify that sign-out request. Return to TSOL to safely continue.', 'member-library'),
+                'description' => __('We could not verify that sign-out request. Return to the site to safely continue.', 'member-library'),
             );
         } elseif (in_array($code, array('server_error', 'temporarily_unavailable'), true)) {
             $copy = array(
                 'eyebrow' => __('Service unavailable', 'member-library'),
-                'title' => __('School sign-in is temporarily unavailable', 'member-library'),
+                'title' => __('Sign-in is temporarily unavailable', 'member-library'),
                 'description' => __('Your account has not been changed. Please wait a moment and try again.', 'member-library'),
             );
         }
@@ -943,7 +943,7 @@ class MemberLibrary_Auth {
                     <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
                     <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>
                     <p class="description"><?php echo esc_html($copy['description']); ?></p>
-                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to TSOL', 'member-library'); ?></a>
+                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to the site', 'member-library'); ?></a>
                 </section>
             </main>
         </body>

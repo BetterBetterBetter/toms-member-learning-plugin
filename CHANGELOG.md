@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## 0.7.0 - 2026-09-01
+
+De-branded the plugin core. The plugin no longer names a specific project
+anywhere a person can see it, and it no longer needs `wp-config` to be neutral.
+
+- **Brand defaults are now universal.** They previously fell back to the TSOL
+  values, so a neutral install was the thing that required configuration —
+  backwards. Now: menu label `Library` (was `TSOL Library`), brand name
+  `Member Library` (was `The Tom Woods School of Life`), and **no logo** (was a
+  hardcoded tomschooloflife.com SVG), with the interstitial CSP falling back to
+  `'self'`. The constant/option override chain survives only as opt-in
+  decoration for a brand that wants its own wording.
+- Replaced 29 TSOL-branded display strings and 37 "School" references across
+  21 files with universal wording — "Return to the site", "Sign-in is
+  temporarily unavailable", "Library app cursor", "Access Groups — …".
+- Added `MemberLibrary_Brand::app_name()` for admin copy that refers to the
+  member-facing application.
+- The brand-config contract now fails if any brand default ever names a
+  specific project again.
+
+**Machine identifiers are unchanged** and remain the frozen cross-brand
+contract: REST namespace `tsol-library/v1`, the `X-TSOL-*` webhook/catalogue/
+transcript headers, `X-TSOL-Client-ID`, `tsol_*` options/hooks/meta, the
+`tsol_library_*` CPTs, the catalogue outbox table, and the `tsol-library`
+OAuth client id.
+
+**Note for existing installs:** an install that configures nothing now shows
+`Library` instead of `TSOL Library`. A brand that wants its previous wording
+sets `tsol_library_brand_library_menu_label` (option) or the matching constant.
+Generated MemberPress rule titles change from `TSOL Access Groups — …` to
+`Access Groups — …` for NEWLY generated rules only; existing rows keep their
+titles.
+
 ## 0.6.0 - 2026-09-01
 
 Consolidation into one canonical multi-brand library plugin (serves Tom's

@@ -148,4 +148,4 @@ WP_CLI::line(wp_json_encode(array(
     'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
     'bytes' => strlen($json),
 ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-WP_CLI::success('The portable package contains only WordPress-owned TSOL Library data and round-trips unchanged.');
+WP_CLI::success('The portable package contains only WordPress-owned Library data and round-trips unchanged.');

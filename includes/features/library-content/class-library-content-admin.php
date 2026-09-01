@@ -1653,7 +1653,7 @@ class MemberLibrary_Content_Admin {
         delete_transient($key);
 
         echo '<div class="notice notice-error is-dismissible"><p><strong>';
-        echo esc_html__('TSOL Library metadata needs attention:', 'member-library');
+        echo esc_html__('Library metadata needs attention:', 'member-library');
         echo '</strong></p><ul class="ul-disc">';
         foreach ($errors as $error) {
             echo '<li>' . esc_html($error) . '</li>';

@@ -35,18 +35,40 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     delete_option('tsol_library_brand_client_id');
     delete_option('tsol_library_brand_name');
 
+    // The core ships NO brand's artwork or wording. An unconfigured install
+    // must read as a generic member library — no project name is allowed to
+    // appear anywhere a person can see it.
     $assert(
-        false !== strpos(MemberLibrary_Brand::logo_url(), 'tomschooloflife.com'),
-        'Default logo_url should preserve the TSOL logo when unconfigured.'
+        '' === MemberLibrary_Brand::logo_url(),
+        'Default logo_url must be empty; the core ships no brand artwork.'
     );
     $assert(
         'tsol-library' === MemberLibrary_Brand::client_id_default(),
-        'Default client id should be tsol-library when unconfigured.'
+        'Default client id should be tsol-library when unconfigured (frozen machine identifier, not branding).'
     );
     $assert(
-        'https://tomschooloflife.com' === MemberLibrary_Brand::image_csp_src(),
-        'CSP img-src should derive from the default logo host.'
+        "'self'" === MemberLibrary_Brand::image_csp_src(),
+        "CSP img-src must fall back to 'self' when no brand logo is configured."
     );
+    $assert(
+        'Library' === MemberLibrary_Brand::library_menu_label(),
+        'Default menu label must be the universal "Library".'
+    );
+    $assert(
+        'Member Library' === MemberLibrary_Brand::name(),
+        'Default brand name must be the universal "Member Library".'
+    );
+    foreach (array(
+        MemberLibrary_Brand::name(),
+        MemberLibrary_Brand::library_menu_label(),
+        MemberLibrary_Brand::app_name(),
+        MemberLibrary_Brand::logo_url(),
+    ) as $unconfigured_value) {
+        $assert(
+            !preg_match('/TSOL|Tom Woods|School of Life|Liberty/i', (string) $unconfigured_value),
+            'No brand default may name a specific project: ' . $unconfigured_value
+        );
+    }
 
     // Option override wins over default.
     update_option('tsol_library_brand_logo_url', 'https://cdn.example.test/liberty-logo.svg');

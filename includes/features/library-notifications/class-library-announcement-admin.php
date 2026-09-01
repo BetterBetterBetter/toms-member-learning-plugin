@@ -153,7 +153,7 @@ class MemberLibrary_Announcement_Admin {
                 </select>
             </label>
             <?php if ($selected_unavailable) : ?>
-                <div class="notice notice-error inline"><p><?php esc_html_e('The saved destination is no longer published or has lost its School identity. Choose a replacement before previewing this audience.', 'member-library'); ?></p></div>
+                <div class="notice notice-error inline"><p><?php esc_html_e('The saved destination is no longer published or has lost its Library identity. Choose a replacement before previewing this audience.', 'member-library'); ?></p></div>
             <?php endif; ?>
         <?php else : ?>
             <p><strong><?php echo esc_html($this->destination_label($selected)); ?></strong></p>
@@ -172,7 +172,7 @@ class MemberLibrary_Announcement_Admin {
             $summary = (string) get_post_meta($post->ID, MemberLibrary_Announcement_Model::META_AUDIENCE_SUMMARY, true);
             ?>
             <div class="notice notice-info inline"><p><strong><?php esc_html_e('Audience review is administrator-only.', 'member-library'); ?></strong></p></div>
-            <p><?php echo esc_html($summary !== '' ? $summary : __('Everyone signed in to the School (administrator review required)', 'member-library')); ?></p>
+            <p><?php echo esc_html($summary !== '' ? $summary : __('Everyone signed in to the Library (administrator review required)', 'member-library')); ?></p>
             <?php
             return;
         }
@@ -281,7 +281,7 @@ class MemberLibrary_Announcement_Admin {
             <p class="description" data-announcement-preview-guidance><?php esc_html_e('Save any destination or audience changes before previewing.', 'member-library'); ?></p>
         <?php endif; ?>
         <p><button type="button" class="button" disabled><?php esc_html_e('Send test to me', 'member-library'); ?></button></p>
-        <p class="description"><?php esc_html_e('Self-test delivery becomes available only after private School notification persistence is reviewed and enabled.', 'member-library'); ?></p>
+        <p class="description"><?php esc_html_e('Self-test delivery becomes available only after private Library notification persistence is reviewed and enabled.', 'member-library'); ?></p>
         <?php
     }
 
@@ -571,7 +571,7 @@ class MemberLibrary_Announcement_Admin {
         $counts = is_array($preview['counts'] ?? null) ? $preview['counts'] : array();
         ?>
         <div class="tsol-announcement-preview-summary">
-            <p><strong><?php echo esc_html(number_format_i18n((int) ($counts['eligible'] ?? 0))); ?></strong> <?php esc_html_e('linked School accounts currently eligible', 'member-library'); ?></p>
+            <p><strong><?php echo esc_html(number_format_i18n((int) ($counts['eligible'] ?? 0))); ?></strong> <?php esc_html_e('linked Library accounts currently eligible', 'member-library'); ?></p>
             <ul>
                 <li><?php echo esc_html(sprintf(__('%s WordPress candidates', 'member-library'), number_format_i18n((int) ($counts['wordpressCandidates'] ?? 0)))); ?></li>
                 <li><?php echo esc_html(sprintf(__('%s unlinked', 'member-library'), number_format_i18n((int) ($counts['unlinked'] ?? 0)))); ?></li>
@@ -579,7 +579,7 @@ class MemberLibrary_Announcement_Admin {
                 <li><?php echo esc_html(sprintf(__('%s relationship preference suppressed', 'member-library'), number_format_i18n((int) ($counts['relationshipSuppressed'] ?? 0)))); ?></li>
                 <li><?php echo esc_html(sprintf(__('%s eligible administrators', 'member-library'), number_format_i18n((int) ($counts['eligibleAdministrators'] ?? 0)))); ?></li>
             </ul>
-            <p class="description"><?php esc_html_e('Estimate only. Live access and School relationships will be checked again at any future dispatch.', 'member-library'); ?></p>
+            <p class="description"><?php esc_html_e('Estimate only. Live access and Library relationships will be checked again at any future dispatch.', 'member-library'); ?></p>
         </div>
         <?php
     }
@@ -626,7 +626,7 @@ class MemberLibrary_Announcement_Admin {
 
     private function preset_authority($preset) {
         if (MemberLibrary_Announcement_Audience_Builder::PRESET_RELATIONSHIP === $preset) {
-            return __('School activity + MemberPress access', 'member-library');
+            return __('Library activity + MemberPress access', 'member-library');
         }
         if (MemberLibrary_Announcement_Audience_Builder::PRESET_MEMBERSHIP === $preset || MemberLibrary_Announcement_Audience_Builder::PRESET_CONTENT_ACCESS === $preset) {
             return __('MemberPress / WordPress authority', 'member-library');

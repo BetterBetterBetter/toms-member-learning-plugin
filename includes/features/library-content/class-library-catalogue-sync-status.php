@@ -40,7 +40,7 @@ class MemberLibrary_Catalogue_Sync_Status {
             $tests['direct'] = array();
         }
         $tests['direct'][self::SITE_HEALTH_TEST] = array(
-            'label' => __('TSOL School catalogue synchronization', 'member-library'),
+            'label' => __('Catalogue synchronization', 'member-library'),
             'test' => array($this, 'site_health_test'),
         );
         return $tests;
@@ -50,16 +50,16 @@ class MemberLibrary_Catalogue_Sync_Status {
         $status = MemberLibrary_Catalogue_Webhook::delivery_status();
         $assessment = self::assess_local_status($status);
         $labels = array(
-            'good' => __('TSOL School catalogue delivery is healthy', 'member-library'),
-            'recommended' => __('TSOL School catalogue delivery needs attention', 'member-library'),
-            'critical' => __('TSOL School catalogue delivery is unhealthy', 'member-library'),
+            'good' => __('Catalogue delivery is healthy', 'member-library'),
+            'recommended' => __('Catalogue delivery needs attention', 'member-library'),
+            'critical' => __('Catalogue delivery is unhealthy', 'member-library'),
         );
 
         return array(
             'label' => $labels[$assessment['status']],
             'status' => $assessment['status'],
             'badge' => array(
-                'label' => __('TSOL School', 'member-library'),
+                'label' => __('Library app', 'member-library'),
                 'color' => 'blue',
             ),
             'description' => sprintf('<p>%s</p>', esc_html($assessment['message'])),
@@ -86,21 +86,21 @@ class MemberLibrary_Catalogue_Sync_Status {
         $retry_notice = isset($_GET['catalogue_retry']) ? sanitize_key(wp_unslash($_GET['catalogue_retry'])) : '';
         ?>
         <h2><?php esc_html_e('Catalogue Synchronization', 'member-library'); ?></h2>
-        <p class="tsol-library-admin-page__lead"><?php esc_html_e('WordPress remains the editorial source of truth. This page confirms that its durable change journal and the School catalogue projection are moving together.', 'member-library'); ?></p>
+        <p class="tsol-library-admin-page__lead"><?php esc_html_e('WordPress remains the editorial source of truth. This page confirms that its durable change journal and the Library app catalogue projection are moving together.', 'member-library'); ?></p>
         <div class="notice <?php echo esc_attr($notice_class); ?> inline">
             <p><strong><?php echo esc_html($assessment['message']); ?></strong></p>
         </div>
         <?php if ('delivered' === $retry_notice) : ?>
-            <div class="notice notice-success inline"><p><?php esc_html_e('WordPress delivered the pending catalogue change. The School worker is now processing it; refresh this page shortly to confirm matching cursors.', 'member-library'); ?></p></div>
+            <div class="notice notice-success inline"><p><?php esc_html_e('WordPress delivered the pending catalogue change. The Library app worker is now processing it; refresh this page shortly to confirm matching cursors.', 'member-library'); ?></p></div>
         <?php elseif ('pending' === $retry_notice) : ?>
-            <div class="notice notice-warning inline"><p><?php esc_html_e('The catalogue delivery is still pending. Confirm that the Library URL and catalogue synchronization secret exactly match the School app, then retry.', 'member-library'); ?></p></div>
+            <div class="notice notice-warning inline"><p><?php esc_html_e('The catalogue delivery is still pending. Confirm that the Library URL and catalogue synchronization secret exactly match the Library app app, then retry.', 'member-library'); ?></p></div>
         <?php endif; ?>
 
         <div class="tsol-library-admin-stats">
             <?php self::render_stat(__('WordPress cursor', 'member-library'), $local['source_cursor']); ?>
-            <?php self::render_stat(__('School cursor', 'member-library'), !empty($remote['ok']) ? $remote['cursor'] : __('Unavailable', 'member-library')); ?>
+            <?php self::render_stat(__('Library app cursor', 'member-library'), !empty($remote['ok']) ? $remote['cursor'] : __('Unavailable', 'member-library')); ?>
             <?php self::render_stat(__('Pending deliveries', 'member-library'), $local['pending']['count']); ?>
-            <?php self::render_stat(__('Pending School wake-ups', 'member-library'), !empty($remote['ok']) ? $remote['pending_wakeups'] : __('Unavailable', 'member-library')); ?>
+            <?php self::render_stat(__('Pending Library app wake-ups', 'member-library'), !empty($remote['ok']) ? $remote['pending_wakeups'] : __('Unavailable', 'member-library')); ?>
         </div>
 
         <section class="card tsol-library-admin-card--wide">
@@ -114,8 +114,8 @@ class MemberLibrary_Catalogue_Sync_Status {
                     <?php self::render_row(__('Next immediate delivery attempt', 'member-library'), self::display_time($local['cron_scheduled_at'])); ?>
                     <?php self::render_row(__('One-minute delivery watchdog', 'member-library'), self::display_time($local['watchdog_scheduled_at'])); ?>
                     <?php self::render_row(__('Last confirmed webhook delivery', 'member-library'), self::last_delivery_label($local['last_delivery'])); ?>
-                    <?php self::render_row(__('School last successful sync', 'member-library'), !empty($remote['ok']) ? self::display_time($remote['last_successful_sync_at']) : __('Unavailable', 'member-library')); ?>
-                    <?php self::render_row(__('School schema', 'member-library'), !empty($remote['ok']) && '' !== $remote['schema_version'] ? $remote['schema_version'] : __('Unavailable', 'member-library')); ?>
+                    <?php self::render_row(__('Library app last successful sync', 'member-library'), !empty($remote['ok']) ? self::display_time($remote['last_successful_sync_at']) : __('Unavailable', 'member-library')); ?>
+                    <?php self::render_row(__('Library app schema', 'member-library'), !empty($remote['ok']) && '' !== $remote['schema_version'] ? $remote['schema_version'] : __('Unavailable', 'member-library')); ?>
                 </tbody>
             </table>
         </section>
@@ -134,8 +134,8 @@ class MemberLibrary_Catalogue_Sync_Status {
 
         <section class="card tsol-library-admin-card--wide">
             <h3><?php esc_html_e('Production requirement', 'member-library'); ?></h3>
-            <p><?php esc_html_e('Run WordPress cron from the hosting platform at least once per minute. Immediate delivery accelerates normal browser saves, while the durable cron retry and the School worker poll recover from process, network, or receiver failures.', 'member-library'); ?></p>
-            <p><?php esc_html_e('Investigate when the oldest pending delivery exceeds two minutes, retry counts keep increasing, the School cursor remains behind, or the latest School run fails.', 'member-library'); ?></p>
+            <p><?php esc_html_e('Run WordPress cron from the hosting platform at least once per minute. Immediate delivery accelerates normal browser saves, while the durable cron retry and the Library app worker poll recover from process, network, or receiver failures.', 'member-library'); ?></p>
+            <p><?php esc_html_e('Investigate when the oldest pending delivery exceeds two minutes, retry counts keep increasing, the Library app cursor remains behind, or the latest Library app run fails.', 'member-library'); ?></p>
         </section>
         <?php
     }
@@ -178,7 +178,7 @@ class MemberLibrary_Catalogue_Sync_Status {
         if (empty($remote['ok'])) {
             return array(
                 'status' => 'recommended',
-                'message' => __('WordPress delivery is available, but the School synchronization status could not be confirmed.', 'member-library'),
+                'message' => __('WordPress delivery is available, but the Library app synchronization status could not be confirmed.', 'member-library'),
             );
         }
 
@@ -187,19 +187,19 @@ class MemberLibrary_Catalogue_Sync_Status {
         if ($school_cursor < $source_cursor || (int) $remote['pending_wakeups'] > 0 || (int) $local['pending']['count'] > 0) {
             return array(
                 'status' => 'recommended',
-                'message' => __('The School catalogue is safely catching up with WordPress.', 'member-library'),
+                'message' => __('The Library app catalogue is safely catching up with WordPress.', 'member-library'),
             );
         }
         if (is_array($remote['latest_run']) && 'FAILED' === (string) $remote['latest_run']['status']) {
             return array(
                 'status' => 'critical',
-                'message' => __('The latest School catalogue synchronization failed.', 'member-library'),
+                'message' => __('The latest Library app catalogue synchronization failed.', 'member-library'),
             );
         }
 
         return array(
             'status' => 'good',
-            'message' => __('The School catalogue is synchronized with WordPress.', 'member-library'),
+            'message' => __('The Library app catalogue is synchronized with WordPress.', 'member-library'),
         );
     }
 

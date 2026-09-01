@@ -75,7 +75,7 @@ class MemberLibrary_Catalogue_Webhook {
         }
         $schedules[self::WATCHDOG_SCHEDULE] = array(
             'interval' => MINUTE_IN_SECONDS,
-            'display' => __('Every minute (TSOL catalogue delivery)', 'member-library'),
+            'display' => __('Every minute (catalogue delivery)', 'member-library'),
         );
         return $schedules;
     }

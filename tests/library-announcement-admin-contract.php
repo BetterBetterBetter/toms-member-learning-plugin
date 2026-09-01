@@ -3,7 +3,7 @@
  * Phase 2 private announcement draft/editor contract.
  *
  * Creates one disposable draft only. It does not send, schedule, publish,
- * resolve recipients, change memberships, or create School notification data.
+ * resolve recipients, change memberships, or create Library notification data.
  */
 
 if (!defined('WP_CLI') || !WP_CLI) {
@@ -37,7 +37,7 @@ try {
         $assert(false === $post_type->publicly_queryable, 'Announcements must not be publicly queryable.');
         $assert(false === $post_type->show_in_rest, 'Announcements must not be available through the public REST post API.');
         $assert(false === $post_type->can_export, 'Announcements must not be bulk-exportable from WordPress.');
-        $assert('tsol-library' === $post_type->show_in_menu, 'Announcements are not grouped under the TSOL Library menu.');
+        $assert('tsol-library' === $post_type->show_in_menu, 'Announcements are not grouped under the Library menu.');
     }
 
     $editor_role = get_role('editor');
@@ -346,7 +346,7 @@ try {
     ob_start();
     $admin_ui->render_review(get_post($announcement_id));
     $editor_review = ob_get_clean();
-    $assert(false !== strpos($editor_review, 'administrator will complete') && false === strpos($editor_review, 'linked School accounts currently eligible'), 'An editor without the delivery capability received aggregate audience results.');
+    $assert(false !== strpos($editor_review, 'administrator will complete') && false === strpos($editor_review, 'linked Library accounts currently eligible'), 'An editor without the delivery capability received aggregate audience results.');
     wp_set_current_user((int) $administrator_ids[0]);
 
     for ($index = 0; $index < MemberLibrary_Announcement_Audit::MAX_ENTRIES + 5; $index++) {
