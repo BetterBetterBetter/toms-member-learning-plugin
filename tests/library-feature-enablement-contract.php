@@ -20,28 +20,52 @@ $assert = function ($condition, $message) use (&$failures) {
     }
 };
 
-delete_option('tsol_library_feature_accountability_modal');
-delete_option('tsol_library_feature_cookie_consent');
+// The option/default path is only assertable when a FEATURE CONSTANT is not
+// forcing the value (constants are immutable within a request). On a
+// constant-configured install (e.g. Liberty, which pins both features off) we
+// assert the constant wins instead.
+if (!defined('TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL')
+    && !defined('TSOL_LIBRARY_FEATURE_COOKIE_CONSENT')) {
 
-// Unset ⇒ enabled (preserves TSOL).
-$assert(true === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Unset feature should default enabled.');
-$assert(true === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Unset feature should default enabled.');
+    delete_option('tsol_library_feature_accountability_modal');
+    delete_option('tsol_library_feature_cookie_consent');
 
-// Option '0' disables (a Liberty core-only install).
-update_option('tsol_library_feature_accountability_modal', '0');
-update_option('tsol_library_feature_cookie_consent', '0');
-$assert(false === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Option "0" should disable the feature.');
-$assert(false === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Option "0" should disable the feature.');
+    // Unset ⇒ enabled (preserves TSOL).
+    $assert(true === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Unset feature should default enabled.');
+    $assert(true === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Unset feature should default enabled.');
 
-// Filter overrides.
-add_filter('tsol_library_feature_cookie_consent', '__return_true');
-$assert(true === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Filter should override a disabling option.');
+    // Option '0' disables (a Liberty core-only install without constants).
+    update_option('tsol_library_feature_accountability_modal', '0');
+    update_option('tsol_library_feature_cookie_consent', '0');
+    $assert(false === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Option "0" should disable the feature.');
+    $assert(false === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Option "0" should disable the feature.');
 
-// Core features are not gated by this mechanism (sanity: unknown key defaults enabled).
-delete_option('tsol_library_feature_accountability_modal');
-$assert(true === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Re-enabling by deleting the option should restore default.');
+    // Filter overrides.
+    add_filter('tsol_library_feature_cookie_consent', '__return_true');
+    $assert(true === TSOL_Library_Brand::feature_enabled('cookie_consent'), 'Filter should override a disabling option.');
 
-delete_option('tsol_library_feature_cookie_consent');
+    // Re-enabling by deleting the option should restore the default.
+    delete_option('tsol_library_feature_accountability_modal');
+    $assert(true === TSOL_Library_Brand::feature_enabled('accountability_modal'), 'Deleting the option should restore default enabled.');
+
+    delete_option('tsol_library_feature_cookie_consent');
+} else {
+    // Constant-configured install: the constant must win over any option.
+    if (defined('TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL')) {
+        update_option('tsol_library_feature_accountability_modal', '1');
+        $assert(
+            ((bool) TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL) === TSOL_Library_Brand::feature_enabled('accountability_modal'),
+            'Constant TSOL_LIBRARY_FEATURE_ACCOUNTABILITY_MODAL must win over the option.'
+        );
+        delete_option('tsol_library_feature_accountability_modal');
+    }
+    if (defined('TSOL_LIBRARY_FEATURE_COOKIE_CONSENT')) {
+        $assert(
+            ((bool) TSOL_LIBRARY_FEATURE_COOKIE_CONSENT) === TSOL_Library_Brand::feature_enabled('cookie_consent'),
+            'Constant TSOL_LIBRARY_FEATURE_COOKIE_CONSENT must win.'
+        );
+    }
+}
 
 if (!empty($failures)) {
     WP_CLI::error("Feature enablement contract failed:\n - " . implode("\n - ", $failures));
