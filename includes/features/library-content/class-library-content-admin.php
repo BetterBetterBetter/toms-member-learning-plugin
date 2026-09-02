@@ -543,6 +543,15 @@ class MemberLibrary_Content_Admin {
             MemberLibrary_Content_Model::SERIES_POST_TYPE,
         ), true)) {
             add_meta_box(
+                'tsol-library-purchase-offer',
+                __('Purchase offer', 'member-library'),
+                array($this, 'render_purchase_offer_meta_box'),
+                $post_type,
+                'normal',
+                'high'
+            );
+
+            add_meta_box(
                 'tsol-library-ai-assistant',
                 __('AI assistant', 'member-library'),
                 array($this, 'render_ai_assistant_meta_box'),
@@ -1151,6 +1160,37 @@ class MemberLibrary_Content_Admin {
         <?php
     }
 
+    public function render_purchase_offer_meta_box($post) {
+        wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
+        $sale_price = MemberLibrary_Content_Model::sanitize_sale_price(get_post_meta($post->ID, MemberLibrary_Content_Model::META_SALE_PRICE, true));
+        $purchase_url = MemberLibrary_Content_Model::sanitize_purchase_url(get_post_meta($post->ID, MemberLibrary_Content_Model::META_PURCHASE_URL, true));
+        $button_label = MemberLibrary_Content_Model::sanitize_purchase_button_label(get_post_meta($post->ID, MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL, true));
+        $default_label = MemberLibrary_Content_Model::SERIES_POST_TYPE === $post->post_type
+            ? __('Buy series', 'member-library')
+            : __('Buy course', 'member-library');
+        ?>
+        <div class="tsol-library-editor">
+            <input type="hidden" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[purchase_offer_present]" value="1" />
+            <div class="tsol-library-field-grid">
+                <div class="tsol-library-field">
+                    <label for="tsol-library-sale-price"><?php esc_html_e('Sale price', 'member-library'); ?></label>
+                    <input type="text" id="tsol-library-sale-price" maxlength="40" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[sale_price]" value="<?php echo esc_attr($sale_price); ?>" placeholder="<?php esc_attr_e('$49 one-time', 'member-library'); ?>" />
+                    <p class="description"><?php esc_html_e('Display text only. Include the currency and billing cadence when relevant.', 'member-library'); ?></p>
+                </div>
+                <div class="tsol-library-field">
+                    <label for="tsol-library-purchase-button-label"><?php esc_html_e('Buy button text', 'member-library'); ?></label>
+                    <input type="text" id="tsol-library-purchase-button-label" maxlength="80" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[purchase_button_label]" value="<?php echo esc_attr($button_label); ?>" placeholder="<?php echo esc_attr($default_label); ?>" />
+                </div>
+            </div>
+            <div class="tsol-library-field">
+                <label for="tsol-library-purchase-url"><?php esc_html_e('Sales page or checkout URL', 'member-library'); ?></label>
+                <input class="widefat" type="url" id="tsol-library-purchase-url" name="<?php echo esc_attr(self::PAYLOAD_NAME); ?>[purchase_url]" value="<?php echo esc_attr($purchase_url); ?>" placeholder="https://example.com/checkout" inputmode="url" />
+                <p class="description"><?php esc_html_e('The Library shows the purchase button only when this is a valid HTTP or HTTPS URL.', 'member-library'); ?></p>
+            </div>
+        </div>
+        <?php
+    }
+
     public function render_series_episodes_meta_box($post) {
         $structure_admin = new MemberLibrary_Structure_Admin();
         $structure_admin->render_compact_summary($post);
@@ -1481,6 +1521,11 @@ class MemberLibrary_Content_Admin {
             MemberLibrary_Content_Model::COURSE_POST_TYPE,
             MemberLibrary_Content_Model::SERIES_POST_TYPE,
         ), true)) {
+            if (!empty($payload['purchase_offer_present'])) {
+                update_post_meta($post_id, MemberLibrary_Content_Model::META_SALE_PRICE, MemberLibrary_Content_Model::sanitize_sale_price($payload['sale_price'] ?? ''));
+                update_post_meta($post_id, MemberLibrary_Content_Model::META_PURCHASE_URL, MemberLibrary_Content_Model::sanitize_purchase_url($payload['purchase_url'] ?? ''));
+                update_post_meta($post_id, MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL, MemberLibrary_Content_Model::sanitize_purchase_button_label($payload['purchase_button_label'] ?? ''));
+            }
             update_post_meta(
                 $post_id,
                 MemberLibrary_Content_Model::META_AI_ASSISTANT_ENABLED,

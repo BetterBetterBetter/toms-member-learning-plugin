@@ -100,6 +100,13 @@ $assert(count(array_filter($all, static function ($item) {
     return in_array((string) $item['record_type'], array('course', 'series'), true)
         && ('available' !== (string) $item['availability'] || null !== $item['release_at']);
 })) === 0, 'A Course or Series emitted item-only availability metadata.');
+$assert(count(array_filter($all, static function ($item) {
+    return !array_key_exists('purchase_offer', $item);
+})) === 0, 'A catalogue record omitted the purchase-offer contract.');
+$assert(count(array_filter($all, static function ($item) {
+    return !in_array((string) $item['record_type'], array('course', 'series'), true)
+        && null !== $item['purchase_offer'];
+})) === 0, 'Purchase-offer metadata leaked onto a lesson or item.');
 $coming_soon_records = array_values(array_filter($all, static function ($item) {
     return 'coming_soon' === (string) ($item['availability'] ?? '');
 }));

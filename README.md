@@ -13,7 +13,8 @@ See the workspace consolidation record in
 ## What this plugin is (and is not)
 
 - **Is:** the Library content model (courses, series, items, speakers,
-  collections), the WordPress↔app OAuth bridge (`library-auth`), the catalogue
+  collections, and Course/Series purchase offers), the WordPress↔app OAuth
+  bridge (`library-auth`), the catalogue
   projection + signed webhooks, native MemberPress access groups, member
   announcements, and the active Liberty LearnDash importer.
 - **Is not:** site-specific features. TSOL-only features (accountability

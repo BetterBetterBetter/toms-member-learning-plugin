@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class MemberLibrary_Content_Catalogue {
 
-    const SCHEMA_VERSION = '20260830.1';
+    const SCHEMA_VERSION = '20260902.1';
     const DEFAULT_PAGE_SIZE = 50;
     const MAX_PAGE_SIZE = 100;
 
@@ -154,6 +154,7 @@ class MemberLibrary_Content_Catalogue {
                 MemberLibrary_Content_Model::META_AI_ASSISTANT_QUESTIONS,
                 true
             )) : array(),
+            'purchase_offer' => self::purchase_offer($post),
             'published_at' => self::post_date($post->post_date_gmt),
             'modified_at' => self::post_date($post->post_modified_gmt),
             'last_updated_at' => self::last_updated_at($post),
@@ -185,6 +186,28 @@ class MemberLibrary_Content_Catalogue {
         );
 
         return $record;
+    }
+
+    private static function purchase_offer(WP_Post $post) {
+        if (!in_array($post->post_type, array(
+            MemberLibrary_Content_Model::COURSE_POST_TYPE,
+            MemberLibrary_Content_Model::SERIES_POST_TYPE,
+        ), true)) {
+            return null;
+        }
+        $url = MemberLibrary_Content_Model::sanitize_purchase_url(get_post_meta($post->ID, MemberLibrary_Content_Model::META_PURCHASE_URL, true));
+        if ('' === $url) {
+            return null;
+        }
+        $button_label = MemberLibrary_Content_Model::sanitize_purchase_button_label(get_post_meta($post->ID, MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL, true));
+        if ('' === $button_label) {
+            $button_label = MemberLibrary_Content_Model::SERIES_POST_TYPE === $post->post_type ? 'Buy series' : 'Buy course';
+        }
+        return array(
+            'price' => MemberLibrary_Content_Model::sanitize_sale_price(get_post_meta($post->ID, MemberLibrary_Content_Model::META_SALE_PRICE, true)),
+            'url' => $url,
+            'button_label' => $button_label,
+        );
     }
 
     public static function is_exportable_post(WP_Post $post) {

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-09-02
+
+- Added portable Course and Series purchase-offer fields for display price,
+  sales or checkout URL, and editable buy-button text.
+- Added the normalized `purchase_offer` catalogue field in schema
+  `20260902.1`; non-parent records and incomplete offers emit `null`.
+
 ## 0.7.1 - 2026-09-02
 
 - Replaced the standalone authentication fallback with a plain, logo-free 403

@@ -71,6 +71,22 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
     }
 }
 
+$purchase_meta_keys = array(
+    MemberLibrary_Content_Model::META_SALE_PRICE,
+    MemberLibrary_Content_Model::META_PURCHASE_URL,
+    MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL,
+);
+foreach (array(MemberLibrary_Content_Model::COURSE_POST_TYPE, MemberLibrary_Content_Model::SERIES_POST_TYPE) as $purchase_post_type) {
+    $assert(
+        array() === array_diff($purchase_meta_keys, MemberLibrary_Content_Model::metadata_keys_for_post_type($purchase_post_type)),
+        'A Course or Series purchase-offer key is outside the portable metadata contract.'
+    );
+}
+$assert(
+    array() === array_values(array_intersect($purchase_meta_keys, MemberLibrary_Content_Model::metadata_keys_for_post_type(MemberLibrary_Content_Model::ITEM_POST_TYPE))),
+    'Purchase-offer keys unexpectedly remain in the Content metadata contract.'
+);
+
 foreach ((array) ($package['data']['terms'] ?? array()) as $term) {
     if (MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY === (string) ($term['taxonomy'] ?? '')) {
         $assert(array_key_exists('appearance', (array) ($term['meta'] ?? array())), 'A portable Collection omitted its optional appearance.');

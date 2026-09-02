@@ -291,6 +291,10 @@ try {
         MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
         MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
             'course_learning_outcomes_present' => '1',
+            'purchase_offer_present' => '1',
+            'sale_price' => '$149 one-time',
+            'purchase_url' => 'https://example.test/checkout/course',
+            'purchase_button_label' => 'Get this course',
             'learning_outcomes' => array(
                 array('text' => 'Build an independent training plan.'),
                 array('text' => ''),
@@ -310,6 +314,9 @@ try {
         array('Build an independent training plan.', 'Evaluate a gym programme.') === $course_learning_outcomes,
         'Course learning outcomes were not cleaned, de-duplicated, and saved in editorial order.'
     );
+    $assert('$149 one-time' === get_post_meta($course_fixture_id, MemberLibrary_Content_Model::META_SALE_PRICE, true), 'Course sale price was not saved.');
+    $assert('https://example.test/checkout/course' === get_post_meta($course_fixture_id, MemberLibrary_Content_Model::META_PURCHASE_URL, true), 'Course purchase URL was not saved.');
+    $assert('Get this course' === get_post_meta($course_fixture_id, MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL, true), 'Course purchase button label was not saved.');
     $_POST = array(
         MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
         MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
@@ -425,6 +432,19 @@ try {
     }
     $series_fixture_id = (int) $series_fixture_id;
     $created_post_ids[] = $series_fixture_id;
+    $_POST = array(
+        MemberLibrary_Content_Admin::NONCE_NAME => wp_create_nonce(MemberLibrary_Content_Admin::NONCE_ACTION),
+        MemberLibrary_Content_Admin::PAYLOAD_NAME => array(
+            'purchase_offer_present' => '1',
+            'sale_price' => '<b>$29/month</b>',
+            'purchase_url' => 'javascript:alert(1)',
+            'purchase_button_label' => 'Join the series',
+        ),
+    );
+    $editor->save_post($series_fixture_id, get_post($series_fixture_id));
+    $assert('$29/month' === get_post_meta($series_fixture_id, MemberLibrary_Content_Model::META_SALE_PRICE, true), 'Series sale price was not sanitized and saved.');
+    $assert('' === get_post_meta($series_fixture_id, MemberLibrary_Content_Model::META_PURCHASE_URL, true), 'An unsafe Series purchase URL was saved.');
+    $assert('Join the series' === get_post_meta($series_fixture_id, MemberLibrary_Content_Model::META_PURCHASE_BUTTON_LABEL, true), 'Series purchase button label was not saved.');
     delete_post_meta($fixture_id, MemberLibrary_Content_Model::META_COURSE_ID);
     update_post_meta($fixture_id, MemberLibrary_Content_Model::META_SERIES_ID, $series_fixture_id);
     ob_start();
@@ -479,6 +499,7 @@ try {
     $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-details'), 'Library Course retained the generic details box.');
     $assert(!$has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-placement'), 'Library Course displayed item placement controls.');
     $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-course-page-content'), 'Library Course landing-page fields were not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-purchase-offer'), 'Library Course purchase-offer fields were not registered.');
     $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-curriculum'), 'Library Course curriculum box was not registered.');
     $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-protection'), 'Library Course access box was not registered.');
     $assert($has_meta_box(MemberLibrary_Content_Model::COURSE_POST_TYPE, 'tsol-library-ai-assistant'), 'Library Course AI assistant box was not registered.');
@@ -489,6 +510,7 @@ try {
 
     $editor->add_meta_boxes(MemberLibrary_Content_Model::SERIES_POST_TYPE, $library_series_post);
     $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-settings'), 'Library Series settings box was not registered.');
+    $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-purchase-offer'), 'Library Series purchase-offer fields were not registered.');
     $assert(!$has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-details'), 'Library Series retained the generic details box.');
     $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-series-episodes'), 'Library Series episodes box was not registered.');
     $assert($has_meta_box(MemberLibrary_Content_Model::SERIES_POST_TYPE, 'tsol-library-protection'), 'Library Series access box was not registered.');
@@ -503,6 +525,7 @@ try {
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-details'), 'TSOL details leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-curriculum'), 'TSOL curriculum leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-course-page-content'), 'TSOL Course landing-page fields leaked onto a native MemberPress Course.');
+    $assert(!$has_meta_box('mpcs-course', 'tsol-library-purchase-offer'), 'Library purchase-offer fields leaked onto a native MemberPress Course.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-protection'), 'TSOL access UI leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-ai-assistant'), 'TSOL AI assistant UI leaked onto the native MemberPress Course editor.');
     $assert(!$has_meta_box('mpcs-course', 'tsol-library-speakers'), 'TSOL Speaker relationships leaked onto the native MemberPress Course editor.');

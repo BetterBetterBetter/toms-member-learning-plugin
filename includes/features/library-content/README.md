@@ -162,6 +162,15 @@ grant access. Draft Speaker profiles can be assigned while editing but are
 omitted from catalogue output until the profile itself is published;
 publication still creates no WordPress frontend route.
 
+Courses and Series also own an optional purchase offer in their dedicated
+**Purchase offer** editor panel. The price is bounded display text, so editors
+must include any currency and cadence (for example, `$49 one-time`); it is not
+used for financial calculations. The sales or checkout destination accepts
+only absolute HTTP(S) URLs, and the button label is bounded plain text. The
+catalogue emits `purchase_offer: null` until a valid destination exists, then
+emits the price, URL, and saved label (or the record-type default). These fields
+are portable WordPress metadata and travel in Library environment packages.
+
 The native Excerpt is the short member-facing introduction. The native body is
 the long-form Description for Series and Content, the public **About this
 course** source for Courses, and the public preview description for Lessons. It

@@ -47,6 +47,9 @@ class MemberLibrary_Content_Model {
     const META_SERIES_ONGOING = '_tsol_library_series_ongoing';
     const META_AI_ASSISTANT_ENABLED = '_tsol_library_ai_assistant_enabled';
     const META_AI_ASSISTANT_QUESTIONS = '_tsol_library_ai_assistant_questions';
+    const META_SALE_PRICE = '_tsol_library_sale_price';
+    const META_PURCHASE_URL = '_tsol_library_purchase_url';
+    const META_PURCHASE_BUTTON_LABEL = '_tsol_library_purchase_button_label';
     const META_SECTION_KEY = '_tsol_library_section_key';
     const META_SECTION_TITLE = '_tsol_library_section_title';
     const META_SECTION_POSITION = '_tsol_library_section_position';
@@ -123,6 +126,9 @@ class MemberLibrary_Content_Model {
             self::META_SERIES_ONGOING,
             self::META_AI_ASSISTANT_ENABLED,
             self::META_AI_ASSISTANT_QUESTIONS,
+            self::META_SALE_PRICE,
+            self::META_PURCHASE_URL,
+            self::META_PURCHASE_BUTTON_LABEL,
             self::META_SECTION_KEY,
             self::META_SECTION_TITLE,
             self::META_SECTION_POSITION,
@@ -154,6 +160,9 @@ class MemberLibrary_Content_Model {
             self::META_RELEASE_AT_GMT,
             self::META_AI_ASSISTANT_ENABLED,
             self::META_AI_ASSISTANT_QUESTIONS,
+            self::META_SALE_PRICE,
+            self::META_PURCHASE_URL,
+            self::META_PURCHASE_BUTTON_LABEL,
             self::META_TRANSCRIPT_CONTENT,
             self::META_TRANSCRIPT_HASH,
             self::META_TRANSCRIPT_LANGUAGE,
@@ -166,10 +175,16 @@ class MemberLibrary_Content_Model {
             $keys[] = self::META_COURSE_LEARNING_OUTCOMES;
             $keys[] = self::META_AI_ASSISTANT_ENABLED;
             $keys[] = self::META_AI_ASSISTANT_QUESTIONS;
+            $keys[] = self::META_SALE_PRICE;
+            $keys[] = self::META_PURCHASE_URL;
+            $keys[] = self::META_PURCHASE_BUTTON_LABEL;
         } elseif (self::SERIES_POST_TYPE === $post_type) {
             $keys[] = self::META_SERIES_GROUPS;
             $keys[] = self::META_AI_ASSISTANT_ENABLED;
             $keys[] = self::META_AI_ASSISTANT_QUESTIONS;
+            $keys[] = self::META_SALE_PRICE;
+            $keys[] = self::META_PURCHASE_URL;
+            $keys[] = self::META_PURCHASE_BUTTON_LABEL;
         } elseif (self::ITEM_POST_TYPE === $post_type) {
             $keys[] = self::META_AVAILABILITY;
             $keys[] = self::META_RELEASE_AT_GMT;
@@ -411,6 +426,32 @@ class MemberLibrary_Content_Model {
             && in_array(strtolower((string) $parts['scheme']), array('http', 'https'), true)
                 ? $url
                 : '';
+    }
+
+    public static function sanitize_purchase_url($value) {
+        $url = self::sanitize_speaker_url($value);
+        $parts = wp_parse_url($url);
+        return '' !== $url
+            && is_array($parts)
+            && empty($parts['user'])
+            && empty($parts['pass'])
+                ? $url
+                : '';
+    }
+
+    public static function sanitize_sale_price($value) {
+        return self::bounded_plain_text($value, 40);
+    }
+
+    public static function sanitize_purchase_button_label($value) {
+        return self::bounded_plain_text($value, 80);
+    }
+
+    private static function bounded_plain_text($value, $limit) {
+        $value = sanitize_text_field((string) $value);
+        return function_exists('mb_substr')
+            ? mb_substr($value, 0, (int) $limit)
+            : substr($value, 0, (int) $limit);
     }
 
     public static function sanitize_speaker_social_links($value) {
@@ -782,9 +823,15 @@ class MemberLibrary_Content_Model {
         self::register_meta(self::COURSE_POST_TYPE, self::META_COURSE_LEARNING_OUTCOMES, 'array', array(__CLASS__, 'sanitize_course_learning_outcomes'));
         self::register_meta(self::COURSE_POST_TYPE, self::META_AI_ASSISTANT_ENABLED, 'boolean', 'rest_sanitize_boolean');
         self::register_meta(self::COURSE_POST_TYPE, self::META_AI_ASSISTANT_QUESTIONS, 'array', array(__CLASS__, 'sanitize_ai_assistant_questions'));
+        self::register_meta(self::COURSE_POST_TYPE, self::META_SALE_PRICE, 'string', array(__CLASS__, 'sanitize_sale_price'));
+        self::register_meta(self::COURSE_POST_TYPE, self::META_PURCHASE_URL, 'string', array(__CLASS__, 'sanitize_purchase_url'));
+        self::register_meta(self::COURSE_POST_TYPE, self::META_PURCHASE_BUTTON_LABEL, 'string', array(__CLASS__, 'sanitize_purchase_button_label'));
         self::register_meta(self::SERIES_POST_TYPE, self::META_SERIES_GROUPS, 'array', array(__CLASS__, 'sanitize_structure_registry'));
         self::register_meta(self::SERIES_POST_TYPE, self::META_AI_ASSISTANT_ENABLED, 'boolean', 'rest_sanitize_boolean');
         self::register_meta(self::SERIES_POST_TYPE, self::META_AI_ASSISTANT_QUESTIONS, 'array', array(__CLASS__, 'sanitize_ai_assistant_questions'));
+        self::register_meta(self::SERIES_POST_TYPE, self::META_SALE_PRICE, 'string', array(__CLASS__, 'sanitize_sale_price'));
+        self::register_meta(self::SERIES_POST_TYPE, self::META_PURCHASE_URL, 'string', array(__CLASS__, 'sanitize_purchase_url'));
+        self::register_meta(self::SERIES_POST_TYPE, self::META_PURCHASE_BUTTON_LABEL, 'string', array(__CLASS__, 'sanitize_purchase_button_label'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_AVAILABILITY, 'string', array(__CLASS__, 'sanitize_availability'));
         self::register_meta(self::ITEM_POST_TYPE, self::META_RELEASE_AT_GMT, 'string', array(__CLASS__, 'sanitize_release_at_gmt'));
 
