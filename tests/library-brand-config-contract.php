@@ -58,16 +58,6 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
         'Member Library' === MemberLibrary_Brand::name(),
         'Default brand name must be the universal "Member Library".'
     );
-    $default_auth_theme = MemberLibrary_Brand::auth_theme();
-    $assert(
-        '#111827' === $default_auth_theme['background']
-            && '#1e40af' === $default_auth_theme['button'],
-        'The auth interstitial must use the neutral default theme.'
-    );
-    $assert(
-        220 === MemberLibrary_Brand::auth_logo_max_width(),
-        'The auth logo must have a neutral, configurable maximum width.'
-    );
     foreach (array(
         MemberLibrary_Brand::name(),
         MemberLibrary_Brand::library_menu_label(),
@@ -98,27 +88,6 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
         'Explicit image_csp_src option should override the derived host.'
     );
 
-    // Auth theme options accept safe hex colors and reject arbitrary CSS.
-    update_option('tsol_library_brand_auth_button', '#123abc');
-    $assert(
-        '#123abc' === MemberLibrary_Brand::auth_theme()['button'],
-        'A valid auth theme color option should override the neutral default.'
-    );
-    update_option('tsol_library_brand_auth_button', 'red; background-image:url(https://example.test)');
-    $assert(
-        '#1e40af' === MemberLibrary_Brand::auth_theme()['button'],
-        'An invalid auth theme color must fall back to the neutral default.'
-    );
-    update_option('tsol_library_brand_auth_logo_max_width', '900');
-    $assert(
-        480 === MemberLibrary_Brand::auth_logo_max_width(),
-        'The configured auth logo width must be clamped to its safe maximum.'
-    );
-    update_option('tsol_library_brand_auth_logo_max_width', 'not-a-width');
-    $assert(
-        220 === MemberLibrary_Brand::auth_logo_max_width(),
-        'An invalid auth logo width must fall back to the neutral default.'
-    );
 } else {
     // Constant-configured install: the resolved value must equal the constant,
     // and (the Liberty regression) the CSP host must NOT be the TSOL default.
@@ -149,17 +118,21 @@ $assert('Filtered Brand' === MemberLibrary_Brand::name(), 'Brand value filter sh
 // Cleanup.
 delete_option('tsol_library_brand_logo_url');
 delete_option('tsol_library_brand_image_csp_src');
-delete_option('tsol_library_brand_auth_button');
-delete_option('tsol_library_brand_auth_logo_max_width');
 
-// The rendered fallback page must remain brand-neutral and must not emit a
-// broken image when an installation has no configured logo.
+// The fallback is intentionally not a branded surface: it is always a plain
+// 403 page and must not consult brand configuration or render brand artwork.
 $auth_source = file_get_contents(MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth.php');
 $access_source = file_get_contents(MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-content/class-library-content-access-column.php');
-$assert(false !== strpos($auth_source, "if ('' !== \$logo_url)"), 'The auth page must render its logo only when a URL is configured.');
-$assert(false === strpos($auth_source, 'width="190" height="51"'), 'The auth page must not assume the TSOL logo aspect ratio.');
+$render_start = strpos($auth_source, 'private function render_browser_error');
+$render_end = strpos($auth_source, 'private function rest_response', $render_start);
+$render_source = substr($auth_source, $render_start, $render_end - $render_start);
+$assert(false !== strpos($render_source, 'status_header(403)'), 'The generic browser fallback must return HTTP 403.');
+$assert(false !== strpos($render_source, '<span class="status-code">403</span>'), 'The generic browser fallback must visibly identify the 403 response.');
+$assert(false === strpos($render_source, 'MemberLibrary_Brand::'), 'The generic 403 page must not consult brand configuration.');
+$assert(false === strpos($render_source, '<img'), 'The generic 403 page must not render brand artwork.');
+$assert(0 === preg_match('/Member Library|TSOL|Tom Woods|School of Life|Liberty/i', $render_source), 'The generic 403 page contains project-specific branding.');
 foreach (array('#06182b', '#0a2540', '#1a3a52', '#65d5ee', '#dc3545', '#c82333') as $legacy_color) {
-    $assert(false === stripos($auth_source, $legacy_color), 'The auth page still contains a legacy brand color: ' . $legacy_color);
+    $assert(false === stripos($render_source, $legacy_color), 'The generic 403 page still contains a legacy brand color: ' . $legacy_color);
 }
 $assert(false === strpos($access_source, 'this TSOL view'), 'User-facing admin copy must not call the shared UI a TSOL view.');
 

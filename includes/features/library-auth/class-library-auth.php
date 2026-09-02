@@ -868,43 +868,13 @@ class MemberLibrary_Auth {
     }
 
     private function render_browser_error($code, $status = 400) {
-        $code = $this->public_error_code($code);
-        $status = (int) $status;
-        if ($status < 400 || $status > 599) {
-            $status = 400;
-        }
-
-        $copy = array(
-            'eyebrow' => __('Sign-in interrupted', 'member-library'),
-            'title' => __('Sign-in unavailable', 'member-library'),
-            'description' => __('We could not complete sign-in. Return to the site and start again.', 'member-library'),
-        );
-
-        if ($code === 'invalid_request') {
-            $copy = array(
-                'eyebrow' => __('Sign-in expired', 'member-library'),
-                'title' => __('Let’s try that again', 'member-library'),
-                'description' => __('This sign-in request is invalid or has expired. Return to the site and start again.', 'member-library'),
-            );
-        } elseif ($code === 'invalid_sign_out') {
-            $copy = array(
-                'eyebrow' => __('Sign-out interrupted', 'member-library'),
-                'title' => __('Unable to complete sign-out', 'member-library'),
-                'description' => __('We could not verify that sign-out request. Return to the site to safely continue.', 'member-library'),
-            );
-        } elseif (in_array($code, array('server_error', 'temporarily_unavailable'), true)) {
-            $copy = array(
-                'eyebrow' => __('Service unavailable', 'member-library'),
-                'title' => __('Sign-in is temporarily unavailable', 'member-library'),
-                'description' => __('Your account has not been changed. Please wait a moment and try again.', 'member-library'),
-            );
-        }
+        unset($code, $status);
 
         $this->browser_security_headers();
-        status_header($status);
+        status_header(403);
         if (!headers_sent()) {
             header('Content-Type: text/html; charset=' . get_option('blog_charset'), true);
-            header("Content-Security-Policy: default-src 'none'; img-src " . esc_attr(MemberLibrary_Brand::image_csp_src()) . "; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", true);
             header('X-Frame-Options: DENY', true);
             header('X-Robots-Tag: noindex, nofollow, noarchive', true);
         }
@@ -912,9 +882,6 @@ class MemberLibrary_Auth {
         $home_url = esc_url(home_url('/'));
         $language = esc_attr(get_bloginfo('language') ?: 'en-US');
         $direction = is_rtl() ? 'rtl' : 'ltr';
-        $logo_url = esc_url(MemberLibrary_Brand::logo_url());
-        $auth_theme = MemberLibrary_Brand::auth_theme();
-        $logo_max_width = MemberLibrary_Brand::auth_logo_max_width();
         ?>
         <!doctype html>
         <html lang="<?php echo $language; ?>" dir="<?php echo esc_attr($direction); ?>">
@@ -922,44 +889,27 @@ class MemberLibrary_Auth {
             <meta charset="<?php echo esc_attr(get_option('blog_charset')); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="robots" content="noindex,nofollow,noarchive">
-            <title><?php echo esc_html($copy['title']); ?></title>
+            <title><?php esc_html_e('403 — Request unavailable', 'member-library'); ?></title>
             <style>
-                :root {
-                    color-scheme: light dark;
-                    --library-auth-background: <?php echo esc_html($auth_theme['background']); ?>;
-                    --library-auth-surface: <?php echo esc_html($auth_theme['surface']); ?>;
-                    --library-auth-text: <?php echo esc_html($auth_theme['text']); ?>;
-                    --library-auth-muted: <?php echo esc_html($auth_theme['muted']); ?>;
-                    --library-auth-accent: <?php echo esc_html($auth_theme['accent']); ?>;
-                    --library-auth-button: <?php echo esc_html($auth_theme['button']); ?>;
-                    --library-auth-button-hover: <?php echo esc_html($auth_theme['button_hover']); ?>;
-                    --library-auth-logo-max-width: <?php echo esc_html((string) $logo_max_width); ?>px;
-                }
+                :root { color-scheme: light; }
                 * { box-sizing: border-box; }
-                body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px 24px; background: var(--library-auth-background); color: var(--library-auth-text); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-                main { width: min(100%, 560px); text-align: center; }
-                .brand { display: block; width: min(var(--library-auth-logo-max-width), 60vw); height: auto; margin: 0 auto 24px; }
-                .panel { width: 100%; padding: clamp(28px, 6vw, 42px); border: 1px solid var(--library-auth-muted); border-radius: 18px; background: var(--library-auth-surface); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
-                .eyebrow { margin: 0; color: var(--library-auth-accent); font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
-                h1 { margin: 12px auto 0; max-width: 460px; font-size: clamp(28px, 5vw, 36px); line-height: 1.12; letter-spacing: .01em; }
-                .description { margin: 18px auto 0; max-width: 420px; color: var(--library-auth-muted); font-size: 15px; line-height: 1.6; }
-                a { display: inline-flex; margin-top: 26px; min-height: 44px; align-items: center; justify-content: center; padding: 11px 22px; border-radius: 6px; background: var(--library-auth-button); color: var(--library-auth-text); font-weight: 700; text-decoration: none; }
-                a:hover { background: var(--library-auth-button-hover); }
-                a:focus-visible { outline: 3px solid var(--library-auth-accent); outline-offset: 3px; }
-                @media (max-width: 480px) { body { padding: 24px 16px; } .brand { width: min(var(--library-auth-logo-max-width), 58vw); margin-bottom: 20px; } .panel { border-radius: 14px; } }
+                body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px 24px; background: #f4f4f2; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+                main { width: min(100%, 560px); }
+                .status-code { display: block; margin-bottom: 28px; color: #71717a; font-size: 14px; font-weight: 700; letter-spacing: .16em; }
+                h1 { margin: 0; max-width: 520px; font-size: clamp(36px, 8vw, 64px); line-height: 1; letter-spacing: -.04em; }
+                p { margin: 24px 0 0; max-width: 440px; color: #52525b; font-size: 17px; line-height: 1.65; }
+                a { display: inline-flex; min-height: 46px; margin-top: 32px; align-items: center; justify-content: center; padding: 12px 20px; border: 2px solid #18181b; border-radius: 4px; background: #18181b; color: #fff; font-weight: 700; text-decoration: none; }
+                a:hover { background: #3f3f46; border-color: #3f3f46; }
+                a:focus-visible { outline: 3px solid #18181b; outline-offset: 4px; }
+                @media (max-width: 480px) { body { align-items: start; padding: 18vh 20px 32px; } }
             </style>
         </head>
         <body>
             <main>
-                <?php if ('' !== $logo_url) : ?>
-                    <img class="brand" src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr(MemberLibrary_Brand::name()); ?>">
-                <?php endif; ?>
-                <section class="panel" aria-labelledby="library-error-title">
-                    <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
-                    <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>
-                    <p class="description"><?php echo esc_html($copy['description']); ?></p>
-                    <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to the site', 'member-library'); ?></a>
-                </section>
+                <span class="status-code">403</span>
+                <h1><?php esc_html_e('Request unavailable', 'member-library'); ?></h1>
+                <p><?php esc_html_e('We could not complete this request. It may be invalid or expired.', 'member-library'); ?></p>
+                <a href="<?php echo $home_url; ?>"><?php esc_html_e('Return to website', 'member-library'); ?></a>
             </main>
         </body>
         </html>

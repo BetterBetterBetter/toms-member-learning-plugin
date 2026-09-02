@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- Made the standalone authentication fallback page fully brand-configurable
-  through validated semantic colour tokens and a bounded logo width; neutral
-  defaults replace the remaining TSOL palette, logos preserve their native
-  aspect ratio, and no empty image is emitted when a logo is not configured.
+## 0.7.1 - 2026-09-02
+
+- Replaced the standalone authentication fallback with a plain, logo-free 403
+  page. It does not read brand names, artwork, colors, or app configuration.
 - Routed member-facing application references through
   `MemberLibrary_Brand::app_name()` and removed the remaining visible "TSOL
   view" wording.

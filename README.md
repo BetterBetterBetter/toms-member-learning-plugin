@@ -30,16 +30,12 @@ WordPress options:
 
 - `TSOL_LIBRARY_BRAND_NAME`, `TSOL_LIBRARY_BRAND_LIBRARY_MENU_LABEL`,
   `TSOL_LIBRARY_BRAND_APP_NAME`
-- `TSOL_LIBRARY_BRAND_LOGO_URL` (auth interstitial; its host also drives the CSP)
-- `TSOL_LIBRARY_BRAND_IMAGE_CSP_SRC` (optional explicit CSP override)
+- `TSOL_LIBRARY_BRAND_LOGO_URL`, `TSOL_LIBRARY_BRAND_IMAGE_CSP_SRC`
+  (retained compatibility metadata; the generic 403 fallback does not render branding)
 - `TSOL_LIBRARY_BRAND_CLIENT_ID`
-- `TSOL_LIBRARY_BRAND_AUTH_BACKGROUND`, `_SURFACE`, `_TEXT`, `_MUTED`,
-  `_ACCENT`, `_BUTTON`, `_BUTTON_HOVER` (validated hex colours)
-- `TSOL_LIBRARY_BRAND_AUTH_LOGO_MAX_WIDTH` (pixels, clamped to 48–480)
 
-The authentication fallback page uses only these semantic values, omits the
-logo element when no logo is configured, and never assumes a logo aspect
-ratio.
+The authentication fallback is deliberately outside the brand system: it is
+a plain, logo-free 403 page with no project or product name.
 
 ## Machine identifiers are a frozen contract
 
