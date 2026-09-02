@@ -29,7 +29,7 @@ class MemberLibrary_Content_Access_Column {
 
     /**
      * MemberPress prints its own verbose Access cell on every eligible post
-     * list. Replace it only for the two TSOL-owned Library lists; native
+     * list. Replace it only for the two plugin-owned Library lists; native
      * MemberPress, Page, and other WordPress screens remain untouched.
      */
     public function suppress_memberpress_renderer_on_library_lists($screen) {
@@ -243,7 +243,7 @@ class MemberLibrary_Content_Access_Column {
     private function render_access_details($summary) {
         ?>
         <p class="tsol-content-access-dialog__intro">
-            <?php esc_html_e('This is the effective access inherited from MemberPress rules. Nothing is stored or edited on the content by this TSOL view.', 'member-library'); ?>
+            <?php esc_html_e('This is the effective access inherited from MemberPress rules. Nothing is stored or edited on the content by this Library view.', 'member-library'); ?>
         </p>
 
         <?php if (!empty($summary['memberships'])) : ?>

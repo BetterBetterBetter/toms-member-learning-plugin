@@ -1,6 +1,6 @@
 <?php
 /**
- * TSOL WordPress -> Library OAuth-style authentication bridge.
+ * WordPress -> Library OAuth-style authentication bridge.
  */
 
 if (!defined('ABSPATH')) {
@@ -912,6 +912,9 @@ class MemberLibrary_Auth {
         $home_url = esc_url(home_url('/'));
         $language = esc_attr(get_bloginfo('language') ?: 'en-US');
         $direction = is_rtl() ? 'rtl' : 'ltr';
+        $logo_url = esc_url(MemberLibrary_Brand::logo_url());
+        $auth_theme = MemberLibrary_Brand::auth_theme();
+        $logo_max_width = MemberLibrary_Brand::auth_logo_max_width();
         ?>
         <!doctype html>
         <html lang="<?php echo $language; ?>" dir="<?php echo esc_attr($direction); ?>">
@@ -921,24 +924,36 @@ class MemberLibrary_Auth {
             <meta name="robots" content="noindex,nofollow,noarchive">
             <title><?php echo esc_html($copy['title']); ?></title>
             <style>
-                :root { color-scheme: dark; }
+                :root {
+                    color-scheme: light dark;
+                    --library-auth-background: <?php echo esc_html($auth_theme['background']); ?>;
+                    --library-auth-surface: <?php echo esc_html($auth_theme['surface']); ?>;
+                    --library-auth-text: <?php echo esc_html($auth_theme['text']); ?>;
+                    --library-auth-muted: <?php echo esc_html($auth_theme['muted']); ?>;
+                    --library-auth-accent: <?php echo esc_html($auth_theme['accent']); ?>;
+                    --library-auth-button: <?php echo esc_html($auth_theme['button']); ?>;
+                    --library-auth-button-hover: <?php echo esc_html($auth_theme['button_hover']); ?>;
+                    --library-auth-logo-max-width: <?php echo esc_html((string) $logo_max_width); ?>px;
+                }
                 * { box-sizing: border-box; }
-                body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px 24px; background: radial-gradient(circle at 15% 35%, rgba(22,155,198,.16), transparent 34%), linear-gradient(135deg, #06182b, #0a2540 58%, #1a3a52); color: #fff; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+                body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px 24px; background: var(--library-auth-background); color: var(--library-auth-text); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
                 main { width: min(100%, 560px); text-align: center; }
-                .brand { display: block; width: min(190px, 60vw); height: auto; margin: 0 auto 24px; }
-                .panel { width: 100%; padding: clamp(28px, 6vw, 42px); border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: rgba(255,255,255,.05); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
-                .eyebrow { margin: 0; color: #65d5ee; font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+                .brand { display: block; width: min(var(--library-auth-logo-max-width), 60vw); height: auto; margin: 0 auto 24px; }
+                .panel { width: 100%; padding: clamp(28px, 6vw, 42px); border: 1px solid var(--library-auth-muted); border-radius: 18px; background: var(--library-auth-surface); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+                .eyebrow { margin: 0; color: var(--library-auth-accent); font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
                 h1 { margin: 12px auto 0; max-width: 460px; font-size: clamp(28px, 5vw, 36px); line-height: 1.12; letter-spacing: .01em; }
-                .description { margin: 18px auto 0; max-width: 420px; color: #cbd5e1; font-size: 15px; line-height: 1.6; }
-                a { display: inline-flex; margin-top: 26px; min-height: 44px; align-items: center; justify-content: center; padding: 11px 22px; border-radius: 6px; background: #dc3545; color: #fff; font-weight: 700; text-decoration: none; }
-                a:hover { background: #c82333; }
-                a:focus-visible { outline: 3px solid #65d5ee; outline-offset: 3px; }
-                @media (max-width: 480px) { body { padding: 24px 16px; } .brand { width: min(176px, 58vw); margin-bottom: 20px; } .panel { border-radius: 14px; } }
+                .description { margin: 18px auto 0; max-width: 420px; color: var(--library-auth-muted); font-size: 15px; line-height: 1.6; }
+                a { display: inline-flex; margin-top: 26px; min-height: 44px; align-items: center; justify-content: center; padding: 11px 22px; border-radius: 6px; background: var(--library-auth-button); color: var(--library-auth-text); font-weight: 700; text-decoration: none; }
+                a:hover { background: var(--library-auth-button-hover); }
+                a:focus-visible { outline: 3px solid var(--library-auth-accent); outline-offset: 3px; }
+                @media (max-width: 480px) { body { padding: 24px 16px; } .brand { width: min(var(--library-auth-logo-max-width), 58vw); margin-bottom: 20px; } .panel { border-radius: 14px; } }
             </style>
         </head>
         <body>
             <main>
-                <img class="brand" src="<?php echo esc_url(MemberLibrary_Brand::logo_url()); ?>" alt="<?php echo esc_attr(MemberLibrary_Brand::name()); ?>" width="190" height="51">
+                <?php if ('' !== $logo_url) : ?>
+                    <img class="brand" src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr(MemberLibrary_Brand::name()); ?>">
+                <?php endif; ?>
                 <section class="panel" aria-labelledby="library-error-title">
                     <p class="eyebrow"><?php echo esc_html($copy['eyebrow']); ?></p>
                     <h1 id="library-error-title"><?php echo esc_html($copy['title']); ?></h1>

@@ -135,7 +135,13 @@ class MemberLibrary_Structure_Admin {
                     <?php if (!empty($snapshot['descending'])) : ?>
                         <p class="tsol-library-structure-page__order-note">
                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
-                            <?php esc_html_e('Shown in the same newest-first order visitors see in the Library.', 'member-library'); ?>
+                            <?php
+                            echo esc_html(sprintf(
+                                /* translators: %s: configured member-facing application name. */
+                                __('Shown in the same newest-first order visitors see in %s.', 'member-library'),
+                                MemberLibrary_Brand::app_name()
+                            ));
+                            ?>
                         </p>
                     <?php endif; ?>
                 </div>

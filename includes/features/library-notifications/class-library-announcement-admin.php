@@ -172,7 +172,11 @@ class MemberLibrary_Announcement_Admin {
             $summary = (string) get_post_meta($post->ID, MemberLibrary_Announcement_Model::META_AUDIENCE_SUMMARY, true);
             ?>
             <div class="notice notice-info inline"><p><strong><?php esc_html_e('Audience review is administrator-only.', 'member-library'); ?></strong></p></div>
-            <p><?php echo esc_html($summary !== '' ? $summary : __('Everyone signed in to the Library (administrator review required)', 'member-library')); ?></p>
+            <p><?php echo esc_html($summary !== '' ? $summary : sprintf(
+                /* translators: %s: configured member-facing application name. */
+                __('Everyone signed in to %s (administrator review required)', 'member-library'),
+                MemberLibrary_Brand::app_name()
+            )); ?></p>
             <?php
             return;
         }

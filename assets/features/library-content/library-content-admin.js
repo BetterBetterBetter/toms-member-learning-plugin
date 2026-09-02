@@ -1,4 +1,4 @@
-/* TSOL Library content editor */
+/* Member Library content editor */
 
 (function($) {
     'use strict';

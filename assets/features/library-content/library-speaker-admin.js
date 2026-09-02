@@ -1,4 +1,4 @@
-/* TSOL Library Speaker profile editor */
+/* Member Library Speaker profile editor */
 
 (function($, wp, settings) {
     'use strict';

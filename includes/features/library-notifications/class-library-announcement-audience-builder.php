@@ -98,7 +98,11 @@ class MemberLibrary_Announcement_Audience_Builder {
 
     public static function presets() {
         return array(
-            self::PRESET_ALL_LINKED => __('Everyone signed in to the Library', 'member-library'),
+            self::PRESET_ALL_LINKED => sprintf(
+                /* translators: %s: configured member-facing application name. */
+                __('Everyone signed in to %s', 'member-library'),
+                MemberLibrary_Brand::app_name()
+            ),
             self::PRESET_CONTENT_ACCESS => __('Everyone with access to the destination', 'member-library'),
             self::PRESET_RELATIONSHIP => __('Enrolled in this Course or following this Series', 'member-library'),
             self::PRESET_MEMBERSHIP => __('Active MemberPress membership', 'member-library'),
@@ -202,9 +206,19 @@ class MemberLibrary_Announcement_Audience_Builder {
             case self::PRESET_SPECIFIC_USERS:
                 return sprintf(_n('1 specifically selected user', '%d specifically selected users', max(1, $user_count), 'member-library'), max(1, $user_count));
             default:
-                return 'general' === $destination['type']
-                    ? __('Everyone signed in to the Library', 'member-library')
-                    : sprintf(__('Everyone signed in to the Library with current access to %s', 'member-library'), $destination_title);
+                if ('general' === $destination['type']) {
+                    return sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('Everyone signed in to %s', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    );
+                }
+                return sprintf(
+                    /* translators: 1: configured member-facing application name, 2: destination title. */
+                    __('Everyone signed in to %1$s with current access to %2$s', 'member-library'),
+                    MemberLibrary_Brand::app_name(),
+                    $destination_title
+                );
         }
     }
 }

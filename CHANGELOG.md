@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Made the standalone authentication fallback page fully brand-configurable
+  through validated semantic colour tokens and a bounded logo width; neutral
+  defaults replace the remaining TSOL palette, logos preserve their native
+  aspect ratio, and no empty image is emitted when a logo is not configured.
+- Routed member-facing application references through
+  `MemberLibrary_Brand::app_name()` and removed the remaining visible "TSOL
+  view" wording.
+- Removed nine unreferenced TSOL content images from the shared release and
+  cleaned stale TSOL-only source comments.
+
 ## 0.7.0 - 2026-09-01
 
 De-branded the plugin core. The plugin no longer names a specific project

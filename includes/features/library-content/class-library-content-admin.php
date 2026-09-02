@@ -1273,7 +1273,15 @@ class MemberLibrary_Content_Admin {
                     <?php endforeach; ?>
                 </ul>
             <?php else : ?>
-                <p><?php esc_html_e('WordPress and MemberPress currently treat this content as unrestricted. Any signed-in Library user can open its full media.', 'member-library'); ?></p>
+                <p>
+                    <?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('WordPress and MemberPress currently treat this content as unrestricted. Any user signed in to %s can open its full media.', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    ));
+                    ?>
+                </p>
                 <?php if (current_user_can('manage_options')) : ?>
                     <p><a class="button button-small" href="<?php echo esc_url(admin_url('edit.php?post_type=memberpressrule')); ?>"><?php esc_html_e('Manage MemberPress rules', 'member-library'); ?></a></p>
                 <?php endif; ?>

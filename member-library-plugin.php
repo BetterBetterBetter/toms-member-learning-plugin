@@ -29,14 +29,14 @@ define('MEMBER_LIBRARY_PLUGIN_REPOSITORY_URL', 'https://github.com/BetterBetterB
 if (file_exists(MEMBER_LIBRARY_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php')) {
     require_once MEMBER_LIBRARY_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
 
-    $tsol_site_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+    $member_library_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
         MEMBER_LIBRARY_PLUGIN_REPOSITORY_URL,
         __FILE__,
         'member-library'
     );
 
     // Enable GitHub releases for better versioning and release asset downloads.
-    $tsol_site_update_checker->getVcsApi()->enableReleaseAssets();
+    $member_library_update_checker->getVcsApi()->enableReleaseAssets();
 }
 
 // Include required files immediately to ensure classes are available for all hooks.

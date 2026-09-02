@@ -100,13 +100,31 @@ class MemberLibrary_Account_Security {
 
             <section aria-labelledby="tsol-library-session-security-title">
                 <h3 id="tsol-library-session-security-title">
-                    <?php esc_html_e('Library sessions', 'member-library'); ?>
+                    <?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('%s sessions', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    ));
+                    ?>
                 </h3>
                 <p>
-                    <?php esc_html_e('Use this if you have lost a device, used a shared computer, or no longer recognize a Library session.', 'member-library'); ?>
+                    <?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('Use this if you have lost a device, used a shared computer, or no longer recognize a %s session.', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    ));
+                    ?>
                 </p>
                 <p>
-                    <?php esc_html_e('This signs your account out of the standalone Library on every browser and device. Your WordPress, MemberPress, or Access login may remain active.', 'member-library'); ?>
+                    <?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('This signs your account out of %s on every browser and device. Your WordPress, MemberPress, or Access login may remain active.', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    ));
+                    ?>
                 </p>
 
                 <form class="mepr-account-form mepr-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">

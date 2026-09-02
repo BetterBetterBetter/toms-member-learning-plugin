@@ -1,4 +1,4 @@
-/* TSOL Library canonical URL editor */
+/* Member Library canonical URL editor */
 
 (function() {
     'use strict';

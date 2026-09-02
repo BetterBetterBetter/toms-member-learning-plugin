@@ -120,7 +120,8 @@ try {
     $speaker_admin->render_details_meta_box(get_post($created_speaker_id));
     $speaker_admin->render_publication_guidance(get_post($created_speaker_id));
     $profile_html = ob_get_clean();
-    foreach (array('About', 'Short bio', 'course instructor sections', 'If left blank, the Library creates a shortened summary from About.', 'Job title', 'Organisation / company', 'Website', 'Social links', 'data-speaker-social-template', 'Publishing makes this speaker available in the Library catalogue.') as $expected_copy) {
+    $app_name = MemberLibrary_Brand::app_name();
+    foreach (array('About', 'Short bio', 'course instructor sections', 'If left blank, ' . $app_name . ' creates a shortened summary from About.', 'Job title', 'Organisation / company', 'Website', 'Social links', 'data-speaker-social-template', 'Publishing makes this speaker available in ' . $app_name . '.') as $expected_copy) {
         $assert(false !== strpos($profile_html, $expected_copy), 'Speaker editor omitted: ' . $expected_copy);
     }
     foreach (array('Add only public profiles. Links must use HTTP or HTTPS.', 'The title is the speaker’s full name.') as $removed_copy) {

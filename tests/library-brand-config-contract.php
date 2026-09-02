@@ -29,7 +29,7 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     && !defined('TSOL_LIBRARY_BRAND_CLIENT_ID')
     && !defined('TSOL_LIBRARY_BRAND_NAME')) {
 
-    // Defaults preserve historical TSOL behavior when nothing is configured.
+    // Defaults are deliberately brand-neutral when nothing is configured.
     delete_option('tsol_library_brand_logo_url');
     delete_option('tsol_library_brand_image_csp_src');
     delete_option('tsol_library_brand_client_id');
@@ -57,6 +57,16 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     $assert(
         'Member Library' === MemberLibrary_Brand::name(),
         'Default brand name must be the universal "Member Library".'
+    );
+    $default_auth_theme = MemberLibrary_Brand::auth_theme();
+    $assert(
+        '#111827' === $default_auth_theme['background']
+            && '#1e40af' === $default_auth_theme['button'],
+        'The auth interstitial must use the neutral default theme.'
+    );
+    $assert(
+        220 === MemberLibrary_Brand::auth_logo_max_width(),
+        'The auth logo must have a neutral, configurable maximum width.'
     );
     foreach (array(
         MemberLibrary_Brand::name(),
@@ -86,6 +96,28 @@ if (!defined('TSOL_LIBRARY_BRAND_LOGO_URL')
     $assert(
         'https://a.test https://b.test' === MemberLibrary_Brand::image_csp_src(),
         'Explicit image_csp_src option should override the derived host.'
+    );
+
+    // Auth theme options accept safe hex colors and reject arbitrary CSS.
+    update_option('tsol_library_brand_auth_button', '#123abc');
+    $assert(
+        '#123abc' === MemberLibrary_Brand::auth_theme()['button'],
+        'A valid auth theme color option should override the neutral default.'
+    );
+    update_option('tsol_library_brand_auth_button', 'red; background-image:url(https://example.test)');
+    $assert(
+        '#1e40af' === MemberLibrary_Brand::auth_theme()['button'],
+        'An invalid auth theme color must fall back to the neutral default.'
+    );
+    update_option('tsol_library_brand_auth_logo_max_width', '900');
+    $assert(
+        480 === MemberLibrary_Brand::auth_logo_max_width(),
+        'The configured auth logo width must be clamped to its safe maximum.'
+    );
+    update_option('tsol_library_brand_auth_logo_max_width', 'not-a-width');
+    $assert(
+        220 === MemberLibrary_Brand::auth_logo_max_width(),
+        'An invalid auth logo width must fall back to the neutral default.'
     );
 } else {
     // Constant-configured install: the resolved value must equal the constant,
@@ -117,6 +149,60 @@ $assert('Filtered Brand' === MemberLibrary_Brand::name(), 'Brand value filter sh
 // Cleanup.
 delete_option('tsol_library_brand_logo_url');
 delete_option('tsol_library_brand_image_csp_src');
+delete_option('tsol_library_brand_auth_button');
+delete_option('tsol_library_brand_auth_logo_max_width');
+
+// The rendered fallback page must remain brand-neutral and must not emit a
+// broken image when an installation has no configured logo.
+$auth_source = file_get_contents(MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth.php');
+$access_source = file_get_contents(MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-content/class-library-content-access-column.php');
+$assert(false !== strpos($auth_source, "if ('' !== \$logo_url)"), 'The auth page must render its logo only when a URL is configured.');
+$assert(false === strpos($auth_source, 'width="190" height="51"'), 'The auth page must not assume the TSOL logo aspect ratio.');
+foreach (array('#06182b', '#0a2540', '#1a3a52', '#65d5ee', '#dc3545', '#c82333') as $legacy_color) {
+    $assert(false === stripos($auth_source, $legacy_color), 'The auth page still contains a legacy brand color: ' . $legacy_color);
+}
+$assert(false === strpos($access_source, 'this TSOL view'), 'User-facing admin copy must not call the shared UI a TSOL view.');
+
+$legacy_assets = glob(MEMBER_LIBRARY_PLUGIN_DIR . 'assets/images/library/*');
+$assert(empty($legacy_assets), 'The shared release still contains legacy brand content images.');
+
+// Scan literal translated UI copy across production PHP. Frozen
+// TSOL_LIBRARY_* constant names are technical instructions, not decoration.
+$translation_functions = array('__', '_e', 'esc_html__', 'esc_html_e', 'esc_attr__', 'esc_attr_e');
+$source_iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator(MEMBER_LIBRARY_PLUGIN_DIR . 'includes', FilesystemIterator::SKIP_DOTS)
+);
+foreach ($source_iterator as $source_file) {
+    if ('php' !== strtolower($source_file->getExtension())) {
+        continue;
+    }
+    $tokens = token_get_all(file_get_contents($source_file->getPathname()));
+    $token_count = count($tokens);
+    for ($index = 0; $index < $token_count; $index++) {
+        if (!is_array($tokens[$index]) || T_STRING !== $tokens[$index][0] || !in_array($tokens[$index][1], $translation_functions, true)) {
+            continue;
+        }
+        $argument_index = $index + 1;
+        while ($argument_index < $token_count && is_array($tokens[$argument_index]) && T_WHITESPACE === $tokens[$argument_index][0]) {
+            $argument_index++;
+        }
+        if ($argument_index >= $token_count || '(' !== $tokens[$argument_index]) {
+            continue;
+        }
+        $argument_index++;
+        while ($argument_index < $token_count && is_array($tokens[$argument_index]) && T_WHITESPACE === $tokens[$argument_index][0]) {
+            $argument_index++;
+        }
+        if ($argument_index >= $token_count || !is_array($tokens[$argument_index]) || T_CONSTANT_ENCAPSED_STRING !== $tokens[$argument_index][0]) {
+            continue;
+        }
+        $display_copy = preg_replace('/TSOL_LIBRARY_[A-Z0-9_]+/', '', $tokens[$argument_index][1]);
+        $assert(
+            !preg_match('/TSOL|Tom Woods|School of Life/i', $display_copy),
+            'Project-specific branding remains in translated UI copy: ' . $source_file->getPathname() . ':' . $tokens[$argument_index][2]
+        );
+    }
+}
 
 if (!empty($failures)) {
     WP_CLI::error("Brand config contract failed:\n - " . implode("\n - ", $failures));

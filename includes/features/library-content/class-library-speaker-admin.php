@@ -82,7 +82,13 @@ class MemberLibrary_Speaker_Admin {
         }
         ?>
         <div class="misc-pub-section tsol-speaker-catalogue-publication">
-            <?php esc_html_e('Publishing makes this speaker available in the Library catalogue.', 'member-library'); ?>
+            <?php
+            echo esc_html(sprintf(
+                /* translators: %s: configured member-facing application name. */
+                __('Publishing makes this speaker available in %s.', 'member-library'),
+                MemberLibrary_Brand::app_name()
+            ));
+            ?>
         </div>
         <?php
     }
@@ -108,7 +114,15 @@ class MemberLibrary_Speaker_Admin {
             <label class="tsol-speaker-profile-field tsol-speaker-profile-field--first">
                 <span><?php esc_html_e('Short bio', 'member-library'); ?></span>
                 <textarea id="excerpt" name="excerpt" rows="4" aria-label="<?php esc_attr_e('Short bio', 'member-library'); ?>"><?php echo esc_textarea((string) $post->post_excerpt); ?></textarea>
-                <small class="description"><?php esc_html_e('Optional. Write two or three plain-text sentences for course instructor sections. If left blank, the Library creates a shortened summary from About.', 'member-library'); ?></small>
+                <small class="description">
+                    <?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: configured member-facing application name. */
+                        __('Optional. Write two or three plain-text sentences for course instructor sections. If left blank, %s creates a shortened summary from About.', 'member-library'),
+                        MemberLibrary_Brand::app_name()
+                    ));
+                    ?>
+                </small>
             </label>
             <div class="tsol-speaker-profile-grid">
                 <label>

@@ -72,6 +72,51 @@ class MemberLibrary_Brand {
     }
 
     /**
+     * Semantic colors for the standalone authentication fallback page.
+     *
+     * Values are deliberately restricted to hex colors because they are
+     * printed into an inline stylesheet before the normal WordPress theme is
+     * available. Invalid configuration falls back to the neutral core theme.
+     */
+    public static function auth_theme() {
+        $defaults = array(
+            'background' => '#111827',
+            'surface' => '#1f2937',
+            'text' => '#f9fafb',
+            'muted' => '#d1d5db',
+            'accent' => '#93c5fd',
+            'button' => '#1e40af',
+            'button_hover' => '#1e3a8a',
+        );
+
+        $theme = array();
+        foreach ($defaults as $key => $default) {
+            $suffix = strtoupper($key);
+            $theme[$key] = self::get_color(
+                'TSOL_LIBRARY_BRAND_AUTH_' . $suffix,
+                'tsol_library_brand_auth_' . $key,
+                $default
+            );
+        }
+
+        return $theme;
+    }
+
+    /**
+     * Maximum rendered logo width on the authentication fallback page.
+     */
+    public static function auth_logo_max_width() {
+        $raw_width = trim(self::get(
+            'TSOL_LIBRARY_BRAND_AUTH_LOGO_MAX_WIDTH',
+            'tsol_library_brand_auth_logo_max_width',
+            '220'
+        ));
+        $width = preg_match('/^\d+$/', $raw_width) ? (int) $raw_width : 220;
+
+        return max(48, min(480, $width));
+    }
+
+    /**
      * Default OAuth client id (TSOL_LIBRARY_CLIENT_ID constant still overrides
      * at the auth layer; this is only the fallback default).
      */
@@ -96,5 +141,13 @@ class MemberLibrary_Brand {
          * Filter any resolved brand value. Filter name is the option key.
          */
         return (string) apply_filters($option, $value);
+    }
+
+    /**
+     * Resolve a brand color while preventing arbitrary inline CSS.
+     */
+    private static function get_color($constant, $option, $default) {
+        $color = sanitize_hex_color(self::get($constant, $option, $default));
+        return $color ?: $default;
     }
 }

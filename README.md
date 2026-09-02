@@ -23,13 +23,23 @@ See the workspace consolidation record in
 ## Brand configuration
 
 Brand values resolve **PHP constant → wp_option → default** via
-`MemberLibrary_Brand`; defaults preserve historical TSOL behavior, so an
-unconfigured install is unchanged. A brand (e.g. Liberty) sets constants in
-`wp-config.php`:
+`MemberLibrary_Brand`. Defaults are deliberately brand-neutral: an
+unconfigured install reads as a generic member library and ships no brand
+artwork. A brand sets constants in `wp-config.php` or the equivalent lowercase
+WordPress options:
 
-- `TSOL_LIBRARY_BRAND_NAME`, `TSOL_LIBRARY_BRAND_LIBRARY_MENU_LABEL`
+- `TSOL_LIBRARY_BRAND_NAME`, `TSOL_LIBRARY_BRAND_LIBRARY_MENU_LABEL`,
+  `TSOL_LIBRARY_BRAND_APP_NAME`
 - `TSOL_LIBRARY_BRAND_LOGO_URL` (auth interstitial; its host also drives the CSP)
+- `TSOL_LIBRARY_BRAND_IMAGE_CSP_SRC` (optional explicit CSP override)
 - `TSOL_LIBRARY_BRAND_CLIENT_ID`
+- `TSOL_LIBRARY_BRAND_AUTH_BACKGROUND`, `_SURFACE`, `_TEXT`, `_MUTED`,
+  `_ACCENT`, `_BUTTON`, `_BUTTON_HOVER` (validated hex colours)
+- `TSOL_LIBRARY_BRAND_AUTH_LOGO_MAX_WIDTH` (pixels, clamped to 48–480)
+
+The authentication fallback page uses only these semantic values, omits the
+logo element when no logo is configured, and never assumes a logo aspect
+ratio.
 
 ## Machine identifiers are a frozen contract
 
