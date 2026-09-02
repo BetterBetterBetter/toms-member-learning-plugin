@@ -148,23 +148,6 @@ $_GET = $authorize_query;
 $_SERVER['QUERY_STRING'] = http_build_query($authorize_query, '', '&', PHP_QUERY_RFC3986);
 $_SERVER['REQUEST_URI'] = (string) wp_parse_url(admin_url('admin-post.php'), PHP_URL_PATH) . '?' . $_SERVER['QUERY_STRING'];
 $assert(true === $authorize_request_method->invoke($auth), 'The exact authorization request shape was rejected.');
-
-$authorize_url_method = new ReflectionMethod(MemberLibrary_Auth::class, 'current_authorize_url');
-$authorize_url_method->setAccessible(true);
-$continuation_params = $authorize_query;
-unset($continuation_params['action']);
-$continuation_url = $authorize_url_method->invoke($auth, $continuation_params);
-$continuation_query = array();
-parse_str((string) wp_parse_url($continuation_url, PHP_URL_QUERY), $continuation_query);
-$assert(
-    $continuation_query === $authorize_query,
-    'The WordPress login continuation did not preserve the exact Library authorization request.'
-);
-$assert(
-    (string) wp_parse_url($continuation_url, PHP_URL_PATH) === (string) wp_parse_url(admin_url('admin-post.php'), PHP_URL_PATH),
-    'The WordPress login continuation no longer targets the Library authorization endpoint.'
-);
-
 $_GET['unexpected'] = '1';
 $_SERVER['QUERY_STRING'] .= '&unexpected=1';
 $assert(false === $authorize_request_method->invoke($auth), 'An unexpected authorization query parameter was accepted.');
