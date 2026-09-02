@@ -45,6 +45,11 @@ $assert($post_count === (int) $preview['unchanged'], 'A self-preview did not mat
 $assert(empty($preview['errors']), 'A self-preview contains blocking conflicts.');
 $assert(empty($preview['missing_attachments']), 'A self-preview could not resolve its own WordPress attachments.');
 
+$attachment_is_bundled = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'attachment_is_bundled');
+$assert(true === $attachment_is_bundled->invoke($migration, array()), 'Legacy migration attachments no longer default to bundled.');
+$assert(true === $attachment_is_bundled->invoke($migration, array('bundled' => true)), 'Bundled migration attachments are not recognized.');
+$assert(false === $attachment_is_bundled->invoke($migration, array('bundled' => false)), 'Referenced migration videos are still treated as bundled files.');
+
 foreach (array(
     'TSOL_LIBRARY_CLIENT_SECRET',
     'tsol_library_auth_client_secret',

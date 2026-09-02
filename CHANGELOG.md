@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.8.1 - 2026-09-02
+
+- Kept WordPress-hosted video files out of Library migration ZIPs when the
+  destination WordPress site already owns the matching attachment, avoiding
+  redundant multi-gigabyte uploads for media managed by the site or S3.
+- Added explicit production attachment matching for referenced videos and
+  block the import preview until every referenced video is present.
+- Enforced the migration package size and entry limits during export so the
+  exporter can no longer create a ZIP that its importer will reject.
+
 ## 0.8.0 - 2026-09-02
 
 - Added portable Course and Series purchase-offer fields for display price,

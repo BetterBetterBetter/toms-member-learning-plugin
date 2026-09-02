@@ -58,10 +58,19 @@ class MemberLibrary_Environment_Migration {
         $package['data']['attachments'] = $attachments;
         $package['manifest']['bundle_format'] = self::BUNDLE_FORMAT;
         $package['manifest']['counts']['attachments'] = count($attachments);
+        $bundled_attachments = $this->bundled_attachments($package);
+        $package['manifest']['counts']['bundled_attachments'] = count($bundled_attachments);
+        $package['manifest']['counts']['referenced_attachments'] = count($attachments) - count($bundled_attachments);
         $package['manifest']['counts']['attachment_bytes'] = array_sum(array_map(static function ($attachment) {
             return (int) $attachment['bytes'];
-        }, $attachments));
+        }, $bundled_attachments));
         $package['manifest']['data_sha256'] = $this->data_hash($package['data']);
+
+        if (count($bundled_attachments) + 1 > self::MAX_BUNDLE_ENTRIES
+            || (int) $package['manifest']['counts']['attachment_bytes'] > self::MAX_BUNDLE_BYTES
+        ) {
+            throw new RuntimeException('The bundled Library uploads exceed the migration package safety limit.');
+        }
 
         $zip = new ZipArchive();
         if (true !== $zip->open((string) $zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
@@ -72,7 +81,7 @@ class MemberLibrary_Environment_Migration {
                 throw new RuntimeException('WordPress could not add the Library manifest to the ZIP package.');
             }
             $uploads = wp_upload_dir(null, false);
-            foreach ($attachments as $attachment) {
+            foreach ($bundled_attachments as $attachment) {
                 $source = trailingslashit((string) $uploads['basedir']) . $attachment['relative_file'];
                 if (!$zip->addFile($source, $attachment['archive_path'])) {
                     throw new RuntimeException(sprintf('WordPress could not add upload “%s” to the ZIP package.', $attachment['relative_file']));
@@ -140,14 +149,16 @@ class MemberLibrary_Environment_Migration {
                 ) {
                     throw new RuntimeException('The Library ZIP attachment manifest contains an unsafe path.');
                 }
-                $stat = $zip->statName($archive_path);
-                if (false === $stat || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)) {
-                    throw new RuntimeException(sprintf('Bundled upload “%s” is missing or has the wrong size.', $relative_file));
+                if ($this->attachment_is_bundled($attachment)) {
+                    $stat = $zip->statName($archive_path);
+                    if (false === $stat || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)) {
+                        throw new RuntimeException(sprintf('Bundled upload “%s” is missing or has the wrong size.', $relative_file));
+                    }
+                    if (!hash_equals((string) ($attachment['sha256'] ?? ''), $this->zip_entry_hash($zip, $archive_path))) {
+                        throw new RuntimeException(sprintf('Bundled upload “%s” failed its checksum.', $relative_file));
+                    }
+                    $expected_entries[$archive_path] = true;
                 }
-                if (!hash_equals((string) ($attachment['sha256'] ?? ''), $this->zip_entry_hash($zip, $archive_path))) {
-                    throw new RuntimeException(sprintf('Bundled upload “%s” failed its checksum.', $relative_file));
-                }
-                $expected_entries[$archive_path] = true;
                 $manifest_paths[$relative_file] = true;
             }
             if (!empty(array_diff_key($entry_names, $expected_entries))
@@ -192,13 +203,16 @@ class MemberLibrary_Environment_Migration {
             foreach ((array) ($package['data']['attachments'] ?? array()) as $attachment) {
                 $relative = (string) ($attachment['relative_file'] ?? '');
                 $archive_path = (string) ($attachment['archive_path'] ?? '');
-                $stat = $zip->statName($archive_path);
                 if (!$this->safe_relative_upload_path($relative)
                     || 'attachments/' . $relative !== $archive_path
-                    || false === $stat
-                    || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)
                 ) {
                     throw new RuntimeException('The Library ZIP attachment manifest contains a missing or unsafe file.');
+                }
+                if ($this->attachment_is_bundled($attachment)) {
+                    $stat = $zip->statName($archive_path);
+                    if (false === $stat || (int) ($stat['size'] ?? -1) !== (int) ($attachment['bytes'] ?? -2)) {
+                        throw new RuntimeException('The Library ZIP attachment manifest contains a missing or unsafe file.');
+                    }
                 }
             }
             return $package;
@@ -258,13 +272,15 @@ class MemberLibrary_Environment_Migration {
             'terms' => count((array) ($package['data']['terms'] ?? array())),
             'groups' => count((array) ($package['data']['access_groups']['groups'] ?? array())),
             'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
-            'attachment_files' => count((array) ($package['data']['attachments'] ?? array())),
+            'attachment_files' => count($this->bundled_attachments($package)),
+            'referenced_attachment_files' => count((array) ($package['data']['attachments'] ?? array())) - count($this->bundled_attachments($package)),
             'attachment_bytes' => array_sum(array_map(static function ($attachment) {
                 return (int) ($attachment['bytes'] ?? 0);
-            }, (array) ($package['data']['attachments'] ?? array()))),
+            }, $this->bundled_attachments($package))),
             'bundled_attachments' => array(),
             'existing_attachments' => array(),
             'missing_attachments' => array(),
+            'missing_referenced_attachments' => array(),
             'errors' => array(),
             'warnings' => array(),
         );
@@ -327,9 +343,16 @@ class MemberLibrary_Environment_Migration {
                 count($report['missing_attachments'])
             );
         }
+        if (!empty($report['missing_referenced_attachments'])) {
+            $report['errors'][] = sprintf(
+                '%d referenced video attachment could not be matched in production. Finish migrating WordPress uploads before applying this package.',
+                count($report['missing_referenced_attachments'])
+            );
+        }
         $report['bundled_attachments'] = array_values($report['bundled_attachments']);
         $report['existing_attachments'] = array_values($report['existing_attachments']);
         $report['missing_attachments'] = array_values($report['missing_attachments']);
+        $report['missing_referenced_attachments'] = array_values($report['missing_referenced_attachments']);
         $report['package_hash'] = (string) $package['manifest']['data_sha256'];
         return $report;
     }
@@ -914,17 +937,42 @@ class MemberLibrary_Environment_Migration {
         $local_file = $this->safe_relative_upload_path($relative)
             ? trailingslashit((string) $uploads['basedir']) . $relative
             : '';
-        if ($attachment_id > 0 && is_file($local_file)) {
+        $manifest_attachment = (array) ($bundle_index[$relative] ?? array());
+        $is_bundled = !empty($manifest_attachment) && $this->attachment_is_bundled($manifest_attachment);
+        $expected_mime = sanitize_mime_type((string) ($manifest_attachment['mime_type'] ?? ''));
+        if (!$is_bundled
+            && $attachment_id > 0
+            && '' !== $expected_mime
+            && $expected_mime !== (string) get_post_mime_type($attachment_id)
+        ) {
+            $report['errors'][] = sprintf('Production upload “%s” has a different media type than the migration package.', $relative);
+            return;
+        }
+        $remote_file_exists = !empty($manifest_attachment)
+            && !$is_bundled
+            && $attachment_id > 0
+            && $this->remote_attachment_available($attachment_id, $expected_mime, (int) ($manifest_attachment['bytes'] ?? 0));
+        if ($attachment_id > 0 && (is_file($local_file) || $remote_file_exists)) {
             if (isset($bundle_index[$relative])
+                && is_file($local_file)
+                && $is_bundled
                 && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
             ) {
-                $report['errors'][] = sprintf('Production upload “%s” differs from the bundled test-site file.', $relative);
+                $report['errors'][] = sprintf('Production upload “%s” differs from the migration source file.', $relative);
+                return;
+            }
+            if (!empty($manifest_attachment)
+                && !$is_bundled
+                && is_file($local_file)
+                && (int) filesize($local_file) !== (int) ($manifest_attachment['bytes'] ?? -1)
+            ) {
+                $report['errors'][] = sprintf('Production video “%s” has a different file size than the migration source.', $relative);
                 return;
             }
             $report['existing_attachments'][$key] = $key;
             return;
         }
-        if (isset($bundle_index[$relative])) {
+        if (isset($bundle_index[$relative]) && $is_bundled) {
             if (is_file($local_file)
                 && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
             ) {
@@ -935,6 +983,9 @@ class MemberLibrary_Environment_Migration {
             return;
         }
         $report['missing_attachments'][$key] = $key;
+        if (!empty($manifest_attachment) && !$is_bundled) {
+            $report['missing_referenced_attachments'][$key] = $key;
+        }
     }
 
     private function import_bundle_attachments($package, $zip_path, &$created) {
@@ -943,7 +994,7 @@ class MemberLibrary_Environment_Migration {
 
     public function prepare_attachment_batch($package, $zip_path, $start, $limit, &$created) {
         $this->validate($package);
-        $attachments = array_values((array) ($package['data']['attachments'] ?? array()));
+        $attachments = $this->bundled_attachments($package);
         $start = max(0, (int) $start);
         $limit = max(1, min(5, (int) $limit));
         if ($start > count($attachments)) {
@@ -969,7 +1020,7 @@ class MemberLibrary_Environment_Migration {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         try {
-            $attachments = array_slice(array_values((array) ($package['data']['attachments'] ?? array())), (int) $start, (int) $limit);
+            $attachments = array_slice($this->bundled_attachments($package), (int) $start, (int) $limit);
             foreach ($attachments as $attachment) {
                 $relative = (string) $attachment['relative_file'];
                 $destination = $base . $relative;
@@ -1194,9 +1245,46 @@ class MemberLibrary_Environment_Migration {
                 'sha256' => (string) hash_file('sha256', $source),
                 'mime_type' => sanitize_mime_type((string) ($ref['mime_type'] ?? '')),
                 'source_url' => esc_url_raw((string) ($ref['source_url'] ?? '')),
+                'bundled' => 0 !== strpos(sanitize_mime_type((string) ($ref['mime_type'] ?? '')), 'video/'),
             );
         }
         return $inventory;
+    }
+
+    private function bundled_attachments($package) {
+        return array_values(array_filter((array) ($package['data']['attachments'] ?? array()), function ($attachment) {
+            return $this->attachment_is_bundled((array) $attachment);
+        }));
+    }
+
+    private function attachment_is_bundled($attachment) {
+        return !array_key_exists('bundled', (array) $attachment) || !empty($attachment['bundled']);
+    }
+
+    private function remote_attachment_available($attachment_id, $expected_mime, $expected_bytes) {
+        static $availability = array();
+        $attachment_id = absint($attachment_id);
+        if (isset($availability[$attachment_id])) {
+            return $availability[$attachment_id];
+        }
+        $url = wp_get_attachment_url($attachment_id);
+        if (!$url || !wp_http_validate_url($url)) {
+            return $availability[$attachment_id] = false;
+        }
+        $response = wp_remote_head($url, array(
+            'redirection' => 3,
+            'timeout' => 10,
+        ));
+        if (is_wp_error($response)) {
+            return $availability[$attachment_id] = false;
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $content_type = sanitize_mime_type((string) wp_remote_retrieve_header($response, 'content-type'));
+        $content_length = (int) wp_remote_retrieve_header($response, 'content-length');
+        return $availability[$attachment_id] = $status >= 200
+            && $status < 400
+            && ('' === $expected_mime || '' === $content_type || $expected_mime === $content_type)
+            && ((int) $expected_bytes <= 0 || $content_length <= 0 || (int) $expected_bytes === $content_length);
     }
 
     private function package_reference_paths($package) {

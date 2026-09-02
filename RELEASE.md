@@ -12,11 +12,12 @@ builds. See `docs/plans/plugin-consolidation-plan.md` in the workspace.
    - the `Version:` header in `member-library-plugin.php`
    - `define('MEMBER_LIBRARY_PLUGIN_VERSION', ...)`
 2. Add a `CHANGELOG.md` entry.
-3. Commit, then tag `vX.Y.Z` and push the tag.
-4. CI (`.github/workflows/release.yml`) verifies the tag matches both version
-   strings, builds `member-library-plugin.zip` (top-level dir
-   `member-library-plugin/`, excluding `.git`, `.github`, `tests`, `tools`,
-   `*.md`), and attaches it to the GitHub Release.
+3. Run `tools/build-release.sh`. It verifies that both version declarations
+   match and builds `build/member-library-plugin.zip` locally with the required
+   top-level `member-library-plugin/` directory.
+4. Inspect the ZIP, commit, tag `vX.Y.Z`, and push the commit and tag.
+5. Create the GitHub Release with `gh release create` and attach the locally
+   built ZIP. GitHub Actions is not part of the build or release path.
 
 ## Update channel — NOT yet live
 
