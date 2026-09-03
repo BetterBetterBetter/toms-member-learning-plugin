@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.12.0 - 2026-09-03
+
+- Put the Library menu in one deliberate order regardless of which module
+  registers each item: Dashboard, Courses, Series, Content, Speakers,
+  Collections, Topics, Homepage, Announcements, Access Groups, Settings,
+  Migration.
+- Turned the Dashboard into a status hub. One card per subsystem, each with
+  the same shape: a state badge (Live, Draft, Review, Needs attention, Not set
+  up), the one number that matters, and where to go. Cards cover the catalogue
+  (drafts waiting to publish), Access Groups (live vs draft, review waiting),
+  the Library app connection (sign-in readiness and catalogue sync, read
+  locally so the page stays fast), the homepage layout, and migration state.
+  Below them: recently edited Library items with a Live/Draft chip, and the
+  create actions.
+- Shared status chips (`tsol-status-chip`) so every page uses the same five
+  states and colours.
+- Plainer page titles: "Homepage" and "Migration".
+
 ## 0.11.0 - 2026-09-03
 
 - Redesigned the Access Groups page around two panels, Live and Draft. Live

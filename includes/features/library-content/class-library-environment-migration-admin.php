@@ -391,7 +391,7 @@ class MemberLibrary_Environment_Migration_Admin {
         $result = isset($_GET['result']) ? sanitize_key(wp_unslash($_GET['result'])) : '';
         ?>
         <div class="wrap tsol-library-admin-page">
-            <h1><?php esc_html_e('Test → Production Migration', 'member-library'); ?></h1>
+            <h1><?php esc_html_e('Migration', 'member-library'); ?></h1>
             <p class="tsol-library-admin-page__lead"><?php esc_html_e('Move only WordPress-owned Library content and configuration between environments using stable UUIDs and membership slugs.', 'member-library'); ?></p>
 
             <?php if ('applied' === $result) : ?>

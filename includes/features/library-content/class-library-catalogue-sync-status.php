@@ -140,6 +140,17 @@ class MemberLibrary_Catalogue_Sync_Status {
         <?php
     }
 
+    /**
+     * Fast, local-only health reading for dashboards: never contacts the app.
+     */
+    public static function summary() {
+        $local = MemberLibrary_Catalogue_Webhook::delivery_status();
+        $assessment = self::assess_local_status($local);
+        $assessment['pending'] = (int) ($local['pending']['count'] ?? 0);
+        $assessment['latest_change_at'] = (string) ($local['latest_change_at'] ?? '');
+        return $assessment;
+    }
+
     private static function assess_local_status($status) {
         if (empty($status['outbox_installed']) || empty($status['configured']) || empty($status['watchdog_scheduled_at'])) {
             return array(

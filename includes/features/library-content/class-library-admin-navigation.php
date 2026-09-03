@@ -26,6 +26,7 @@ class MemberLibrary_Admin_Navigation {
     public function init() {
         add_action('admin_menu', array($this, 'add_root_menu'), 8);
         add_action('admin_menu', array($this, 'add_submenus'), 20);
+        add_action('admin_menu', array($this, 'order_submenu'), 999);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('admin_init', array($this, 'redirect_legacy_settings_pages'), 1);
         add_filter('parent_file', array($this, 'filter_parent_file'));
@@ -55,6 +56,45 @@ class MemberLibrary_Admin_Navigation {
             self::MENU_SLUG,
             array($this, 'render_dashboard')
         );
+    }
+
+    /**
+     * Six classes register Library submenu items at different priorities. Put
+     * them in one deliberate order: content, curation, access, then system.
+     * Unknown items (other plugins hooking into the menu) keep their place at
+     * the end.
+     */
+    public function order_submenu() {
+        global $submenu;
+        if (empty($submenu[self::MENU_SLUG]) || !is_array($submenu[self::MENU_SLUG])) {
+            return;
+        }
+        $order = array_flip(array(
+            self::MENU_SLUG,
+            'edit.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE,
+            'edit.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE,
+            'edit.php?post_type=' . MemberLibrary_Content_Model::ITEM_POST_TYPE,
+            'edit.php?post_type=' . MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
+            $this->taxonomy_menu_slug(MemberLibrary_Content_Model::COURSE_COLLECTION_TAXONOMY),
+            $this->taxonomy_menu_slug(MemberLibrary_Content_Model::TOPIC_TAXONOMY),
+            MemberLibrary_Homepage_Curation::PAGE_SLUG,
+            'edit.php?post_type=' . MemberLibrary_Announcement_Model::POST_TYPE,
+            MemberLibrary_Access_Groups_Admin::PAGE_SLUG,
+            self::SETTINGS_SLUG,
+            MemberLibrary_Environment_Migration_Admin::PAGE_SLUG,
+        ));
+        $items = array_values($submenu[self::MENU_SLUG]);
+        $ranked = array();
+        foreach ($items as $position => $entry) {
+            $slug = (string) ($entry[2] ?? '');
+            $ranked[] = array(isset($order[$slug]) ? $order[$slug] : count($order) + $position, $position, $entry);
+        }
+        usort($ranked, static function ($left, $right) {
+            return $left[0] === $right[0] ? $left[1] - $right[1] : $left[0] - $right[0];
+        });
+        $submenu[self::MENU_SLUG] = array_map(static function ($row) {
+            return $row[2];
+        }, $ranked);
     }
 
     public function add_submenus() {
@@ -232,47 +272,177 @@ class MemberLibrary_Admin_Navigation {
             return;
         }
         $counts = $this->content_counts();
+        $can_manage = current_user_can('manage_options');
         $course_url = admin_url('edit.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE);
         $series_url = admin_url('edit.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE);
         $content_url = add_query_arg(array(
             'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
             MemberLibrary_Content_Admin::CONTENT_SCOPE_FILTER => MemberLibrary_Content_Admin::CONTENT_SCOPE_ALL,
         ), admin_url('edit.php'));
+        $drafts_url = add_query_arg('post_status', 'draft', $content_url);
+        $cards = $this->dashboard_cards($counts, $can_manage);
+        $recent = get_posts(array(
+            'post_type' => MemberLibrary_Content_Model::post_types(),
+            'post_status' => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 8,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'suppress_filters' => true,
+        ));
+        $type_labels = array(
+            MemberLibrary_Content_Model::COURSE_POST_TYPE => __('Course', 'member-library'),
+            MemberLibrary_Content_Model::SERIES_POST_TYPE => __('Series', 'member-library'),
+            MemberLibrary_Content_Model::ITEM_POST_TYPE => __('Content', 'member-library'),
+        );
         ?>
-        <div class="wrap tsol-library-admin-page">
+        <div class="wrap tsol-library-admin-page tsol-library-dashboard">
             <h1><?php echo esc_html(MemberLibrary_Brand::library_menu_label()); ?></h1>
-            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Build the new Library catalogue here. The existing MemberPress Courses area and all legacy pages remain separate and unchanged.', 'member-library'); ?></p>
+            <p class="tsol-library-admin-page__lead"><?php esc_html_e('Everything in the member Library, and whether it is live.', 'member-library'); ?></p>
 
-            <div class="tsol-library-admin-stats">
-                <?php $this->render_stat(__('Courses', 'member-library'), $counts['courses'], $course_url); ?>
-                <?php $this->render_stat(__('Series', 'member-library'), $counts['series'], $series_url); ?>
-                <?php $this->render_stat(__('Content', 'member-library'), $counts['content'], $content_url); ?>
-                <?php $this->render_stat(__('Published', 'member-library'), $counts['published'], $content_url); ?>
-                <?php $this->render_stat(__('Drafts', 'member-library'), $counts['drafts'], $content_url); ?>
+            <div class="tsol-dashboard-cards">
+                <?php foreach ($cards as $key => $card) : ?>
+                    <a class="tsol-dashboard-card tsol-dashboard-card--<?php echo esc_attr($card['state']); ?>" href="<?php echo esc_url($card['url']); ?>" data-dashboard-card="<?php echo esc_attr($key); ?>" data-dashboard-state="<?php echo esc_attr($card['state']); ?>">
+                        <span class="tsol-status-chip tsol-status-chip--<?php echo esc_attr($card['state']); ?>"><?php echo esc_html($card['badge']); ?></span>
+                        <strong class="tsol-dashboard-card__title"><?php echo esc_html($card['title']); ?></strong>
+                        <span class="tsol-dashboard-card__detail"><?php echo esc_html($card['detail']); ?></span>
+                        <span class="tsol-dashboard-card__action"><?php echo esc_html($card['action']); ?> →</span>
+                    </a>
+                <?php endforeach; ?>
             </div>
 
-            <div class="tsol-library-admin-grid">
-                <section class="card">
-                    <h2><?php esc_html_e('Create and organize', 'member-library'); ?></h2>
-                    <p><?php esc_html_e('Courses own intentional curricula. Series own related ordered videos, whether recurring or finite. Content may remain standalone only when it has no meaningful parent.', 'member-library'); ?></p>
-                    <p>
-                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('Add course', 'member-library'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('Add series', 'member-library'); ?></a>
-                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('Add content', 'member-library'); ?></a>
-                    </p>
+            <div class="tsol-library-admin-grid tsol-dashboard-lower">
+                <section class="card tsol-dashboard-recent" data-dashboard-recent>
+                    <h2><?php esc_html_e('Recently edited', 'member-library'); ?></h2>
+                    <?php if (empty($recent)) : ?>
+                        <p><?php esc_html_e('Nothing in the Library yet.', 'member-library'); ?></p>
+                    <?php else : ?>
+                        <ul>
+                            <?php foreach ($recent as $post) : ?>
+                                <?php $status = get_post_status_object((string) $post->post_status); ?>
+                                <li>
+                                    <a href="<?php echo esc_url(get_edit_post_link((int) $post->ID, 'raw')); ?>"><?php echo esc_html(get_the_title($post) ?: __('(untitled)', 'member-library')); ?></a>
+                                    <span class="tsol-dashboard-recent__meta">
+                                        <span class="tsol-status-chip tsol-status-chip--<?php echo 'publish' === $post->post_status ? 'live' : 'draft'; ?>"><?php echo esc_html('publish' === $post->post_status ? __('Live', 'member-library') : ($status ? $status->label : $post->post_status)); ?></span>
+                                        <?php echo esc_html($type_labels[$post->post_type] ?? $post->post_type); ?> · <?php echo esc_html(sprintf(__('%s ago', 'member-library'), human_time_diff(strtotime($post->post_modified_gmt . ' UTC')))); ?>
+                                    </span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                 </section>
                 <section class="card">
-                    <h2><?php esc_html_e('Access Groups', 'member-library'); ?></h2>
-                    <p><?php esc_html_e('Define reusable Library access packages, then assign them from each MemberPress membership. Changes are checked before they can become live.', 'member-library'); ?></p>
-                    <?php if (current_user_can('manage_options')) : ?>
-                        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . MemberLibrary_Access_Groups_Admin::PAGE_SLUG)); ?>"><?php esc_html_e('Manage Access Groups', 'member-library'); ?></a></p>
-                    <?php else : ?>
-                        <p><a class="button" href="<?php echo esc_url(self::settings_url(self::SETTINGS_TAB_ACCESS)); ?>"><?php esc_html_e('Review effective access', 'member-library'); ?></a></p>
-                    <?php endif; ?>
+                    <h2><?php esc_html_e('Add to the Library', 'member-library'); ?></h2>
+                    <p><?php esc_html_e('A Course is an ordered curriculum. A Series is a run of related videos. Content is a single lesson or video, ideally inside one of those.', 'member-library'); ?></p>
+                    <p class="tsol-dashboard-actions">
+                        <a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::COURSE_POST_TYPE)); ?>"><?php esc_html_e('New course', 'member-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::SERIES_POST_TYPE)); ?>"><?php esc_html_e('New series', 'member-library'); ?></a>
+                        <a class="button" href="<?php echo esc_url(admin_url('post-new.php?post_type=' . MemberLibrary_Content_Model::ITEM_POST_TYPE)); ?>"><?php esc_html_e('New content', 'member-library'); ?></a>
+                    </p>
+                    <p class="tsol-dashboard-counts">
+                        <a href="<?php echo esc_url($course_url); ?>"><strong><?php echo esc_html(number_format_i18n($counts['courses'])); ?></strong> <?php esc_html_e('courses', 'member-library'); ?></a>
+                        <a href="<?php echo esc_url($series_url); ?>"><strong><?php echo esc_html(number_format_i18n($counts['series'])); ?></strong> <?php esc_html_e('series', 'member-library'); ?></a>
+                        <a href="<?php echo esc_url($content_url); ?>"><strong><?php echo esc_html(number_format_i18n($counts['content'])); ?></strong> <?php esc_html_e('content items', 'member-library'); ?></a>
+                        <a href="<?php echo esc_url($drafts_url); ?>"><strong><?php echo esc_html(number_format_i18n($counts['drafts'])); ?></strong> <?php esc_html_e('drafts', 'member-library'); ?></a>
+                    </p>
                 </section>
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * One card per subsystem. Each answers the same question in the same
+     * shape: what state is it in, what is the one number that matters, and
+     * where do I go.
+     */
+    private function dashboard_cards($counts, $can_manage) {
+        $cards = array();
+
+        $drafts = (int) $counts['drafts'];
+        $cards['catalogue'] = array(
+            'state' => $drafts > 0 ? 'draft' : 'live',
+            'badge' => $drafts > 0 ? __('Drafts', 'member-library') : __('Live', 'member-library'),
+            'title' => __('Catalogue', 'member-library'),
+            'detail' => $drafts > 0
+                ? sprintf(_n('%1$s published · %2$s draft waiting to publish', '%1$s published · %2$s drafts waiting to publish', $drafts, 'member-library'), number_format_i18n((int) $counts['published']), number_format_i18n($drafts))
+                : sprintf(__('%s items published, nothing in draft', 'member-library'), number_format_i18n((int) $counts['published'])),
+            'action' => __('Open content', 'member-library'),
+            'url' => add_query_arg(array(
+                'post_type' => MemberLibrary_Content_Model::ITEM_POST_TYPE,
+                MemberLibrary_Content_Admin::CONTENT_SCOPE_FILTER => MemberLibrary_Content_Admin::CONTENT_SCOPE_ALL,
+            ) + ($drafts > 0 ? array('post_status' => 'draft') : array()), admin_url('edit.php')),
+        );
+
+        $access = new MemberLibrary_Access_Groups();
+        $access_url = $can_manage
+            ? admin_url('admin.php?page=' . MemberLibrary_Access_Groups_Admin::PAGE_SLUG)
+            : self::settings_url(self::SETTINGS_TAB_ACCESS);
+        if (!$access->is_bootstrapped()) {
+            $cards['access'] = array('state' => 'off', 'badge' => __('Not set up', 'member-library'), 'title' => __('Access Groups', 'member-library'), 'detail' => __('Members use the existing MemberPress rules. Import them to manage access here.', 'member-library'), 'action' => __('Set up', 'member-library'), 'url' => $access_url);
+        } else {
+            $preview = $access->preview();
+            $phase = (string) ($preview['stage']['phase'] ?? '');
+            $changes = $access->changes_since_publish();
+            if ('staged' === $phase) {
+                $card = array('state' => 'review', 'badge' => __('Review waiting', 'member-library'), 'detail' => __('A review is complete and waiting for Publish or Back to editing.', 'member-library'), 'action' => __('Decide', 'member-library'));
+            } elseif (in_array($phase, array('staging', 'failed'), true)) {
+                $card = array('state' => 'attention', 'badge' => __('Needs attention', 'member-library'), 'detail' => __('The last review did not finish. Nothing changed for members.', 'member-library'), 'action' => __('Clear it', 'member-library'));
+            } elseif (!$changes['has_published']) {
+                $card = array('state' => 'draft', 'badge' => __('Draft only', 'member-library'), 'detail' => sprintf(_n('%d group defined, nothing published yet', '%d groups defined, nothing published yet', (int) $preview['group_count'], 'member-library'), (int) $preview['group_count']), 'action' => __('Review and publish', 'member-library'));
+            } elseif ($changes['has_changes']) {
+                $card = array('state' => 'draft', 'badge' => __('Draft', 'member-library'), 'detail' => sprintf(_n('%d change not yet live', '%d changes not yet live', (int) $changes['counts']['total'], 'member-library'), (int) $changes['counts']['total']), 'action' => __('Review and publish', 'member-library'));
+            } else {
+                $card = array('state' => 'live', 'badge' => __('Live', 'member-library'), 'detail' => sprintf(_n('%1$d group live · %2$d membership assigned · same as draft', '%1$d groups live · %2$d memberships assigned · same as draft', (int) $preview['group_count'], 'member-library'), (int) $preview['group_count'], (int) $preview['assigned_memberships']), 'action' => __('Open', 'member-library'));
+            }
+            $cards['access'] = $card + array('title' => __('Access Groups', 'member-library'), 'url' => $access_url);
+        }
+
+        if ($can_manage) {
+            $reason = MemberLibrary_Auth_Settings::readiness_error();
+            $sync = MemberLibrary_Catalogue_Sync_Status::summary();
+            if ('' !== $reason) {
+                $card = array('state' => 'attention', 'badge' => __('Not connected', 'member-library'), 'detail' => $reason, 'action' => __('Finish setup', 'member-library'), 'url' => self::settings_url(self::SETTINGS_TAB_AUTHENTICATION));
+            } elseif ('critical' === $sync['status']) {
+                $card = array('state' => 'attention', 'badge' => __('Needs attention', 'member-library'), 'detail' => __('Sign-in works, but catalogue changes are not reaching the app.', 'member-library'), 'action' => __('See sync', 'member-library'), 'url' => self::settings_url(self::SETTINGS_TAB_SYNC));
+            } elseif ('recommended' === $sync['status']) {
+                $card = array('state' => 'review', 'badge' => __('Syncing', 'member-library'), 'detail' => sprintf(_n('%d change on its way to the app', '%d changes on their way to the app', (int) $sync['pending'], 'member-library'), (int) $sync['pending']), 'action' => __('See sync', 'member-library'), 'url' => self::settings_url(self::SETTINGS_TAB_SYNC));
+            } else {
+                $card = array('state' => 'ok', 'badge' => __('Connected', 'member-library'), 'detail' => __('Members can sign in and the app has every published change.', 'member-library'), 'action' => __('Settings', 'member-library'), 'url' => self::settings_url(self::SETTINGS_TAB_AUTHENTICATION));
+            }
+            $cards['connection'] = $card + array('title' => __('Library app', 'member-library'));
+        }
+
+        $layout = MemberLibrary_Homepage_Curation::layout();
+        $curated = 0;
+        foreach ((array) ($layout['rails'] ?? array()) as $ids) {
+            $curated += count((array) $ids);
+        }
+        $cards['homepage'] = array(
+            'state' => $curated > 0 ? 'live' : 'attention',
+            'badge' => $curated > 0 ? __('Live', 'member-library') : __('Empty', 'member-library'),
+            'title' => __('Homepage', 'member-library'),
+            'detail' => $curated > 0
+                ? sprintf(_n('%d item placed across the homepage rails', '%d items placed across the homepage rails', $curated, 'member-library'), $curated)
+                : __('No items placed yet; the app shows its automatic layout.', 'member-library'),
+            'action' => __('Arrange', 'member-library'),
+            'url' => admin_url('admin.php?page=' . MemberLibrary_Homepage_Curation::PAGE_SLUG),
+        );
+
+        if ($can_manage) {
+            $pending = get_option(MemberLibrary_Environment_Migration_Admin::PENDING_OPTION, array());
+            $rollback = get_option(MemberLibrary_Environment_Migration::ROLLBACK_OPTION, array());
+            $apply_phase = is_array($pending) ? (string) ($pending['apply_state']['phase'] ?? '') : '';
+            if (is_array($pending) && !empty($pending['token'])) {
+                $card = array('state' => 'failed' === $apply_phase ? 'attention' : 'review', 'badge' => 'failed' === $apply_phase ? __('Import stopped', 'member-library') : __('Import waiting', 'member-library'), 'detail' => 'failed' === $apply_phase ? __('An import stopped part-way. Resume it or roll it back.', 'member-library') : __('A package is uploaded and waiting to be imported.', 'member-library'), 'action' => __('Continue', 'member-library'));
+            } elseif (is_array($rollback) && !empty($rollback['import_hash'])) {
+                $card = array('state' => 'ok', 'badge' => __('Imported', 'member-library'), 'detail' => sprintf(__('Last import %s. Rollback is available.', 'member-library'), !empty($rollback['created_at']) ? human_time_diff(strtotime((string) $rollback['created_at'])) . ' ' . __('ago', 'member-library') : ''), 'action' => __('Open', 'member-library'));
+            } else {
+                $card = array('state' => 'off', 'badge' => __('Idle', 'member-library'), 'detail' => __('Move Library content between sites with a verified package.', 'member-library'), 'action' => __('Open', 'member-library'));
+            }
+            $cards['migration'] = $card + array('title' => __('Migration', 'member-library'), 'url' => admin_url('admin.php?page=' . MemberLibrary_Environment_Migration_Admin::PAGE_SLUG));
+        }
+
+        return $cards;
     }
 
     public function render_settings() {

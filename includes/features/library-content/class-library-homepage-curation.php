@@ -216,7 +216,7 @@ class MemberLibrary_Homepage_Curation {
         });
         ?>
         <div class="wrap tsol-library-admin-page tsol-library-homepage" data-homepage-curation>
-            <h1><?php esc_html_e('Library Homepage', 'member-library'); ?></h1>
+            <h1><?php esc_html_e('Homepage', 'member-library'); ?></h1>
             <p class="tsol-library-admin-page__lead"><?php esc_html_e('Choose which Courses and Series belong on the homepage, move them between sections, and drag them into the intended order.', 'member-library'); ?></p>
 
             <?php if (isset($_GET['updated'])) : ?>

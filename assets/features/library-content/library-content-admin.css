@@ -1207,3 +1207,160 @@
         min-width: 40px;
     }
 }
+
+/* Shared status chips: the same five states everywhere in the Library admin. */
+.tsol-status-chip {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1;
+    padding: 5px 9px;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.tsol-status-chip--live,
+.tsol-status-chip--ok {
+    background: #edfaef;
+    color: #166534;
+}
+
+.tsol-status-chip--draft {
+    background: #fcf9e8;
+    color: #7a5b00;
+}
+
+.tsol-status-chip--review {
+    background: #f0f6fc;
+    color: #1d4f8a;
+}
+
+.tsol-status-chip--attention {
+    background: #fcf0f1;
+    color: #8a2424;
+}
+
+.tsol-status-chip--off {
+    background: #f6f7f7;
+    color: #50575e;
+}
+
+/* Dashboard */
+.tsol-dashboard-cards {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    margin: 1.25rem 0 1.75rem;
+    max-width: 72rem;
+}
+
+.tsol-dashboard-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
+    border-top: 4px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
+    color: inherit;
+    display: grid;
+    gap: 8px;
+    padding: 16px 18px 14px;
+    text-decoration: none;
+    transition: box-shadow .12s ease, border-color .12s ease;
+}
+
+.tsol-dashboard-card:hover,
+.tsol-dashboard-card:focus-visible {
+    border-color: #2271b1;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+    color: inherit;
+    outline: none;
+}
+
+.tsol-dashboard-card--live,
+.tsol-dashboard-card--ok { border-top-color: #00a32a; }
+.tsol-dashboard-card--draft { border-top-color: #dba617; }
+.tsol-dashboard-card--review { border-top-color: #2271b1; }
+.tsol-dashboard-card--attention { border-top-color: #d63638; }
+.tsol-dashboard-card--off { border-top-color: #c3c4c7; }
+
+.tsol-dashboard-card .tsol-status-chip {
+    justify-self: start;
+}
+
+.tsol-dashboard-card__title {
+    color: #1d2327;
+    font-size: 16px;
+}
+
+.tsol-dashboard-card__detail {
+    color: #50575e;
+    line-height: 1.45;
+    min-height: 2.9em;
+}
+
+.tsol-dashboard-card__action {
+    color: #2271b1;
+    font-weight: 600;
+}
+
+.tsol-dashboard-lower {
+    max-width: 72rem;
+}
+
+.tsol-dashboard-recent ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tsol-dashboard-recent li {
+    border-top: 1px solid #f0f0f1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.tsol-dashboard-recent li:first-child {
+    border-top: 0;
+}
+
+.tsol-dashboard-recent a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.tsol-dashboard-recent__meta {
+    align-items: center;
+    color: #646970;
+    display: inline-flex;
+    font-size: 12px;
+    gap: 8px;
+}
+
+.tsol-dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tsol-dashboard-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 12px;
+}
+
+.tsol-dashboard-counts a {
+    color: #50575e;
+    text-decoration: none;
+}
+
+.tsol-dashboard-counts strong {
+    color: #1d2327;
+    font-size: 18px;
+    margin-right: 4px;
+}
