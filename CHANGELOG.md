@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.9.1 - 2026-09-03
+
+- Fixed the staged migration import stopping with "applyForm.submit is not a
+  function" after the files were prepared. The Import, Export, and Rollback
+  buttons were rendered with `name="submit"`, which shadows the form's
+  `submit()` method in the browser. The buttons now carry distinct names and
+  the page submits through `HTMLFormElement.prototype.submit`. A contract
+  assertion renders the page and rejects any control named "submit".
+
 ## 0.9.0 - 2026-09-03
 
 - Link uploads that WP Offload Media already keeps in the shared storage

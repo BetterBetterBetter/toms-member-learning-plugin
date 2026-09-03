@@ -215,6 +215,42 @@ if (class_exists($offload_item_class) && !empty($linked_entries)) {
     WP_CLI::log('WP Offload Media is not active on this site: the linked-storage contract was not exercised here.');
 }
 
+// The staged import submits its form from JavaScript. A control named
+// "submit" shadows HTMLFormElement.submit ("applyForm.submit is not a
+// function" on production, 2026-09-03), so the page may never render one.
+$admin_ids = get_users(array('role' => 'administrator', 'fields' => 'ID', 'number' => 1));
+if (!empty($admin_ids)) {
+    $previous_user_id = get_current_user_id();
+    $previous_pending = get_option(MemberLibrary_Environment_Migration_Admin::PENDING_OPTION, null);
+    wp_set_current_user((int) $admin_ids[0]);
+    update_option(MemberLibrary_Environment_Migration_Admin::PENDING_OPTION, array(
+        'token' => wp_generate_uuid4(),
+        'user_id' => (int) $admin_ids[0],
+        'created_at' => time(),
+        'bundle_path' => '',
+        'report' => $preview,
+        'attachment_index' => 0,
+        'prepared_created' => array('posts' => array(), 'terms' => array(), 'attachments' => array()),
+    ), false);
+    try {
+        ob_start();
+        (new MemberLibrary_Environment_Migration_Admin())->render();
+        $rendered_page = (string) ob_get_clean();
+    } finally {
+        if (null === $previous_pending) {
+            delete_option(MemberLibrary_Environment_Migration_Admin::PENDING_OPTION);
+        } else {
+            update_option(MemberLibrary_Environment_Migration_Admin::PENDING_OPTION, $previous_pending, false);
+        }
+        wp_set_current_user($previous_user_id);
+    }
+    $assert(false !== strpos($rendered_page, 'id="tsol-library-migration-apply"'), 'The migration page did not render the staged import form.');
+    $assert(!preg_match('/name=["\']submit["\']/', $rendered_page), 'The migration page renders a control named "submit", which shadows HTMLFormElement.submit.');
+    $assert(false === strpos($rendered_page, 'applyForm.submit()'), 'The staged import still calls the shadowable form.submit().');
+} else {
+    $assert(false, 'No administrator user exists to render the migration page.');
+}
+
 $with_lock = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'with_lock');
 delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
 add_option(

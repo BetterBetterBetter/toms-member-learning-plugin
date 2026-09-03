@@ -317,7 +317,7 @@ class MemberLibrary_Environment_Migration_Admin {
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_migration_export">
                         <?php wp_nonce_field(self::NONCE_ACTION); ?>
-                        <?php submit_button(__('Download complete Library ZIP', 'member-library'), 'secondary', 'submit', false); ?>
+                        <?php submit_button(__('Download complete Library ZIP', 'member-library'), 'secondary', 'tsol_library_migration_export', false); ?>
                     </form>
                 </section>
                 <section class="card">
@@ -372,7 +372,7 @@ class MemberLibrary_Environment_Migration_Admin {
                             <?php wp_nonce_field(self::NONCE_ACTION); ?>
                             <label for="tsol-library-migration-confirmation"><strong><?php esc_html_e('Type import-wordpress-library to confirm', 'member-library'); ?></strong></label><br>
                             <input id="tsol-library-migration-confirmation" class="regular-text code" name="confirmation" autocomplete="off" required>
-                            <?php submit_button(__('Import WordPress Library', 'member-library'), 'primary', 'submit', false); ?>
+                            <?php submit_button(__('Import WordPress Library', 'member-library'), 'primary', 'tsol_library_migration_import', false); ?>
                             <progress id="tsol-library-migration-apply-progress" max="100" value="<?php echo esc_attr((int) round(100 * (int) ($pending['attachment_index'] ?? 0) / max(1, (int) ($report['attachment_files'] ?? 0)))); ?>" hidden></progress>
                             <p id="tsol-library-migration-apply-status" class="description" aria-live="polite"></p>
                         </form>
@@ -389,7 +389,7 @@ class MemberLibrary_Environment_Migration_Admin {
                         <?php wp_nonce_field(self::NONCE_ACTION); ?>
                         <label for="tsol-library-rollback-confirmation"><strong><?php esc_html_e('Type rollback-library-migration to confirm', 'member-library'); ?></strong></label><br>
                         <input id="tsol-library-rollback-confirmation" class="regular-text code" name="confirmation" autocomplete="off" required>
-                        <?php submit_button(__('Roll back last migration', 'member-library'), 'delete', 'submit', false); ?>
+                        <?php submit_button(__('Roll back last migration', 'member-library'), 'delete', 'tsol_library_migration_rollback', false); ?>
                     </form>
                 </section>
             <?php endif; ?>
@@ -434,7 +434,7 @@ class MemberLibrary_Environment_Migration_Admin {
                     }
                     status.textContent = <?php echo wp_json_encode(__('Upload complete. Verifying checksums…', 'member-library')); ?>;
                     form.querySelector('[name="upload_token"]').value = uploadToken;
-                    form.submit();
+                    HTMLFormElement.prototype.submit.call(form);
                 } catch (error) {
                     status.textContent = error instanceof Error ? error.message : <?php echo wp_json_encode(__('The ZIP upload failed.', 'member-library')); ?>;
                     button.disabled = false;
@@ -473,7 +473,7 @@ class MemberLibrary_Environment_Migration_Admin {
                         }
                         applyForm.querySelector('[name="attachments_prepared"]').value = '1';
                         applyForm.dataset.ready = 'true';
-                        applyForm.submit();
+                        HTMLFormElement.prototype.submit.call(applyForm);
                     } catch (error) {
                         applyStatus.textContent = error instanceof Error ? error.message : <?php echo wp_json_encode(__('The staged import could not continue.', 'member-library')); ?>;
                         if (submit) submit.disabled = false;
