@@ -313,7 +313,7 @@ class MemberLibrary_Environment_Migration_Admin {
             <div class="tsol-library-admin-grid">
                 <section class="card">
                     <h2><?php esc_html_e('1. Export from test', 'member-library'); ?></h2>
-                    <p><?php esc_html_e('Download one verified ZIP containing courses, series, content, speakers, terms, homepage curation, portable Access Groups, and referenced non-video uploads. Existing WordPress or offloaded videos are matched and verified on production instead of uploaded again.', 'member-library'); ?></p>
+                    <p><?php esc_html_e('Download one verified ZIP containing courses, series, content, speakers, terms, homepage curation, portable Access Groups, and the uploads only this site holds. Uploads WP Offload Media already keeps in the shared storage bucket are linked on production, and existing videos are matched and verified there, instead of being uploaded again.', 'member-library'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_migration_export">
                         <?php wp_nonce_field(self::NONCE_ACTION); ?>
@@ -347,8 +347,9 @@ class MemberLibrary_Environment_Migration_Admin {
                         <?php $this->stat(__('Terms', 'member-library'), (int) ($report['terms'] ?? 0)); ?>
                         <?php $this->stat(__('Access Groups', 'member-library'), (int) ($report['groups'] ?? 0)); ?>
                         <?php $this->stat(__('Memberships', 'member-library'), (int) ($report['membership_assignments'] ?? 0)); ?>
-                        <?php $this->stat(__('Bundled files', 'member-library'), (int) ($report['attachment_files'] ?? 0)); ?>
-                        <?php $this->stat(__('Reused videos', 'member-library'), (int) ($report['referenced_attachment_files'] ?? 0)); ?>
+                        <?php $this->stat(__('Bundled files', 'member-library'), (int) ($report['bundled_attachment_files'] ?? 0)); ?>
+                        <?php $this->stat(__('Linked from storage', 'member-library'), (int) ($report['linked_attachment_files'] ?? 0)); ?>
+                        <?php $this->stat(__('Matched on production', 'member-library'), count((array) ($report['existing_attachments'] ?? array()))); ?>
                         <?php $this->stat(__('Upload size', 'member-library'), size_format((int) ($report['attachment_bytes'] ?? 0), 1)); ?>
                     </div>
                     <?php foreach ((array) ($report['errors'] ?? array()) as $error) : ?>

@@ -33,3 +33,11 @@ cannot import a v2 package** — older plugin code checks `=== 1` and rejects it
 
 Migrate the exporting and importing installs to canonical (v2-capable)
 together. During any rolling window, export from the OLDER of the two.
+
+## Additive attachment keys (0.8.1 / 0.9.0, still schema 2)
+
+Attachment entries may carry `bundled` (0.8.1) and `offload` (0.9.0). Both are
+additive: a v2 importer without them treats every entry as bundled (0.6.0
+behaviour), which is why a 0.9.0 package fails on a 0.6.0/0.8.x production
+with "Bundled upload … is missing" — upgrade the importing site first. See
+`docs/environment-migration.md`.

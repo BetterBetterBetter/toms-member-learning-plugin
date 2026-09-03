@@ -733,7 +733,12 @@ class MemberLibrary_Access_Groups {
                 $expanded[$group_key] = true;
                 continue;
             }
-            $expanded['collection:masterclasses'] = true;
+            // Brands without a Masterclasses collection expand Entire Library to
+            // every Course individually; the collection scope only exists when
+            // its term does.
+            if (isset($definitions['collection:masterclasses'])) {
+                $expanded['collection:masterclasses'] = true;
+            }
             $expanded['series:all'] = true;
             foreach ($definitions as $key => $definition) {
                 if ('course' === $definition['kind'] && !$this->course_is_masterclass((int) $definition['target_id'])) {
@@ -770,7 +775,7 @@ class MemberLibrary_Access_Groups {
 
     private function compact_assignments($assignments) {
         $definitions = $this->definitions();
-        $required = array('collection:masterclasses', 'series:all');
+        $required = array_values(array_intersect(array('collection:masterclasses', 'series:all'), array_keys($definitions)));
         foreach ($definitions as $key => $definition) {
             if ('course' === $definition['kind'] && !$this->course_is_masterclass((int) $definition['target_id'])) {
                 $required[] = $key;
@@ -893,7 +898,7 @@ class MemberLibrary_Access_Groups {
         if (1 === count($scope_keys) && isset($definitions[$scope_keys[0]])) {
             return preg_replace('/^(Course|Series):\s*/', '', (string) $definitions[$scope_keys[0]]['label']);
         }
-        $core_scopes = array('collection:masterclasses', 'series:all');
+        $core_scopes = array_values(array_intersect(array('collection:masterclasses', 'series:all'), array_keys($definitions)));
         foreach ($definitions as $key => $definition) {
             if ('course' === $definition['kind'] && !$this->course_is_masterclass((int) $definition['target_id'])) {
                 $core_scopes[] = $key;
@@ -1290,9 +1295,6 @@ class MemberLibrary_Access_Groups {
     private function assert_memberpress() {
         if (!class_exists('MeprRule') || !class_exists('MeprRuleAccessCondition') || !class_exists('MeprUser')) {
             throw new RuntimeException('MemberPress is unavailable; Access Groups fail closed.');
-        }
-        if ($this->masterclasses_term_id() <= 0) {
-            throw new RuntimeException('The Masterclasses collection is unavailable.');
         }
     }
 

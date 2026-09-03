@@ -19,6 +19,7 @@ class MemberLibrary_Environment_Migration {
     const PACKAGE_FILENAME = 'tsol-library-package.json';
     const MAX_BUNDLE_BYTES = 2147483648;
     const MAX_BUNDLE_ENTRIES = 1000;
+    const OFFLOAD_ITEM_CLASS = 'DeliciousBrains\\WP_Offload_Media\\Items\\Media_Library_Item';
 
     public function build_package() {
         MemberLibrary_Homepage_Curation::reset_cache();
@@ -61,6 +62,7 @@ class MemberLibrary_Environment_Migration {
         $bundled_attachments = $this->bundled_attachments($package);
         $package['manifest']['counts']['bundled_attachments'] = count($bundled_attachments);
         $package['manifest']['counts']['referenced_attachments'] = count($attachments) - count($bundled_attachments);
+        $package['manifest']['counts']['linked_attachments'] = count($this->linkable_attachments($package));
         $package['manifest']['counts']['attachment_bytes'] = array_sum(array_map(static function ($attachment) {
             return (int) $attachment['bytes'];
         }, $bundled_attachments));
@@ -272,7 +274,8 @@ class MemberLibrary_Environment_Migration {
             'terms' => count((array) ($package['data']['terms'] ?? array())),
             'groups' => count((array) ($package['data']['access_groups']['groups'] ?? array())),
             'membership_assignments' => count((array) ($package['data']['access_groups']['assignments'] ?? array())),
-            'attachment_files' => count($this->bundled_attachments($package)),
+            'attachment_files' => count($this->staged_attachments($package)),
+            'bundled_attachment_files' => count($this->bundled_attachments($package)),
             'referenced_attachment_files' => count((array) ($package['data']['attachments'] ?? array())) - count($this->bundled_attachments($package)),
             'attachment_bytes' => array_sum(array_map(static function ($attachment) {
                 return (int) ($attachment['bytes'] ?? 0);
@@ -281,6 +284,7 @@ class MemberLibrary_Environment_Migration {
             'existing_attachments' => array(),
             'missing_attachments' => array(),
             'missing_referenced_attachments' => array(),
+            'linked_attachments' => array(),
             'errors' => array(),
             'warnings' => array(),
         );
@@ -353,6 +357,8 @@ class MemberLibrary_Environment_Migration {
         $report['existing_attachments'] = array_values($report['existing_attachments']);
         $report['missing_attachments'] = array_values($report['missing_attachments']);
         $report['missing_referenced_attachments'] = array_values($report['missing_referenced_attachments']);
+        $report['linked_attachments'] = array_values($report['linked_attachments']);
+        $report['linked_attachment_files'] = count($report['linked_attachments']);
         $report['package_hash'] = (string) $package['manifest']['data_sha256'];
         return $report;
     }
@@ -580,7 +586,9 @@ class MemberLibrary_Environment_Migration {
                 'taxonomies' => $this->export_post_terms((int) $post->ID),
                 'speaker_uuids' => array_values(array_filter(array_map(array($this, 'post_uuid'), array_map('intval', get_post_meta($post->ID, MemberLibrary_Content_Model::META_SPEAKER_IDS, false))))),
                 'featured_attachment' => $this->attachment_ref((int) get_post_thumbnail_id($post->ID)),
-                'legacy_authorization' => $this->legacy_authorization_ref((int) $post->ID),
+                'legacy_authorization' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE === (string) $post->post_type
+                    ? array()
+                    : $this->legacy_authorization_ref((int) $post->ID),
             );
             $record['fingerprint'] = $this->record_fingerprint($record);
             $records[] = $record;
@@ -832,6 +840,11 @@ class MemberLibrary_Environment_Migration {
      * parent UUID so an already-exported ZIP can be reapplied safely.
      */
     private function package_legacy_authorization_ref($record, $records_by_uuid, $visited = array()) {
+        // Speakers are never MemberPress-protected: their legacy source IDs are
+        // importer bookkeeping that can collide with unrelated posts.
+        if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === (string) ($record['post_type'] ?? '')) {
+            return array();
+        }
         $uuid = (string) ($record['uuid'] ?? '');
         if ('' !== $uuid) {
             if (isset($visited[$uuid])) {
@@ -940,6 +953,8 @@ class MemberLibrary_Environment_Migration {
         $manifest_attachment = (array) ($bundle_index[$relative] ?? array());
         $is_bundled = !empty($manifest_attachment) && $this->attachment_is_bundled($manifest_attachment);
         $expected_mime = sanitize_mime_type((string) ($manifest_attachment['mime_type'] ?? ''));
+        $expected_bytes = (int) ($manifest_attachment['bytes'] ?? 0);
+        $offload = (array) ($manifest_attachment['offload'] ?? array());
         if (!$is_bundled
             && $attachment_id > 0
             && '' !== $expected_mime
@@ -948,38 +963,49 @@ class MemberLibrary_Environment_Migration {
             $report['errors'][] = sprintf('Production upload “%s” has a different media type than the migration package.', $relative);
             return;
         }
-        $remote_file_exists = !empty($manifest_attachment)
-            && !$is_bundled
-            && $attachment_id > 0
-            && $this->remote_attachment_available($attachment_id, $expected_mime, (int) ($manifest_attachment['bytes'] ?? 0));
-        if ($attachment_id > 0 && (is_file($local_file) || $remote_file_exists)) {
-            if (isset($bundle_index[$relative])
-                && is_file($local_file)
-                && $is_bundled
-                && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
-            ) {
-                $report['errors'][] = sprintf('Production upload “%s” differs from the migration source file.', $relative);
-                return;
-            }
-            if (!empty($manifest_attachment)
+        if ($attachment_id > 0) {
+            $has_local_file = '' !== $local_file && is_file($local_file);
+            $remote_file_exists = !$has_local_file
+                && !empty($manifest_attachment)
                 && !$is_bundled
-                && is_file($local_file)
-                && (int) filesize($local_file) !== (int) ($manifest_attachment['bytes'] ?? -1)
-            ) {
-                $report['errors'][] = sprintf('Production video “%s” has a different file size than the migration source.', $relative);
+                && $this->remote_attachment_available($attachment_id, $expected_mime, $expected_bytes);
+            if ($has_local_file || $remote_file_exists) {
+                if ($is_bundled
+                    && $has_local_file
+                    && !hash_equals((string) $manifest_attachment['sha256'], (string) hash_file('sha256', $local_file))
+                ) {
+                    $report['errors'][] = sprintf('Production upload “%s” differs from the migration source file.', $relative);
+                    return;
+                }
+                if (!empty($manifest_attachment)
+                    && !$is_bundled
+                    && $has_local_file
+                    && (int) filesize($local_file) !== $expected_bytes
+                ) {
+                    $report['errors'][] = sprintf('Production upload “%s” has a different file size than the migration source.', $relative);
+                    return;
+                }
+                $report['existing_attachments'][$key] = $key;
                 return;
             }
-            $report['existing_attachments'][$key] = $key;
-            return;
         }
-        if (isset($bundle_index[$relative]) && $is_bundled) {
-            if (is_file($local_file)
-                && !hash_equals((string) $bundle_index[$relative]['sha256'], (string) hash_file('sha256', $local_file))
+        if ($is_bundled) {
+            if ('' !== $local_file
+                && is_file($local_file)
+                && !hash_equals((string) $manifest_attachment['sha256'], (string) hash_file('sha256', $local_file))
             ) {
                 $report['errors'][] = sprintf('Production file “%s” exists but differs from the bundled test-site file.', $relative);
                 return;
             }
             $report['bundled_attachments'][$key] = $key;
+            return;
+        }
+        if ($attachment_id <= 0 && !empty($offload['url'])) {
+            if ($this->remote_url_available((string) $offload['url'], $expected_mime, $expected_bytes)) {
+                $report['linked_attachments'][$key] = $key;
+                return;
+            }
+            $report['errors'][] = sprintf('Offloaded upload “%s” is not reachable at its storage URL, so production cannot link it.', $relative);
             return;
         }
         $report['missing_attachments'][$key] = $key;
@@ -994,7 +1020,7 @@ class MemberLibrary_Environment_Migration {
 
     public function prepare_attachment_batch($package, $zip_path, $start, $limit, &$created) {
         $this->validate($package);
-        $attachments = $this->bundled_attachments($package);
+        $attachments = $this->staged_attachments($package);
         $start = max(0, (int) $start);
         $limit = max(1, min(5, (int) $limit));
         if ($start > count($attachments)) {
@@ -1020,13 +1046,31 @@ class MemberLibrary_Environment_Migration {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         try {
-            $attachments = array_slice($this->bundled_attachments($package), (int) $start, (int) $limit);
+            $attachments = array_slice($this->staged_attachments($package), (int) $start, (int) $limit);
             foreach ($attachments as $attachment) {
                 $relative = (string) $attachment['relative_file'];
                 $destination = $base . $relative;
                 $ref = array('relative_file' => $relative, 'source_url' => (string) ($attachment['source_url'] ?? ''));
                 $attachment_id = $this->resolve_attachment($ref);
                 $file_existed = is_file($destination);
+                if (!$this->attachment_is_bundled($attachment)) {
+                    // Production already owns this upload (verified in preview),
+                    // or it links the storage object the source site offloaded.
+                    if ($attachment_id > 0) {
+                        continue;
+                    }
+                    if (!empty($attachment['offload'])) {
+                        $attachment_id = $this->link_offloaded_attachment($attachment, $destination);
+                        $created['attachments'][] = array(
+                            'action' => 'linked_attachment',
+                            'post_id' => (int) $attachment_id,
+                            'relative_file' => $relative,
+                            'generated_files' => array(),
+                        );
+                        continue;
+                    }
+                    throw new RuntimeException(sprintf('Referenced upload “%s” is missing in production.', $relative));
+                }
                 if (!$file_existed) {
                     if (!wp_mkdir_p(dirname($destination))) {
                         throw new RuntimeException(sprintf('WordPress could not create the upload directory for “%s”.', $relative));
@@ -1052,7 +1096,9 @@ class MemberLibrary_Environment_Migration {
                         'generated_files' => array(),
                     );
                 }
-                if (!hash_equals((string) $attachment['sha256'], (string) hash_file('sha256', $destination))) {
+                if ('' !== (string) ($attachment['sha256'] ?? '')
+                    && !hash_equals((string) $attachment['sha256'], (string) hash_file('sha256', $destination))
+                ) {
                     throw new RuntimeException(sprintf('Extracted upload “%s” failed its checksum.', $relative));
                 }
                 if ($attachment_id > 0) {
@@ -1103,6 +1149,89 @@ class MemberLibrary_Environment_Migration {
         }
     }
 
+    /**
+     * Register a WordPress attachment for an upload whose object already
+     * exists in the storage bucket the source site offloaded it to. No bytes
+     * are copied: WP Offload Media serves the attachment from that object.
+     */
+    private function link_offloaded_attachment($attachment, $destination) {
+        $relative = (string) ($attachment['relative_file'] ?? '');
+        $offload = (array) ($attachment['offload'] ?? array());
+        $class = self::OFFLOAD_ITEM_CLASS;
+        if (!class_exists($class)) {
+            throw new RuntimeException(sprintf('Offloaded upload “%s” cannot be linked because WP Offload Media is not active on this site.', $relative));
+        }
+        foreach (array('provider', 'region', 'bucket', 'path', 'url') as $required) {
+            if ('' === (string) ($offload[$required] ?? '')) {
+                throw new RuntimeException(sprintf('Offloaded upload “%s” has an incomplete storage reference.', $relative));
+            }
+        }
+        $filetype = wp_check_filetype(basename($destination), null);
+        $mime_type = (string) ($filetype['type'] ?: ($attachment['mime_type'] ?? 'application/octet-stream'));
+        $attachment_id = wp_insert_attachment(array(
+            'post_mime_type' => $mime_type,
+            'post_title' => sanitize_text_field(pathinfo(basename($destination), PATHINFO_FILENAME)),
+            'post_status' => 'inherit',
+            'guid' => esc_url_raw((string) $offload['url']),
+        ), $destination, 0, true);
+        if (is_wp_error($attachment_id) || (int) $attachment_id <= 0) {
+            throw new RuntimeException(sprintf('WordPress could not register offloaded upload “%s”.', $relative));
+        }
+        // Written directly: wp_update_attachment_metadata() would ask WP Offload
+        // Media to upload a local file that deliberately does not exist here.
+        update_post_meta((int) $attachment_id, '_wp_attachment_metadata', array(
+            'file' => $relative,
+            'filesize' => (int) ($attachment['bytes'] ?? 0),
+        ));
+        $original_filename = basename((string) ($offload['original_source_path'] ?? ''));
+        if ('' === $original_filename || $original_filename === basename($relative)) {
+            $original_filename = null;
+        }
+        $item = new $class(
+            (string) $offload['provider'],
+            (string) $offload['region'],
+            (string) $offload['bucket'],
+            (string) $offload['path'],
+            false,
+            (int) $attachment_id,
+            $relative,
+            $original_filename,
+            array('objects' => (array) ($offload['objects'] ?? array()), 'private_prefix' => ''),
+            null,
+            0,
+            true
+        );
+        $saved = $item->save();
+        if (is_wp_error($saved) || empty($saved)) {
+            wp_delete_post((int) $attachment_id, true);
+            throw new RuntimeException(sprintf('WP Offload Media could not register the existing storage object for “%s”.', $relative));
+        }
+        return (int) $attachment_id;
+    }
+
+    /**
+     * Remove a linked attachment without touching the shared storage object:
+     * the source site still serves it from that same key.
+     */
+    private function unlink_offloaded_attachment($post_id) {
+        $class = self::OFFLOAD_ITEM_CLASS;
+        if (class_exists($class)) {
+            $item = call_user_func(array($class, 'get_by_source_id'), (int) $post_id);
+            if (is_object($item) && method_exists($item, 'delete')) {
+                $item->delete();
+            }
+        }
+        $preserve = static function () {
+            return array();
+        };
+        add_filter('as3cf_remove_source_files_from_provider', $preserve, 100);
+        try {
+            wp_delete_post((int) $post_id, true);
+        } finally {
+            remove_filter('as3cf_remove_source_files_from_provider', $preserve, 100);
+        }
+    }
+
     private function metadata_files($relative, $metadata) {
         $files = array();
         $directory = dirname($relative);
@@ -1142,6 +1271,8 @@ class MemberLibrary_Environment_Migration {
                 if ($this->safe_relative_upload_path($relative) && is_file($base . $relative)) {
                     unlink($base . $relative);
                 }
+            } elseif ('linked_attachment' === $action && $post_id > 0) {
+                $this->unlink_offloaded_attachment($post_id);
             } elseif ('file_only' === $action && $this->safe_relative_upload_path($relative) && is_file($base . $relative)) {
                 unlink($base . $relative);
             }
@@ -1235,20 +1366,85 @@ class MemberLibrary_Environment_Migration {
         $base = trailingslashit((string) $uploads['basedir']);
         foreach ($refs as $relative => $ref) {
             $source = $base . $relative;
-            if (!is_file($source) || !is_readable($source)) {
+            $mime_type = sanitize_mime_type((string) ($ref['mime_type'] ?? ''));
+            $is_video = 0 === strpos($mime_type, 'video/');
+            $offload = $this->offload_record($this->resolve_attachment($ref), $relative);
+            $local_exists = is_file($source) && is_readable($source);
+            if (!$local_exists && empty($offload)) {
                 throw new RuntimeException(sprintf('Referenced WordPress upload “%s” is missing from the test site.', $relative));
             }
-            $inventory[] = array(
+            $bytes = $local_exists ? (int) filesize($source) : $this->remote_content_length((string) $offload['url']);
+            if ($bytes <= 0) {
+                throw new RuntimeException(sprintf('Referenced WordPress upload “%s” has no readable local file or storage object.', $relative));
+            }
+            $entry = array(
                 'relative_file' => $relative,
                 'archive_path' => 'attachments/' . $relative,
-                'bytes' => (int) filesize($source),
-                'sha256' => (string) hash_file('sha256', $source),
-                'mime_type' => sanitize_mime_type((string) ($ref['mime_type'] ?? '')),
+                'bytes' => $bytes,
+                // Videos are never bundled, so hashing gigabytes of them only
+                // slows the export; their size is verified on production instead.
+                'sha256' => ($local_exists && !$is_video) ? (string) hash_file('sha256', $source) : '',
+                'mime_type' => $mime_type,
                 'source_url' => esc_url_raw((string) ($ref['source_url'] ?? '')),
-                'bundled' => 0 !== strpos(sanitize_mime_type((string) ($ref['mime_type'] ?? '')), 'video/'),
+                'bundled' => !$is_video && empty($offload),
             );
+            if (!empty($offload)) {
+                $entry['offload'] = $offload;
+            }
+            $inventory[] = $entry;
         }
         return $inventory;
+    }
+
+    /**
+     * Describe the public storage object WP Offload Media serves an attachment
+     * from, so production can link the same object instead of receiving bytes.
+     */
+    private function offload_record($attachment_id, $relative) {
+        $class = self::OFFLOAD_ITEM_CLASS;
+        $attachment_id = absint($attachment_id);
+        if ($attachment_id <= 0 || !class_exists($class)) {
+            return array();
+        }
+        $item = call_user_func(array($class, 'get_by_source_id'), $attachment_id);
+        if (!is_object($item) || !method_exists($item, 'get_provider_url') || $item->is_private()) {
+            return array();
+        }
+        if ((string) $item->source_path() !== (string) $relative) {
+            return array();
+        }
+        $region = $item->region();
+        $url = $item->get_provider_url();
+        if (is_wp_error($region) || !is_string($url) || !wp_http_validate_url($url)) {
+            return array();
+        }
+        return array(
+            'provider' => (string) $item->provider(),
+            'region' => (string) $region,
+            'bucket' => (string) $item->bucket(),
+            'path' => (string) $item->path(),
+            'original_path' => (string) $item->original_path(),
+            'source_path' => (string) $item->source_path(),
+            'original_source_path' => (string) $item->original_source_path(),
+            'objects' => (array) $item->objects(),
+            'url' => esc_url_raw($url),
+        );
+    }
+
+    private function linkable_attachments($package) {
+        return array_values(array_filter((array) ($package['data']['attachments'] ?? array()), function ($attachment) {
+            return !$this->attachment_is_bundled((array) $attachment) && !empty($attachment['offload']);
+        }));
+    }
+
+    /**
+     * Uploads the resumable import must touch: bundled files to extract and
+     * offloaded objects to link. Referenced videos are only verified.
+     */
+    private function staged_attachments($package) {
+        return array_values(array_filter((array) ($package['data']['attachments'] ?? array()), function ($attachment) {
+            return $this->attachment_is_bundled((array) $attachment) || !empty($attachment['offload']);
+        }));
     }
 
     private function bundled_attachments($package) {
@@ -1262,29 +1458,42 @@ class MemberLibrary_Environment_Migration {
     }
 
     private function remote_attachment_available($attachment_id, $expected_mime, $expected_bytes) {
-        static $availability = array();
         $attachment_id = absint($attachment_id);
-        if (isset($availability[$attachment_id])) {
-            return $availability[$attachment_id];
+        $url = $attachment_id > 0 ? wp_get_attachment_url($attachment_id) : '';
+        return is_string($url) && '' !== $url && $this->remote_url_available($url, $expected_mime, $expected_bytes);
+    }
+
+    private function remote_url_available($url, $expected_mime, $expected_bytes, $use_cache = true) {
+        static $availability = array();
+        $url = (string) $url;
+        if ($use_cache && isset($availability[$url])) {
+            return $availability[$url];
         }
-        $url = wp_get_attachment_url($attachment_id);
-        if (!$url || !wp_http_validate_url($url)) {
-            return $availability[$attachment_id] = false;
+        if ('' === $url || !wp_http_validate_url($url)) {
+            return $availability[$url] = false;
         }
         $response = wp_remote_head($url, array(
             'redirection' => 3,
             'timeout' => 10,
         ));
         if (is_wp_error($response)) {
-            return $availability[$attachment_id] = false;
+            return $availability[$url] = false;
         }
         $status = (int) wp_remote_retrieve_response_code($response);
         $content_type = sanitize_mime_type((string) wp_remote_retrieve_header($response, 'content-type'));
         $content_length = (int) wp_remote_retrieve_header($response, 'content-length');
-        return $availability[$attachment_id] = $status >= 200
+        return $availability[$url] = $status >= 200
             && $status < 400
             && ('' === $expected_mime || '' === $content_type || $expected_mime === $content_type)
             && ((int) $expected_bytes <= 0 || $content_length <= 0 || (int) $expected_bytes === $content_length);
+    }
+
+    private function remote_content_length($url) {
+        $response = wp_remote_head((string) $url, array('redirection' => 3, 'timeout' => 10));
+        if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) >= 400) {
+            return 0;
+        }
+        return (int) wp_remote_retrieve_header($response, 'content-length');
     }
 
     private function package_reference_paths($package) {

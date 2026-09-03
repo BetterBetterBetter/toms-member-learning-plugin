@@ -131,6 +131,90 @@ foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
 }
 $assert($compatibility_checked, 'The migration fixture contains no parent-authorized record for backward-compatibility testing.');
 
+// Speakers never carry a legacy MemberPress authorization: their legacy
+// source IDs are importer bookkeeping that can collide with unrelated posts.
+foreach ((array) ($package['data']['posts'] ?? array()) as $record) {
+    if (MemberLibrary_Content_Model::SPEAKER_POST_TYPE === (string) ($record['post_type'] ?? '')) {
+        $assert(empty($record['legacy_authorization']), 'A Speaker record exported a legacy authorization source.');
+    }
+}
+$speaker_with_junk_authority = array(
+    'uuid' => 'ffffffffffffffffffffffffffffffff',
+    'post_type' => MemberLibrary_Content_Model::SPEAKER_POST_TYPE,
+    'legacy_authorization' => array('post_type' => 'attachment', 'slug' => 'placeholder', 'path' => 'placeholder', 'title' => 'Placeholder'),
+);
+$assert(
+    array() === $legacy_resolver->invoke($migration, $speaker_with_junk_authority, array()),
+    'A pre-0.9.0 package Speaker authorization source is still treated as an access authority.'
+);
+
+// Attachment strategy: bundle small files, reference videos, link offloaded objects.
+$inventory_method = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'bundle_attachment_inventory');
+$inventory = (array) $inventory_method->invoke($migration, $package);
+$linked_entries = array();
+foreach ($inventory as $entry) {
+    $is_video = 0 === strpos((string) ($entry['mime_type'] ?? ''), 'video/');
+    $assert(array_key_exists('bundled', (array) $entry), 'A migration attachment entry omits its bundled flag.');
+    if ($is_video) {
+        $assert(empty($entry['bundled']), 'A video upload is still bundled into the migration ZIP.');
+        $assert('' === (string) ($entry['sha256'] ?? ''), 'The exporter still hashes a video it does not bundle.');
+    }
+    if (!empty($entry['offload'])) {
+        $assert(empty($entry['bundled']), 'An offloaded upload is bundled even though its object already exists in storage.');
+        foreach (array('provider', 'region', 'bucket', 'path', 'source_path', 'url') as $offload_key) {
+            $assert('' !== (string) ($entry['offload'][$offload_key] ?? ''), 'An offloaded upload entry omits its storage ' . $offload_key . '.');
+        }
+        $assert((string) $entry['relative_file'] === (string) ($entry['offload']['source_path'] ?? ''), 'An offloaded upload entry does not map to its WordPress upload path.');
+        $linked_entries[] = $entry;
+    }
+    if (!empty($entry['bundled'])) {
+        $assert('' !== (string) ($entry['sha256'] ?? ''), 'A bundled upload has no checksum.');
+    }
+    $assert((int) ($entry['bytes'] ?? 0) > 0, 'A migration attachment entry has no size.');
+}
+$assert(array_key_exists('linked_attachment_files', $preview), 'The preview does not count uploads linked from existing storage.');
+$assert(array_key_exists('linked_attachments', $preview), 'The preview does not list uploads linked from existing storage.');
+
+$offload_item_class = 'DeliciousBrains\\WP_Offload_Media\\Items\\Media_Library_Item';
+if (class_exists($offload_item_class)) {
+    $assert(!empty($linked_entries), 'WP Offload Media is active but no referenced upload was exported as a linked storage object.');
+}
+if (class_exists($offload_item_class) && !empty($linked_entries)) {
+    $entry = $linked_entries[0];
+    $unique = 'tsol-migration-contract/' . wp_generate_uuid4() . '/' . basename((string) $entry['relative_file']);
+    $entry['relative_file'] = $unique;
+    $entry['archive_path'] = 'attachments/' . $unique;
+    $entry['offload']['source_path'] = $unique;
+    $remote_available = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'remote_url_available');
+    $assert(
+        true === $remote_available->invoke($migration, (string) $entry['offload']['url'], (string) $entry['mime_type'], (int) $entry['bytes'], false),
+        'The exported storage URL is not reachable with the expected media type and size.'
+    );
+    $link = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'link_offloaded_attachment');
+    $uploads = wp_upload_dir(null, false);
+    $linked_id = (int) $link->invoke($migration, $entry, trailingslashit((string) $uploads['basedir']) . $unique);
+    $assert($linked_id > 0 && 'attachment' === get_post_type($linked_id), 'A linked storage object did not become a WordPress attachment.');
+    $assert($unique === (string) get_post_meta($linked_id, '_wp_attached_file', true), 'A linked attachment does not keep its WordPress upload path.');
+    $assert((string) $entry['offload']['url'] === (string) wp_get_attachment_url($linked_id), 'A linked attachment is not served from its existing storage object.');
+    $linked_item = call_user_func(array($offload_item_class, 'get_by_source_id'), $linked_id);
+    $assert(is_object($linked_item) && (string) $entry['offload']['path'] === (string) $linked_item->path(), 'A linked attachment is not registered with WP Offload Media at its existing key.');
+    $remove = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'remove_created_attachments');
+    $remove->invoke($migration, array(array(
+        'action' => 'linked_attachment',
+        'post_id' => $linked_id,
+        'relative_file' => $unique,
+        'generated_files' => array(),
+    )));
+    $assert(null === get_post($linked_id), 'Rolling back a linked attachment left its WordPress record behind.');
+    $assert(false === call_user_func(array($offload_item_class, 'get_by_source_id'), $linked_id), 'Rolling back a linked attachment left its WP Offload Media record behind.');
+    $assert(
+        true === $remote_available->invoke($migration, (string) $entry['offload']['url'], (string) $entry['mime_type'], (int) $entry['bytes'], false),
+        'Rolling back a linked attachment deleted the shared storage object.'
+    );
+} elseif (!class_exists($offload_item_class)) {
+    WP_CLI::log('WP Offload Media is not active on this site: the linked-storage contract was not exercised here.');
+}
+
 $with_lock = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'with_lock');
 delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
 add_option(

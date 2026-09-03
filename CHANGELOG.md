@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 0.9.0 - 2026-09-03
+
+- Link uploads that WP Offload Media already keeps in the shared storage
+  bucket instead of shipping their bytes: the exporter records each public
+  offloaded object (provider, region, bucket, key, URL) and leaves the file out
+  of the ZIP; the production preview verifies the object with a HEAD request
+  and reports it as "Linked from storage"; the resumable import registers a
+  WordPress attachment plus its WP Offload Media record at that same key.
+  Rolling back a linked attachment deletes only the WordPress record, never
+  the shared object. Sites without WP Offload Media keep bundling every
+  non-video upload exactly as before.
+- Stopped hashing multi-gigabyte videos the exporter never bundles; their size
+  is still verified on production. The Liberty Classroom export dropped from
+  about two minutes to under a second.
+- Speakers no longer export a legacy MemberPress authorization source, and a
+  Speaker authorization carried by an older package is ignored. Their legacy
+  source IDs are importer bookkeeping that collided with unrelated posts and
+  made every Liberty Classroom import fail at the Access Groups step.
+- Access Groups no longer fail closed when the site has no Masterclasses
+  collection; Entire Library expands to every Course individually on such
+  brands. The collection scope itself still appears only when the term exists.
+- The import preview now reports bundled, linked, and matched upload counts
+  separately, and the resumable file stage covers both bundled and linked
+  uploads.
+
 ## 0.8.1 - 2026-09-02
 
 - Kept WordPress-hosted video files out of Library migration ZIPs when the

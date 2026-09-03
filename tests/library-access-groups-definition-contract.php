@@ -51,4 +51,23 @@ try {
     update_option(MemberLibrary_Access_Groups::OPTION_NAME, $before_configuration, false);
 }
 
+// Access Groups must not fail closed on a brand-specific collection term.
+$precondition = new ReflectionMethod(MemberLibrary_Access_Groups::class, 'assert_memberpress');
+try {
+    $precondition->invoke(new MemberLibrary_Access_Groups());
+} catch (Throwable $exception) {
+    if (false !== strpos($exception->getMessage(), 'Masterclasses')) {
+        throw new RuntimeException('Access Groups still fail closed on the TSOL-only Masterclasses collection.');
+    }
+    throw $exception;
+}
+$expand = new ReflectionMethod(MemberLibrary_Access_Groups::class, 'expand_group_keys');
+$scope_service = new MemberLibrary_Access_Groups();
+$scope_definitions = $scope_service->definitions();
+foreach ((array) $expand->invoke($scope_service, array('library:all'), $scope_definitions) as $expanded_key) {
+    if (!isset($scope_definitions[$expanded_key])) {
+        throw new RuntimeException('The Entire Library scope expands to an undefined access scope: ' . $expanded_key);
+    }
+}
+
 WP_CLI::success('A new unassigned Access Group remains a non-destructive draft.');
