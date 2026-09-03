@@ -19,6 +19,7 @@ class MemberLibrary_Environment_Migration {
     const PACKAGE_FILENAME = 'tsol-library-package.json';
     const MAX_BUNDLE_BYTES = 2147483648;
     const MAX_BUNDLE_ENTRIES = 1000;
+    const RECORD_BATCH_SIZE = 100;
     const OFFLOAD_ITEM_CLASS = 'DeliciousBrains\\WP_Offload_Media\\Items\\Media_Library_Item';
 
     public function build_package() {
@@ -470,45 +471,219 @@ class MemberLibrary_Environment_Migration {
         $records_by_uuid = array();
         foreach ((array) $package['data']['posts'] as $record) {
             $records_by_uuid[(string) $record['uuid']] = $record;
-            $existing = $this->find_post_by_uuid((string) $record['uuid'], (string) $record['post_type']);
-            if (!$existing) {
-                $candidate = $this->find_slug_owner((string) $record['post_name'], (string) $record['post_type']);
-                if ($candidate instanceof WP_Post && $this->can_adopt_slug_owner($candidate, $record)) {
-                    $existing = $candidate;
-                }
-            }
-            $payload = array(
-                'post_type' => (string) $record['post_type'],
-                'post_status' => (string) $record['post_status'],
-                'post_name' => (string) $record['post_name'],
-                'post_title' => (string) $record['post_title'],
-                'post_content' => (string) $record['post_content'],
-                'post_excerpt' => (string) $record['post_excerpt'],
-                'menu_order' => (int) $record['menu_order'],
-                'post_parent' => 0,
-            );
-            if ($existing) {
-                $payload['ID'] = (int) $existing->ID;
-                $post_id = wp_update_post(wp_slash($payload), true);
-            } else {
-                $post_id = wp_insert_post(wp_slash($payload), true);
-                if (!is_wp_error($post_id)) {
-                    $created['posts'][] = (int) $post_id;
-                }
-            }
-            if (is_wp_error($post_id) || (int) $post_id <= 0) {
-                throw new RuntimeException(sprintf('Could not import Library record “%s”.', $record['post_title']));
-            }
-            $post_ids[(string) $record['uuid']] = (int) $post_id;
-            update_post_meta((int) $post_id, $this->uuid_key((string) $record['post_type']), (string) $record['uuid']);
-            if (in_array((int) $post_id, $created['posts'], true)) {
-                update_post_meta((int) $post_id, self::OWNER_META, $owner_hash);
-            }
+            $post_ids[(string) $record['uuid']] = $this->upsert_record($record, $owner_hash, $created);
         }
-
         $transition = array();
         foreach ((array) $package['data']['posts'] as $record) {
-            $post_id = (int) $post_ids[(string) $record['uuid']];
+            $this->link_record($record, $post_ids, $term_ids, $records_by_uuid, $transition, true);
+        }
+        $this->finalize_import($package, $term_ids, $post_ids, $transition);
+        return $created;
+    }
+
+    /**
+     * Resumable import: one bounded unit of work per call so a production
+     * request never has to write the whole catalogue at once. The caller
+     * persists the returned state between calls. Phases:
+     * prepare → records → relations → finalize → complete.
+     */
+    public function apply_step($package, $expected_hash, $state, $has_verified_bundle = true) {
+        $state = array_merge(array(
+            'phase' => 'prepare',
+            'cursor' => 0,
+            'total' => 0,
+            'term_ids' => array(),
+            'post_ids' => array(),
+            'transition' => array(),
+            'unchanged' => array(),
+            'created' => array('posts' => array(), 'terms' => array(), 'attachments' => array()),
+            'import_hash' => '',
+            'started_at' => '',
+        ), (array) $state);
+        $this->validate($package);
+        if (!hash_equals((string) ($package['manifest']['data_sha256'] ?? ''), (string) $expected_hash)) {
+            throw new RuntimeException('The migration preview changed. Upload the package again before importing.');
+        }
+        return $this->with_lock(function () use ($package, $expected_hash, $state, $has_verified_bundle) {
+            $messages = array();
+            $posts = array_values((array) $package['data']['posts']);
+            $total = count($posts);
+            switch ((string) $state['phase']) {
+                case 'prepare':
+                    $report = $this->preview($package, $has_verified_bundle);
+                    if (!empty($report['errors'])) {
+                        throw new RuntimeException('The migration has blocking conflicts and was not applied.');
+                    }
+                    if (!empty(get_option(MemberLibrary_Access_Groups::STAGE_OPTION, array()))) {
+                        throw new RuntimeException('Roll back or finish the current Access Groups stage before importing.');
+                    }
+                    $state['import_hash'] = (string) $expected_hash;
+                    $state['started_at'] = gmdate('c');
+                    $state['total'] = $total;
+                    $existing_state = $this->rollback_state();
+                    if (!empty($existing_state['partial']) && hash_equals((string) ($existing_state['import_hash'] ?? ''), (string) $expected_hash)) {
+                        // A previous attempt already snapshotted production before
+                        // writing anything; never replace that snapshot with one
+                        // that contains partially imported records.
+                        $before_fingerprints = (array) ($existing_state['fingerprints'] ?? array());
+                        $messages[] = 'Reusing the rollback snapshot from the interrupted attempt.';
+                    } else {
+                        $before = $this->build_package();
+                        $before_fingerprints = array();
+                        foreach ((array) $before['data']['posts'] as $record) {
+                            $before_fingerprints[(string) $record['uuid']] = (string) $record['fingerprint'];
+                        }
+                        update_option(self::ROLLBACK_OPTION, array(
+                            'schema_version' => self::SCHEMA_VERSION,
+                            'package' => base64_encode(gzencode($this->encode($before), 6)),
+                            'raw_options' => array(
+                                'access_groups' => get_option(MemberLibrary_Access_Groups::OPTION_NAME, null),
+                                'homepage' => get_option(MemberLibrary_Homepage_Curation::OPTION_NAME, null),
+                                'authorization' => $this->authorization_snapshot(),
+                            ),
+                            'created' => $state['created'],
+                            'fingerprints' => $before_fingerprints,
+                            'import_hash' => (string) $expected_hash,
+                            'partial' => true,
+                            'created_at' => gmdate('c'),
+                        ), false);
+                        $messages[] = sprintf('Rollback snapshot saved (%d current records).', count($before_fingerprints));
+                    }
+                    $unchanged = array();
+                    foreach ($posts as $record) {
+                        $uuid = (string) $record['uuid'];
+                        if (isset($before_fingerprints[$uuid]) && hash_equals($before_fingerprints[$uuid], (string) ($record['fingerprint'] ?? ''))) {
+                            $unchanged[$uuid] = true;
+                        }
+                    }
+                    $state['unchanged'] = $unchanged;
+                    $state['term_ids'] = $this->upsert_terms((array) $package['data']['terms'], $state['created']);
+                    $messages[] = sprintf('%d terms synced. %d of %d records are unchanged and will be skipped.', count((array) $package['data']['terms']), count($unchanged), $total);
+                    $state['phase'] = 'records';
+                    $state['cursor'] = 0;
+                    break;
+
+                case 'records':
+                    $batch = array_slice($posts, (int) $state['cursor'], self::RECORD_BATCH_SIZE);
+                    $written = 0;
+                    foreach ($batch as $record) {
+                        $uuid = (string) $record['uuid'];
+                        $existing = isset($state['unchanged'][$uuid]) ? $this->find_post_by_uuid($uuid, (string) $record['post_type']) : null;
+                        if ($existing instanceof WP_Post) {
+                            $state['post_ids'][$uuid] = (int) $existing->ID;
+                            continue;
+                        }
+                        unset($state['unchanged'][$uuid]);
+                        $state['post_ids'][$uuid] = $this->upsert_record($record, (string) $state['import_hash'], $state['created']);
+                        $written++;
+                    }
+                    $state['cursor'] = min($total, (int) $state['cursor'] + self::RECORD_BATCH_SIZE);
+                    $messages[] = sprintf('Records %d / %d (%d written, %d unchanged).', $state['cursor'], $total, $written, count($batch) - $written);
+                    if ($state['cursor'] >= $total) {
+                        $state['phase'] = 'relations';
+                        $state['cursor'] = 0;
+                    }
+                    break;
+
+                case 'relations':
+                    $records_by_uuid = array();
+                    foreach ($posts as $record) {
+                        $records_by_uuid[(string) $record['uuid']] = $record;
+                    }
+                    $batch = array_slice($posts, (int) $state['cursor'], self::RECORD_BATCH_SIZE);
+                    foreach ($batch as $record) {
+                        $uuid = (string) $record['uuid'];
+                        if (!isset($state['post_ids'][$uuid])) {
+                            throw new RuntimeException(sprintf('Library record “%s” was not imported before its relationships.', $record['post_title']));
+                        }
+                        $this->link_record($record, $state['post_ids'], $state['term_ids'], $records_by_uuid, $state['transition'], !isset($state['unchanged'][$uuid]));
+                    }
+                    $state['cursor'] = min($total, (int) $state['cursor'] + self::RECORD_BATCH_SIZE);
+                    $messages[] = sprintf('Relationships %d / %d.', $state['cursor'], $total);
+                    if ($state['cursor'] >= $total) {
+                        $state['phase'] = 'finalize';
+                        $state['cursor'] = 0;
+                    }
+                    break;
+
+                case 'finalize':
+                    $this->finalize_import($package, $state['term_ids'], $state['post_ids'], $state['transition']);
+                    $rollback = $this->rollback_state();
+                    $rollback['created'] = $state['created'];
+                    $rollback['partial'] = false;
+                    unset($rollback['fingerprints']);
+                    update_option(self::ROLLBACK_OPTION, $rollback, false);
+                    $messages[] = 'Homepage curation and Access Groups draft imported. Rollback snapshot finalized.';
+                    $state['phase'] = 'complete';
+                    break;
+
+                case 'complete':
+                    break;
+
+                default:
+                    throw new RuntimeException('The staged import is in an unknown phase.');
+            }
+            if ('complete' !== $state['phase']) {
+                $this->sync_partial_rollback($state['created']);
+            }
+            return array('state' => $state, 'messages' => $messages);
+        });
+    }
+
+    private function sync_partial_rollback($created) {
+        $rollback = $this->rollback_state();
+        if (empty($rollback['partial'])) {
+            return;
+        }
+        $rollback['created'] = $created;
+        update_option(self::ROLLBACK_OPTION, $rollback, false);
+    }
+
+    private function upsert_record($record, $owner_hash, &$created) {
+        $existing = $this->find_post_by_uuid((string) $record['uuid'], (string) $record['post_type']);
+        if (!$existing) {
+            $candidate = $this->find_slug_owner((string) $record['post_name'], (string) $record['post_type']);
+            if ($candidate instanceof WP_Post && $this->can_adopt_slug_owner($candidate, $record)) {
+                $existing = $candidate;
+            }
+        }
+        $payload = array(
+            'post_type' => (string) $record['post_type'],
+            'post_status' => (string) $record['post_status'],
+            'post_name' => (string) $record['post_name'],
+            'post_title' => (string) $record['post_title'],
+            'post_content' => (string) $record['post_content'],
+            'post_excerpt' => (string) $record['post_excerpt'],
+            'menu_order' => (int) $record['menu_order'],
+            'post_parent' => 0,
+        );
+        if ($existing) {
+            $payload['ID'] = (int) $existing->ID;
+            $post_id = wp_update_post(wp_slash($payload), true);
+        } else {
+            $post_id = wp_insert_post(wp_slash($payload), true);
+            if (!is_wp_error($post_id)) {
+                $created['posts'][] = (int) $post_id;
+            }
+        }
+        if (is_wp_error($post_id) || (int) $post_id <= 0) {
+            throw new RuntimeException(sprintf('Could not import Library record “%s”.', $record['post_title']));
+        }
+        update_post_meta((int) $post_id, $this->uuid_key((string) $record['post_type']), (string) $record['uuid']);
+        if (in_array((int) $post_id, (array) $created['posts'], true)) {
+            update_post_meta((int) $post_id, self::OWNER_META, $owner_hash);
+        }
+        return (int) $post_id;
+    }
+
+    /**
+     * Second pass for one record: parent, portable meta, taxonomies, featured
+     * image, and the legacy MemberPress authorization. With $write false the
+     * record is unchanged and only its authorization transition is collected.
+     */
+    private function link_record($record, $post_ids, $term_ids, $records_by_uuid, &$transition, $write) {
+        $post_id = (int) $post_ids[(string) $record['uuid']];
+        if ($write) {
             if (!empty($record['parent_uuid']) && isset($post_ids[$record['parent_uuid']])) {
                 wp_update_post(array('ID' => $post_id, 'post_parent' => (int) $post_ids[$record['parent_uuid']]));
             }
@@ -528,19 +703,22 @@ class MemberLibrary_Environment_Migration {
             } else {
                 delete_post_thumbnail($post_id);
             }
-            $authorization_ref = $this->package_legacy_authorization_ref($record, $records_by_uuid);
-            if (!empty($authorization_ref)) {
-                $authorization_id = $this->resolve_external_post($authorization_ref);
-                if (!$authorization_id) {
-                    throw new RuntimeException(sprintf('Legacy authorization source for “%s” disappeared during import.', $record['post_title']));
-                }
-                update_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $authorization_id);
-                $transition[$post_id] = $authorization_id;
-            }
         }
+        $authorization_ref = $this->package_legacy_authorization_ref($record, $records_by_uuid);
+        if (!empty($authorization_ref)) {
+            $authorization_id = $this->resolve_external_post($authorization_ref);
+            if (!$authorization_id) {
+                throw new RuntimeException(sprintf('Legacy authorization source for “%s” disappeared during import.', $record['post_title']));
+            }
+            if ($write) {
+                update_post_meta($post_id, MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, $authorization_id);
+            }
+            $transition[$post_id] = $authorization_id;
+        }
+    }
 
+    private function finalize_import($package, $term_ids, $post_ids, $transition) {
         $this->import_term_meta((array) $package['data']['terms'], $term_ids, $post_ids);
-
         $this->import_homepage((array) ($package['data']['homepage'] ?? array()), $post_ids);
         $access = (array) ($package['data']['access_groups'] ?? array());
         if (!empty($access['groups'])) {
@@ -554,7 +732,6 @@ class MemberLibrary_Environment_Migration {
             delete_option(MemberLibrary_Access_Groups::OPTION_NAME);
         }
         MemberLibrary_Homepage_Curation::reset_cache();
-        return $created;
     }
 
     private function export_posts() {

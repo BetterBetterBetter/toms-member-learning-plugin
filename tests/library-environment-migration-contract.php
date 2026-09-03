@@ -251,6 +251,49 @@ if (!empty($admin_ids)) {
     $assert(false, 'No administrator user exists to render the migration page.');
 }
 
+// The resumable import walks prepare → records → relations → finalize →
+// complete in bounded steps and never applies a record twice. Exercised as a
+// self-import inside a transaction that is rolled back afterwards.
+$assert(false !== has_action('wp_ajax_tsol_library_migration_apply_step'), 'The resumable apply step action is not registered.');
+$stepped_zip = wp_tempnam('tsol-library-stepped.zip');
+$step_migration = new MemberLibrary_Environment_Migration();
+$stepped_package = $step_migration->build_bundle($stepped_zip);
+$stepped_hash = (string) $stepped_package['manifest']['data_sha256'];
+$stepped_total = count((array) $stepped_package['data']['posts']);
+$prior_rollback = get_option(MemberLibrary_Environment_Migration::ROLLBACK_OPTION, null);
+delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
+$phases = array();
+$state = array();
+$step_error = '';
+global $wpdb;
+$wpdb->query('START TRANSACTION');
+try {
+    $guard = 0;
+    while ('complete' !== (string) ($state['phase'] ?? '') && $guard++ < 200) {
+        $result = $step_migration->apply_step($step_migration->decode_bundle_manifest($stepped_zip), $stepped_hash, $state, true);
+        $state = $result['state'];
+        $phases[] = (string) $state['phase'];
+        $assert(is_array($result['messages']) && !empty($result['messages']) || 'complete' === $state['phase'], 'A resumable import step produced no progress message.');
+    }
+    $partial_after_prepare = get_option(MemberLibrary_Environment_Migration::ROLLBACK_OPTION, array());
+} catch (Throwable $exception) {
+    $step_error = $exception->getMessage();
+}
+$wpdb->query('ROLLBACK');
+if (is_file($stepped_zip)) {
+    unlink($stepped_zip);
+}
+$assert('' === $step_error, 'The resumable self-import failed: ' . $step_error);
+$assert('complete' === (string) ($state['phase'] ?? ''), 'The resumable import did not reach the complete phase.');
+$assert(array_values(array_unique($phases)) === array('records', 'relations', 'finalize', 'complete'), 'The resumable import phases ran out of order: ' . implode(',', $phases));
+$assert(count($phases) > 4, 'The resumable import did not split the catalogue into bounded batches.');
+$assert($stepped_total === count((array) ($state['post_ids'] ?? array())), 'The resumable import did not map every record UUID to a WordPress post.');
+$assert($stepped_total === count((array) ($state['unchanged'] ?? array())), 'A resumable self-import rewrote records whose fingerprints were unchanged.');
+$assert(empty($state['created']['posts']) && empty($state['created']['terms']), 'A resumable self-import created duplicate records or terms.');
+$assert(is_array($partial_after_prepare) && array_key_exists('partial', $partial_after_prepare) && false === $partial_after_prepare['partial'], 'The rollback snapshot was not finalized when the resumable import completed.');
+wp_cache_flush();
+$assert($prior_rollback === get_option(MemberLibrary_Environment_Migration::ROLLBACK_OPTION, null), 'The transaction guard did not restore the rollback snapshot state.');
+
 $with_lock = new ReflectionMethod(MemberLibrary_Environment_Migration::class, 'with_lock');
 delete_option(MemberLibrary_Environment_Migration::LOCK_OPTION);
 add_option(

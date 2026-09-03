@@ -3,7 +3,7 @@
  * Plugin Name: Member Library Platform
  * Plugin URI: https://github.com/BetterBetterBetter/toms-member-learning-plugin
  * Description: Member library platform for WordPress — courses, series, speakers and announcements, with MemberPress-driven access and a catalogue feed for a companion member-facing app.
- * Version: 0.9.1
+ * Version: 0.10.0
  * Author: Thrice Agency
  * License: GPL v2 or later
  * Text Domain: member-library
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants.
-define('MEMBER_LIBRARY_PLUGIN_VERSION', '0.9.1');
+define('MEMBER_LIBRARY_PLUGIN_VERSION', '0.10.0');
 define('MEMBER_LIBRARY_PLUGIN_FILE', __FILE__);
 define('MEMBER_LIBRARY_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('MEMBER_LIBRARY_PLUGIN_DIR', plugin_dir_path(__FILE__));

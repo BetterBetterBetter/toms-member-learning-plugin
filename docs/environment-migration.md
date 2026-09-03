@@ -56,9 +56,35 @@ term) so the remaining `collection:masterclasses` special cases in
 `expand_group_keys`, `compact_assignments`, `imported_group_name`,
 `compact_scope_keys` and `rule_target` disappear.
 
+## Resumable import (0.10.0)
+
+The Migration page never posts one long apply request any more. After the
+file stage, the page loops `wp_ajax_tsol_library_migration_apply_step`, and
+`MemberLibrary_Environment_Migration::apply_step()` performs one bounded unit
+of work per call:
+
+| Phase | Work per call | Idempotent on resume |
+|---|---|---|
+| `prepare` | Preview re-check, rollback snapshot written **before any write** (`partial: true`, with current fingerprints), terms upserted, unchanged UUIDs computed | Reuses an existing partial snapshot for the same `import_hash` instead of re-snapshotting a half-written site |
+| `records` | 100 records: upsert or, when the fingerprint matches production, only map UUID → post ID | Yes (UUID lookup) |
+| `relations` | 100 records: parent, portable meta, taxonomies, featured image, authorization; unchanged records only contribute their authorization transition | Yes |
+| `finalize` | Term meta, homepage curation, Access Groups draft; rollback snapshot marked `partial: false` | Yes |
+
+State (`apply_state`: phase, cursor, `post_ids`, `term_ids`, `transition`,
+`unchanged`, `created`) and a timestamped log live in the pending option for
+24 hours. A failed step stores the error and `resume_phase`; the page shows
+the log, a Resume button, and the partial-rollback card. `created` is synced
+into the rollback snapshot after every step so a hard-killed request still
+rolls back completely. The single-request `apply()` remains only for the
+no-JavaScript fallback and rollback/recovery, and shares the same
+`upsert_record` / `link_record` / `finalize_import` helpers.
+
+Invariant: **an unchanged record is never rewritten.** A repeat import of an
+identical catalogue performs zero record writes (contract-tested).
+
 ## Measured import cost (local Liberty clone, 1280 records)
 
-Happy path: ~12 s, ~88k queries (~70 per record), ~24k rows written to
-`wp_tsol_library_content_changes`, +70 MB peak memory. Every record is
-rewritten even when its fingerprint is unchanged; that is the next
-optimisation target.
+Single-request happy path before 0.10.0: ~12 s, ~88k queries (~70 per
+record), ~24k rows written to `wp_tsol_library_content_changes`, +70 MB peak
+memory, every record rewritten. See the 0.10.0 measurement in the changelog
+commit for the stepped equivalent.

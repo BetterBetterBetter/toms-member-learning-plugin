@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.10.0 - 2026-09-03
+
+- The catalogue import now runs in resumable steps from the Migration page
+  instead of one long request: a rollback snapshot is saved before anything is
+  written, then records, relationships, and the homepage/Access Groups finish
+  in batches of 100 with a live progress bar and a timestamped log. Each step
+  is its own short request, so production timeouts and memory limits no
+  longer cut an import in half.
+- Records whose fingerprint already matches production are skipped instead of
+  rewritten. A repeat import of an unchanged catalogue writes nothing.
+- If a step fails, the page shows the error, keeps the log, and offers Resume;
+  closing the tab does the same. The rollback snapshot taken before the first
+  write stays available, so a partial import can always be undone exactly.
+- The log and progress persist with the pending import for 24 hours.
+
 ## 0.9.1 - 2026-09-03
 
 - Fixed the staged migration import stopping with "applyForm.submit is not a

@@ -17,6 +17,7 @@ class MemberLibrary_Environment_Migration_Admin {
     const CHUNK_BYTES = 524288;
     const PENDING_TTL = 86400;
     const ATTACHMENT_BATCH_SIZE = 2;
+    const LOG_LIMIT = 300;
 
     public function init() {
         add_action('admin_menu', array($this, 'add_page'), 21);
@@ -26,6 +27,7 @@ class MemberLibrary_Environment_Migration_Admin {
         add_action('admin_post_tsol_library_migration_rollback', array($this, 'rollback'));
         add_action('wp_ajax_tsol_library_migration_upload_chunk', array($this, 'upload_chunk'));
         add_action('wp_ajax_tsol_library_migration_prepare_attachments', array($this, 'prepare_attachments'));
+        add_action('wp_ajax_tsol_library_migration_apply_step', array($this, 'apply_step'));
     }
 
     public function add_page() {
@@ -275,6 +277,98 @@ class MemberLibrary_Environment_Migration_Admin {
         }
     }
 
+    public function apply_step() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('You are not allowed to migrate the Library.', 'member-library')), 403);
+        }
+        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+        $pending = $this->pending();
+        $token = sanitize_text_field(wp_unslash((string) ($_POST['migration_token'] ?? '')));
+        if (empty($pending) || !hash_equals((string) ($pending['token'] ?? ''), $token)) {
+            wp_send_json_error(array('message' => __('The migration preview expired or changed.', 'member-library')), 409);
+        }
+        $state = (array) ($pending['apply_state'] ?? array());
+        if (empty($state['phase'])) {
+            $confirmation = sanitize_text_field(wp_unslash((string) ($_POST['confirmation'] ?? '')));
+            if (self::IMPORT_CONFIRMATION !== $confirmation) {
+                wp_send_json_error(array('message' => __('Enter the exact migration confirmation before importing.', 'member-library')), 400);
+            }
+            $attachment_total = (int) ($pending['report']['attachment_files'] ?? 0);
+            if ((int) ($pending['attachment_index'] ?? 0) < $attachment_total) {
+                wp_send_json_error(array('message' => __('The bundled files are not fully prepared yet.', 'member-library')), 409);
+            }
+            $state = array('phase' => 'prepare', 'created' => (array) ($pending['prepared_created'] ?? array()));
+            $this->log($pending, __('Import started.', 'member-library'));
+        } elseif ('failed' === $state['phase']) {
+            $state['phase'] = (string) ($state['resume_phase'] ?? 'prepare');
+            $this->log($pending, __('Resuming import.', 'member-library'));
+        }
+        try {
+            @set_time_limit(0);
+            $migration = new MemberLibrary_Environment_Migration();
+            $package = $migration->decode_bundle_manifest((string) $pending['bundle_path']);
+            $result = $migration->apply_step($package, (string) ($pending['report']['package_hash'] ?? ''), $state, true);
+            $state = $result['state'];
+            foreach ((array) $result['messages'] as $message) {
+                $this->log($pending, (string) $message);
+            }
+            $complete = 'complete' === (string) $state['phase'];
+            if ($complete) {
+                $this->log($pending, __('Import complete.', 'member-library'));
+                $this->delete_private_bundle((string) $pending['bundle_path']);
+                $log = (array) ($pending['log'] ?? array());
+                delete_option(self::PENDING_OPTION);
+                wp_send_json_success(array('complete' => true, 'phase' => 'complete', 'progress' => 100, 'log' => $log));
+            }
+            $pending['apply_state'] = $state;
+            $pending['last_progress_at'] = time();
+            update_option(self::PENDING_OPTION, $pending, false);
+            wp_send_json_success(array(
+                'complete' => false,
+                'phase' => (string) $state['phase'],
+                'progress' => $this->apply_progress($state),
+                'log' => (array) ($pending['log'] ?? array()),
+            ));
+        } catch (Throwable $exception) {
+            $failed_phase = (string) (($state['phase'] ?? '') ?: 'prepare');
+            $state['resume_phase'] = $failed_phase;
+            $state['phase'] = 'failed';
+            $state['error'] = $exception->getMessage();
+            $pending['apply_state'] = $state;
+            $this->log($pending, sprintf(__('Error during %1$s: %2$s', 'member-library'), $failed_phase, $exception->getMessage()));
+            update_option(self::PENDING_OPTION, $pending, false);
+            wp_send_json_error(array(
+                'message' => $exception->getMessage(),
+                'phase' => 'failed',
+                'resumable' => true,
+                'log' => (array) ($pending['log'] ?? array()),
+            ), 409);
+        }
+    }
+
+    private function log(&$pending, $message) {
+        $log = (array) ($pending['log'] ?? array());
+        $log[] = gmdate('H:i:s') . ' ' . (string) $message;
+        $pending['log'] = array_slice($log, -self::LOG_LIMIT);
+    }
+
+    private function apply_progress($state) {
+        $total = max(1, (int) ($state['total'] ?? 0));
+        $cursor = (int) ($state['cursor'] ?? 0);
+        switch ((string) ($state['phase'] ?? '')) {
+            case 'records':
+                return (int) round(5 + 60 * $cursor / $total);
+            case 'relations':
+                return (int) round(65 + 30 * $cursor / $total);
+            case 'finalize':
+                return 96;
+            case 'complete':
+                return 100;
+            default:
+                return 2;
+        }
+    }
+
     public function rollback() {
         $this->authorize();
         $confirmation = sanitize_text_field(wp_unslash((string) ($_POST['confirmation'] ?? '')));
@@ -363,18 +457,33 @@ class MemberLibrary_Environment_Migration_Admin {
                             <?php foreach ($report['missing_attachments'] as $missing) : ?><li><code><?php echo esc_html($missing); ?></code></li><?php endforeach; ?>
                         </ul></details>
                     <?php endif; ?>
+                    <?php $apply_state = (array) ($pending['apply_state'] ?? array()); $in_flight = !empty($apply_state['phase']); ?>
                     <?php if (empty($report['errors'])) : ?>
-                        <p><?php esc_html_e('Importing creates a rollback snapshot and leaves Access Groups unpublished. Existing legacy MemberPress authorization remains active until the separate access comparison is checked and explicitly published.', 'member-library'); ?></p>
-                        <form id="tsol-library-migration-apply" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <?php if ($in_flight) : ?>
+                            <?php if ('failed' === (string) $apply_state['phase']) : ?>
+                                <div class="notice notice-error inline"><p><?php echo esc_html(sprintf(__('The import stopped during “%1$s”: %2$s', 'member-library'), (string) ($apply_state['resume_phase'] ?? ''), (string) ($apply_state['error'] ?? ''))); ?></p></div>
+                                <p><?php esc_html_e('Resume to retry that step, or roll back the partial import below.', 'member-library'); ?></p>
+                            <?php else : ?>
+                                <p><?php esc_html_e('An import is in progress. If the browser tab was closed, resume it here; nothing is applied twice.', 'member-library'); ?></p>
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <p><?php esc_html_e('Importing creates a rollback snapshot and leaves Access Groups unpublished. Existing legacy MemberPress authorization remains active until the separate access comparison is checked and explicitly published.', 'member-library'); ?></p>
+                        <?php endif; ?>
+                        <form id="tsol-library-migration-apply" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-in-flight="<?php echo $in_flight ? '1' : '0'; ?>">
                             <input type="hidden" name="action" value="tsol_library_migration_apply">
                             <input type="hidden" name="migration_token" value="<?php echo esc_attr((string) $pending['token']); ?>">
                             <input type="hidden" name="attachments_prepared" value="0">
                             <?php wp_nonce_field(self::NONCE_ACTION); ?>
-                            <label for="tsol-library-migration-confirmation"><strong><?php esc_html_e('Type import-wordpress-library to confirm', 'member-library'); ?></strong></label><br>
-                            <input id="tsol-library-migration-confirmation" class="regular-text code" name="confirmation" autocomplete="off" required>
-                            <?php submit_button(__('Import WordPress Library', 'member-library'), 'primary', 'tsol_library_migration_import', false); ?>
-                            <progress id="tsol-library-migration-apply-progress" max="100" value="<?php echo esc_attr((int) round(100 * (int) ($pending['attachment_index'] ?? 0) / max(1, (int) ($report['attachment_files'] ?? 0)))); ?>" hidden></progress>
+                            <?php if (!$in_flight) : ?>
+                                <label for="tsol-library-migration-confirmation"><strong><?php esc_html_e('Type import-wordpress-library to confirm', 'member-library'); ?></strong></label><br>
+                                <input id="tsol-library-migration-confirmation" class="regular-text code" name="confirmation" autocomplete="off" required>
+                                <?php submit_button(__('Import WordPress Library', 'member-library'), 'primary', 'tsol_library_migration_import', false); ?>
+                            <?php else : ?>
+                                <?php submit_button(__('Resume import', 'member-library'), 'primary', 'tsol_library_migration_resume', false); ?>
+                            <?php endif; ?>
+                            <progress id="tsol-library-migration-apply-progress" max="100" value="<?php echo esc_attr($in_flight ? $this->apply_progress($apply_state) : (int) round(100 * (int) ($pending['attachment_index'] ?? 0) / max(1, (int) ($report['attachment_files'] ?? 0)))); ?>" <?php echo $in_flight ? '' : 'hidden'; ?>></progress>
                             <p id="tsol-library-migration-apply-status" class="description" aria-live="polite"></p>
+                            <pre id="tsol-library-migration-log" class="tsol-library-migration-log" <?php echo empty($pending['log']) ? 'hidden' : ''; ?> style="max-height:16em;overflow:auto;background:#f6f7f7;padding:8px 12px;font-size:12px;"><?php echo esc_html(implode("\n", (array) ($pending['log'] ?? array()))); ?></pre>
                         </form>
                     <?php endif; ?>
                 </section>
@@ -383,6 +492,9 @@ class MemberLibrary_Environment_Migration_Admin {
             <?php if (!empty($rollback)) : ?>
                 <section class="card tsol-library-admin-card--wide">
                     <h2><?php esc_html_e('Rollback', 'member-library'); ?></h2>
+                    <?php if (!empty($rollback['partial'])) : ?>
+                        <div class="notice notice-warning inline"><p><?php esc_html_e('The last import did not finish. This snapshot was taken before it wrote anything, so rolling back restores production exactly.', 'member-library'); ?></p></div>
+                    <?php endif; ?>
                     <p><?php esc_html_e('A snapshot from before the last import is available. Roll back any Access Groups stage first, then restore the previous WordPress Library records and configuration.', 'member-library'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="tsol_library_migration_rollback">
@@ -445,38 +557,77 @@ class MemberLibrary_Environment_Migration_Admin {
             const applyForm = document.getElementById('tsol-library-migration-apply');
             const applyProgress = document.getElementById('tsol-library-migration-apply-progress');
             const applyStatus = document.getElementById('tsol-library-migration-apply-status');
+            const applyLog = document.getElementById('tsol-library-migration-log');
             if (applyForm && applyProgress && applyStatus) {
+                const ajaxUrl = <?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>;
+                const nonce = <?php echo wp_json_encode(wp_create_nonce(self::NONCE_ACTION)); ?>;
+                const token = <?php echo wp_json_encode((string) ($pending['token'] ?? '')); ?>;
+                const renderLog = (lines) => {
+                    if (!applyLog || !Array.isArray(lines)) return;
+                    applyLog.hidden = lines.length === 0;
+                    applyLog.textContent = lines.join('\n');
+                    applyLog.scrollTop = applyLog.scrollHeight;
+                };
+                const post = async (action, extra) => {
+                    const body = new FormData();
+                    body.append('action', action);
+                    body.append('nonce', nonce);
+                    body.append('migration_token', token);
+                    Object.keys(extra || {}).forEach((key) => body.append(key, extra[key]));
+                    const response = await fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body });
+                    let result = null;
+                    try { result = await response.json(); } catch (e) { result = null; }
+                    if (!result) throw new Error(<?php echo wp_json_encode(__('The server returned an unreadable response (status %s). Reload this page to resume.', 'member-library')); ?>.replace('%s', String(response.status)));
+                    if (result.data && result.data.log) renderLog(result.data.log);
+                    if (!response.ok || !result.success) throw new Error(result?.data?.message || <?php echo wp_json_encode(__('The staged import could not continue.', 'member-library')); ?>);
+                    return result.data;
+                };
+                const phaseLabels = {
+                    prepare: <?php echo wp_json_encode(__('Saving rollback snapshot and syncing terms…', 'member-library')); ?>,
+                    records: <?php echo wp_json_encode(__('Writing catalogue records…', 'member-library')); ?>,
+                    relations: <?php echo wp_json_encode(__('Linking relationships, media, and access…', 'member-library')); ?>,
+                    finalize: <?php echo wp_json_encode(__('Finalizing homepage and Access Groups…', 'member-library')); ?>,
+                };
                 applyForm.addEventListener('submit', async (event) => {
-                    if (applyForm.dataset.ready === 'true') return;
                     event.preventDefault();
                     if (!applyForm.reportValidity()) return;
                     const submit = applyForm.querySelector('[type="submit"]');
                     if (submit) submit.disabled = true;
                     applyProgress.hidden = false;
+                    const inFlight = applyForm.dataset.inFlight === '1';
+                    const confirmationField = applyForm.querySelector('[name="confirmation"]');
+                    const confirmation = confirmationField ? confirmationField.value : '';
                     try {
-                        let complete = false;
-                        while (!complete) {
-                            const body = new FormData();
-                            body.append('action', 'tsol_library_migration_prepare_attachments');
-                            body.append('nonce', <?php echo wp_json_encode(wp_create_nonce(self::NONCE_ACTION)); ?>);
-                            body.append('migration_token', <?php echo wp_json_encode((string) ($pending['token'] ?? '')); ?>);
-                            const response = await fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, { method: 'POST', credentials: 'same-origin', body });
-                            const result = await response.json();
-                            if (!response.ok || !result.success) throw new Error(result?.data?.message || <?php echo wp_json_encode(__('The staged import could not continue.', 'member-library')); ?>);
-                            const processed = Number(result.data.processed || 0);
-                            const total = Number(result.data.total || 0);
-                            complete = Boolean(result.data.complete);
-                            applyProgress.value = total > 0 ? Math.round(processed / total * 100) : 100;
-                            applyStatus.textContent = complete
-                                ? <?php echo wp_json_encode(__('Files prepared. Applying catalogue records…', 'member-library')); ?>
-                                : <?php echo wp_json_encode(__('Preparing bundled files…', 'member-library')); ?> + ' ' + processed + ' / ' + total;
+                        if (!inFlight) {
+                            let complete = false;
+                            while (!complete) {
+                                const data = await post('tsol_library_migration_prepare_attachments', {});
+                                const processed = Number(data.processed || 0);
+                                const total = Number(data.total || 0);
+                                complete = Boolean(data.complete);
+                                applyProgress.value = total > 0 ? Math.round(processed / total * 100) : 100;
+                                applyStatus.textContent = <?php echo wp_json_encode(__('Preparing bundled files…', 'member-library')); ?> + ' ' + processed + ' / ' + total;
+                            }
                         }
-                        applyForm.querySelector('[name="attachments_prepared"]').value = '1';
-                        applyForm.dataset.ready = 'true';
-                        HTMLFormElement.prototype.submit.call(applyForm);
+                        applyStatus.textContent = phaseLabels.prepare;
+                        let done = false;
+                        while (!done) {
+                            const data = await post('tsol_library_migration_apply_step', { confirmation });
+                            done = Boolean(data.complete);
+                            applyProgress.value = Number(data.progress || 0);
+                            applyStatus.textContent = done
+                                ? <?php echo wp_json_encode(__('Import complete. Reloading…', 'member-library')); ?>
+                                : (phaseLabels[data.phase] || data.phase) + ' ' + applyProgress.value + '%';
+                        }
+                        window.location.href = <?php echo wp_json_encode(add_query_arg(array('page' => self::PAGE_SLUG, 'result' => 'applied'), admin_url('admin.php'))); ?>;
                     } catch (error) {
                         applyStatus.textContent = error instanceof Error ? error.message : <?php echo wp_json_encode(__('The staged import could not continue.', 'member-library')); ?>;
-                        if (submit) submit.disabled = false;
+                        applyForm.dataset.inFlight = '1';
+                        if (confirmationField) confirmationField.required = false;
+                        if (submit) {
+                            submit.disabled = false;
+                            submit.value = <?php echo wp_json_encode(__('Resume import', 'member-library')); ?>;
+                        }
                     }
                 });
             }
