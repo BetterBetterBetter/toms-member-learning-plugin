@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.10.1 - 2026-09-03
+
+- Cut the catalogue snapshot endpoint from about 536 to 87 database queries
+  per 100-record page by priming post, meta, term, parent, speaker, and
+  thumbnail caches for the page up front, reading terms through the object
+  term cache, and resolving each Speaker once per request. Output is
+  byte-identical to before (verified against a full 1,266-record dump), so
+  no content fingerprints change. On the Liberty Classroom production server a
+  page went from over 5 s, past the app's timeout, to roughly 1 s.
+
 ## 0.10.0 - 2026-09-03
 
 - The catalogue import now runs in resumable steps from the Migration page

@@ -32,6 +32,7 @@ class MemberLibrary_Content_Catalogue {
         $ids = array_values(array_filter(array_map('intval', $all_ids), static function ($post_id) use ($after_id) {
             return $post_id > $after_id;
         }));
+        self::prime_record_caches(array_slice($ids, 0, $per_page + 1));
         $items = array();
         foreach ($ids as $post_id) {
             $record = self::record($post_id);
@@ -500,10 +501,16 @@ class MemberLibrary_Content_Catalogue {
     }
 
     private static function terms($post_id, $taxonomy) {
-        $terms = wp_get_post_terms((int) $post_id, $taxonomy);
-        if (is_wp_error($terms)) {
+        // get_the_terms() reads the object term cache that prime_record_caches()
+        // fills for the whole page; wp_get_post_terms() queried once per record.
+        $terms = get_the_terms((int) $post_id, $taxonomy);
+        if (is_wp_error($terms) || !is_array($terms)) {
             return array();
         }
+        usort($terms, static function ($a, $b) {
+            $by_name = strcasecmp((string) $a->name, (string) $b->name);
+            return 0 !== $by_name ? $by_name : (int) $a->term_id - (int) $b->term_id;
+        });
 
         return array_values(array_map(static function ($term) use ($taxonomy) {
             $description = trim(preg_replace('/\s+/u', ' ', html_entity_decode(
@@ -566,9 +573,25 @@ class MemberLibrary_Content_Catalogue {
     }
 
     private static function speakers($speaker_ids) {
+        // Memoized per request, keyed by the posts "last changed" stamp so any
+        // post or meta write (including in one long CLI/test process) refreshes it.
+        static $memo = array();
+        static $memo_generation = '';
+        $generation = (string) wp_cache_get_last_changed('posts');
+        if ($generation !== $memo_generation) {
+            $memo = array();
+            $memo_generation = $generation;
+        }
         $speaker_ids = array_values(array_unique(array_filter(array_map('absint', (array) $speaker_ids))));
         $records = array();
         foreach ($speaker_ids as $speaker_id) {
+            if (array_key_exists($speaker_id, $memo)) {
+                if (null !== $memo[$speaker_id]) {
+                    $records[] = $memo[$speaker_id];
+                }
+                continue;
+            }
+            $memo[$speaker_id] = null;
             $speaker = get_post($speaker_id);
             if (!$speaker instanceof WP_Post
                 || MemberLibrary_Content_Model::SPEAKER_POST_TYPE !== $speaker->post_type
@@ -592,7 +615,7 @@ class MemberLibrary_Content_Catalogue {
                     '…'
                 );
             }
-            $records[] = array(
+            $memo[$speaker_id] = array(
                 'wordpress_id' => $speaker_id,
                 'content_uuid' => sanitize_text_field((string) get_post_meta($speaker_id, MemberLibrary_Content_Model::SPEAKER_META_UUID, true)),
                 'slug' => (string) $speaker->post_name,
@@ -614,8 +637,60 @@ class MemberLibrary_Content_Catalogue {
                     get_post_meta($speaker_id, MemberLibrary_Content_Model::SPEAKER_META_SOCIAL_LINKS, true)
                 ),
             );
+            $records[] = $memo[$speaker_id];
         }
         return $records;
+    }
+
+    /**
+     * Load the posts, meta, terms, and related posts (parents, speakers,
+     * thumbnails) for one catalogue page in a handful of queries so record()
+     * reads from cache instead of issuing several queries per record.
+     */
+    private static function prime_record_caches($post_ids) {
+        $post_ids = array_values(array_unique(array_filter(array_map('intval', (array) $post_ids))));
+        if (empty($post_ids)) {
+            return;
+        }
+        _prime_post_caches($post_ids, true, true);
+        $related = array();
+        foreach ($post_ids as $post_id) {
+            foreach (array(
+                MemberLibrary_Content_Model::META_COURSE_ID,
+                MemberLibrary_Content_Model::META_SERIES_ID,
+                '_thumbnail_id',
+            ) as $key) {
+                $related[] = (int) get_post_meta($post_id, $key, true);
+            }
+            foreach ((array) get_post_meta($post_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, false) as $speaker_id) {
+                $related[] = (int) $speaker_id;
+            }
+        }
+        $related = array_values(array_unique(array_filter($related)));
+        if (empty($related)) {
+            return;
+        }
+        _prime_post_caches($related, false, true);
+        // Second hop: inherited speakers and speaker headshots.
+        $second = array();
+        foreach ($related as $related_id) {
+            foreach ((array) get_post_meta($related_id, MemberLibrary_Content_Model::META_SPEAKER_IDS, false) as $speaker_id) {
+                $second[] = (int) $speaker_id;
+            }
+            $second[] = (int) get_post_meta($related_id, '_thumbnail_id', true);
+        }
+        $second = array_values(array_diff(array_unique(array_filter($second)), $related, $post_ids));
+        if (!empty($second)) {
+            _prime_post_caches($second, false, true);
+            $thumbnails = array();
+            foreach ($second as $second_id) {
+                $thumbnails[] = (int) get_post_meta($second_id, '_thumbnail_id', true);
+            }
+            $thumbnails = array_values(array_diff(array_unique(array_filter($thumbnails)), $second, $related, $post_ids));
+            if (!empty($thumbnails)) {
+                _prime_post_caches($thumbnails, false, true);
+            }
+        }
     }
 
     private static function media($post_id) {
