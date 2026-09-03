@@ -14,10 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const removeValue = card.querySelector("[data-access-group-remove-value]")
 
     name?.addEventListener("input", () => {
-      if (summary) summary.textContent = name.value.trim() || "New Access Group"
+      if (summary) summary.textContent = name.value.trim() || "New group"
     })
     remove?.addEventListener("click", () => {
-      if (!window.confirm("Delete this Access Group from the draft? Assigned memberships will become unassigned when you save.")) return
+      if (!window.confirm("Remove this group from the draft? Memberships that include it lose it when you save. Nothing changes for members until you publish.")) return
       if (removeValue instanceof HTMLInputElement) removeValue.value = "1"
       card.hidden = true
       card.querySelectorAll("input, textarea").forEach(field => {
@@ -25,6 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     })
   }
+
+  // Publish and undo use a plain confirmation dialog instead of a typed phrase.
+  page.querySelectorAll("form[data-access-confirm]").forEach(form => {
+    form.addEventListener("submit", event => {
+      const message = form.getAttribute("data-access-confirm") || ""
+      if (message && !window.confirm(message)) event.preventDefault()
+    })
+  })
 
   page.querySelectorAll("[data-access-group-card]").forEach(connect)
   add?.addEventListener("click", () => {

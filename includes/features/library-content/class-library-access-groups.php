@@ -341,6 +341,14 @@ class MemberLibrary_Access_Groups {
             throw new RuntimeException('Checked access changes exist. Discard or clear them before editing the setup.');
         }
         if ('active' === (string) ($stage['phase'] ?? '')) {
+            // Installs published before the snapshot existed: what is live right
+            // now is exactly this configuration, so record it before editing.
+            if (empty($configuration['published'])) {
+                $configuration['published'] = $this->published_snapshot(
+                    $configuration,
+                    (string) ($stage['activated_at'] ?? ($configuration['activated_at'] ?? gmdate('Y-m-d H:i:s')))
+                );
+            }
             // Promote the active generated rules to the next revision's safe
             // baseline. They remain published while the administrator edits
             // and stages a replacement.
@@ -369,6 +377,136 @@ class MemberLibrary_Access_Groups {
     public function groups() {
         $configuration = $this->configuration();
         return is_array($configuration['groups'] ?? null) ? $configuration['groups'] : array();
+    }
+
+    /**
+     * The groups and assignments members are living under right now, recorded
+     * when the last publish succeeded. Empty until something has been published.
+     */
+    public function published_configuration($configuration = null) {
+        $configuration = is_array($configuration) ? $configuration : $this->configuration();
+        $published = $configuration['published'] ?? array();
+        return is_array($published) && isset($published['groups'], $published['assignments']) ? $published : array();
+    }
+
+    private function published_snapshot($configuration, $activated_at) {
+        return array(
+            'groups' => (array) ($configuration['groups'] ?? array()),
+            'assignments' => (array) ($configuration['assignments'] ?? array()),
+            'exceptions' => (array) ($configuration['exceptions'] ?? array()),
+            'revision' => (string) ($configuration['revision'] ?? ''),
+            'activated_at' => (string) $activated_at,
+        );
+    }
+
+    /**
+     * Exact difference between the saved draft and what is live, in words an
+     * administrator can act on: groups added, removed, or changed, and which
+     * memberships gain or lose which groups.
+     */
+    public function changes_since_publish($configuration = null) {
+        $configuration = is_array($configuration) ? $configuration : $this->configuration();
+        $published = $this->published_configuration($configuration);
+        $has_published = !empty($published);
+        $live_groups = (array) ($published['groups'] ?? array());
+        $draft_groups = (array) ($configuration['groups'] ?? array());
+        $live_assignments = (array) ($published['assignments'] ?? array());
+        $draft_assignments = (array) ($configuration['assignments'] ?? array());
+        $definitions = $this->definitions();
+        $label = static function ($scope_key) use ($definitions) {
+            return (string) ($definitions[$scope_key]['label'] ?? $scope_key);
+        };
+        $name_of = static function ($group_id) use ($draft_groups, $live_groups) {
+            return (string) ($draft_groups[$group_id]['name'] ?? ($live_groups[$group_id]['name'] ?? $group_id));
+        };
+
+        $groups = array('added' => array(), 'removed' => array(), 'changed' => array());
+        foreach ($draft_groups as $group_id => $group) {
+            if (!isset($live_groups[$group_id])) {
+                $groups['added'][$group_id] = (string) $group['name'];
+                continue;
+            }
+            $live = $live_groups[$group_id];
+            $live_scopes = array_map('strval', (array) ($live['scopes'] ?? array()));
+            $draft_scopes = array_map('strval', (array) ($group['scopes'] ?? array()));
+            sort($live_scopes, SORT_STRING);
+            sort($draft_scopes, SORT_STRING);
+            $renamed = (string) $live['name'] !== (string) $group['name'];
+            $described = (string) ($live['description'] ?? '') !== (string) ($group['description'] ?? '');
+            if ($renamed || $described || $live_scopes !== $draft_scopes) {
+                $groups['changed'][$group_id] = array(
+                    'name' => (string) $group['name'],
+                    'previous_name' => (string) $live['name'],
+                    'renamed' => $renamed,
+                    'description_changed' => $described,
+                    'scopes_added' => array_map($label, array_values(array_diff($draft_scopes, $live_scopes))),
+                    'scopes_removed' => array_map($label, array_values(array_diff($live_scopes, $draft_scopes))),
+                );
+            }
+        }
+        foreach ($live_groups as $group_id => $group) {
+            if (!isset($draft_groups[$group_id])) {
+                $groups['removed'][$group_id] = (string) $group['name'];
+            }
+        }
+
+        $membership_names = array();
+        foreach ($this->memberships() as $membership) {
+            $membership_names[(int) $membership->ID] = (string) $membership->post_title;
+        }
+        $assignments = array();
+        foreach (array_unique(array_merge(array_keys($live_assignments), array_keys($draft_assignments))) as $membership_id) {
+            $live_set = array_map('strval', (array) ($live_assignments[$membership_id] ?? array()));
+            $draft_set = array_map('strval', (array) ($draft_assignments[$membership_id] ?? array()));
+            $added = array_values(array_diff($draft_set, $live_set));
+            $removed = array_values(array_diff($live_set, $draft_set));
+            if (empty($added) && empty($removed)) {
+                continue;
+            }
+            $assignments[(int) $membership_id] = array(
+                'name' => $membership_names[(int) $membership_id] ?? sprintf(__('Membership #%d', 'member-library'), (int) $membership_id),
+                'added' => array_map($name_of, $added),
+                'removed' => array_map($name_of, $removed),
+            );
+        }
+        ksort($assignments, SORT_NUMERIC);
+
+        $counts = array(
+            'groups_added' => count($groups['added']),
+            'groups_removed' => count($groups['removed']),
+            'groups_changed' => count($groups['changed']),
+            'memberships_changed' => count($assignments),
+        );
+        $counts['total'] = array_sum($counts);
+        return array(
+            'has_published' => $has_published,
+            'has_changes' => $counts['total'] > 0,
+            'published_at' => $has_published ? (string) ($published['activated_at'] ?? '') : '',
+            'groups' => $groups,
+            'assignments' => $assignments,
+            'counts' => $counts,
+        );
+    }
+
+    /**
+     * Badge state per group: live, changed, new, or draft (never published).
+     */
+    public function group_states($configuration = null) {
+        $configuration = is_array($configuration) ? $configuration : $this->configuration();
+        $changes = $this->changes_since_publish($configuration);
+        $states = array();
+        foreach (array_keys((array) ($configuration['groups'] ?? array())) as $group_id) {
+            if (!$changes['has_published']) {
+                $states[$group_id] = 'draft';
+            } elseif (isset($changes['groups']['added'][$group_id])) {
+                $states[$group_id] = 'new';
+            } elseif (isset($changes['groups']['changed'][$group_id])) {
+                $states[$group_id] = 'changed';
+            } else {
+                $states[$group_id] = 'live';
+            }
+        }
+        return $states;
     }
 
     public function membership_group_ids($membership_id) {
@@ -624,6 +762,7 @@ class MemberLibrary_Access_Groups {
             update_option(self::STAGE_OPTION, $state, false);
             $configuration['status'] = 'active';
             $configuration['activated_at'] = $state['activated_at'];
+            $configuration['published'] = $this->published_snapshot($configuration, (string) $state['activated_at']);
             update_option(self::OPTION_NAME, $configuration, false);
             $this->clear_rule_cache();
             return $this->verify_stage();
@@ -661,6 +800,9 @@ class MemberLibrary_Access_Groups {
             if (!empty($configuration)) {
                 $configuration['status'] = 'draft';
                 unset($configuration['activated_at']);
+                if ('active' === (string) ($state['phase'] ?? '')) {
+                    unset($configuration['published']);
+                }
                 update_option(self::OPTION_NAME, $configuration, false);
             }
             $this->clear_rule_cache();

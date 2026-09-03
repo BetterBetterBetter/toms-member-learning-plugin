@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.11.0 - 2026-09-03
+
+- Redesigned the Access Groups page around two panels, Live and Draft. Live
+  shows what members have now and when it was published; Draft lists exactly
+  what would change (groups added, changed with the scopes they gain or lose,
+  removed, and which memberships gain or lose which groups) with one action
+  for its state: Review changes, then Publish or Back to editing.
+- Every group card carries a Live / Changed / New badge, and the membership
+  editor shows "Draft differs from live" with the specific groups involved.
+- Publishing uses a normal confirmation dialog instead of typing
+  `publish-access-groups`. The safety net is unchanged and server-side: a
+  publish that would remove access from any current member stays blocked.
+- The plugin now records a published snapshot of groups and assignments when
+  a publish succeeds (and backfills it for installs that were already live),
+  which is what makes the draft comparison exact.
+- Replaced implementation jargon ("stage", "checked changes", "pending") with
+  Live, Draft, Review, Publish, and Undo throughout the page.
+
 ## 0.10.2 - 2026-09-03
 
 - Added a write-only "Session revocation secret" field to Library →

@@ -6,109 +6,171 @@
     margin: 24px 0 12px;
 }
 
-.tsol-access-groups-steps {
-    counter-reset: access-step;
+.tsol-access-state {
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    list-style: none;
-    margin: 16px 0 20px;
+    gap: 16px;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    margin: 18px 0 28px;
     max-width: 1180px;
-    padding: 0;
 }
 
-.tsol-access-groups-steps li {
-    align-items: start;
+.tsol-access-state__panel {
     background: #fff;
-    border: 1px solid #dcdcde;
+    border: 1px solid #c3c4c7;
     border-radius: 4px;
-    counter-increment: access-step;
-    display: grid;
-    gap: 2px;
-    grid-template-columns: 28px 1fr;
-    padding: 12px;
+    border-top: 4px solid #c3c4c7;
+    box-sizing: border-box;
+    padding: 18px 20px 20px;
 }
 
-.tsol-access-groups-steps li::before {
-    align-items: center;
-    background: #2271b1;
-    border-radius: 50%;
-    color: #fff;
-    content: counter(access-step);
-    display: flex;
+.tsol-access-state__panel--live {
+    border-top-color: #00a32a;
+}
+
+.tsol-access-state__panel--draft {
+    border-top-color: #dba617;
+}
+
+.tsol-access-state__panel--staged {
+    border-top-color: #2271b1;
+}
+
+.tsol-access-state__panel--failed,
+.tsol-access-state__panel--staging {
+    border-top-color: #d63638;
+}
+
+.tsol-access-state__panel h2 {
+    font-size: 18px;
+    margin: 6px 0 8px;
+}
+
+.tsol-access-state__panel > p {
+    margin: 0 0 12px;
+    max-width: 640px;
+}
+
+.tsol-access-state__figures strong {
+    font-size: 20px;
+}
+
+.tsol-access-state__figures span[aria-hidden] {
+    color: #a7aaad;
+    margin: 0 8px;
+}
+
+.tsol-access-state__badge,
+.tsol-access-chip {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
     font-weight: 700;
-    grid-row: 1 / span 2;
-    height: 24px;
-    justify-content: center;
-    width: 24px;
+    letter-spacing: .06em;
+    line-height: 1;
+    padding: 5px 9px;
+    text-transform: uppercase;
+    vertical-align: middle;
 }
 
-.tsol-access-groups-steps span {
+.tsol-access-state__badge--live,
+.tsol-access-chip--live {
+    background: #edfaef;
+    color: #166534;
+}
+
+.tsol-access-state__badge--draft,
+.tsol-access-chip--draft {
+    background: #fcf9e8;
+    color: #7a5b00;
+}
+
+.tsol-access-state__badge--review {
+    background: #f0f6fc;
+    color: #1d4f8a;
+}
+
+.tsol-access-state__badge--problem,
+.tsol-access-chip--removed {
+    background: #fcf0f1;
+    color: #8a2424;
+}
+
+.tsol-access-chip--new {
+    background: #f0f6fc;
+    color: #1d4f8a;
+}
+
+.tsol-access-chip--changed {
+    background: #fcf9e8;
+    color: #7a5b00;
+}
+
+.tsol-access-chip--membership {
+    background: #f6f7f7;
     color: #50575e;
 }
 
-.tsol-access-publish-status {
-    border-left: 5px solid #dba617;
-    box-sizing: border-box;
-    margin: 20px 0 28px;
-    max-width: 1180px;
-    padding: 20px 22px;
+.tsol-access-state__matrix,
+.tsol-access-state__changes {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
 }
 
-.tsol-access-publish-status--staged {
-    border-left-color: #2271b1;
+.tsol-access-state__matrix li {
+    margin: 0 0 4px;
 }
 
-.tsol-access-publish-status--active {
-    border-left-color: #00a32a;
+.tsol-access-state__matrix li.is-blocking {
+    color: #8a2424;
 }
 
-.tsol-access-publish-status--failed,
-.tsol-access-publish-status--staging {
-    border-left-color: #d63638;
-}
-
-.tsol-access-publish-status__label {
-    color: #646970;
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-}
-
-.tsol-access-publish-status h2 {
-    margin: 0 0 6px;
-}
-
-.tsol-access-publish-status > p {
-    font-size: 14px;
-    margin: 0 0 16px;
-    max-width: 820px;
-}
-
-.tsol-access-publish-status__result {
-    background: #f0f6fc;
-    border-radius: 3px;
-    padding: 10px 12px;
-}
-
-.tsol-access-publish-status__confirm {
-    align-items: end;
+.tsol-access-state__changes li {
+    align-items: baseline;
+    border-top: 1px solid #f0f0f1;
     display: flex;
     flex-wrap: wrap;
+    gap: 8px;
+    padding: 7px 0;
+}
+
+.tsol-access-state__changes li:first-child {
+    border-top: 0;
+}
+
+.tsol-access-state__changes small {
+    color: #50575e;
+    flex-basis: 100%;
+    padding-left: 2px;
+}
+
+.tsol-access-state__actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin: 6px 0 10px;
+}
+
+.tsol-access-state__actions .description {
+    margin: 0;
+}
+
+.tsol-access-action {
+    display: inline-block;
+}
+
+.tsol-access-group-card__title {
+    align-items: center;
+    display: inline-flex;
     gap: 10px;
-    margin-bottom: 12px;
 }
 
-.tsol-access-publish-status__confirm label {
-    display: grid;
-    gap: 5px;
-}
-
-.tsol-access-publish-status__confirm .button {
-    margin-bottom: 1px;
+.tsol-membership-access-groups__pending {
+    background: #fcf9e8;
+    border-left: 3px solid #dba617;
+    margin: 0 0 10px;
+    padding: 6px 8px;
 }
 
 .tsol-access-groups-heading h2,
@@ -301,7 +363,7 @@
 }
 
 @media (max-width: 782px) {
-    .tsol-access-groups-steps {
+    .tsol-access-state {
         grid-template-columns: 1fr;
     }
 
