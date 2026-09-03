@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.10.2 - 2026-09-03
+
+- Added a write-only "Session revocation secret" field to Library →
+  Authentication for hosts where wp-config cannot be edited. A server-defined
+  `TSOL_LIBRARY_AUTH_REVOCATION_SECRET` constant still wins and disables the
+  field; the saved value is never displayed, must be at least 32 characters,
+  and must differ from the client and catalogue secrets. Until one of the two
+  is present WordPress cannot end Library sessions on password change, account
+  deletion, or role change.
+
 ## 0.10.1 - 2026-09-03
 
 - Cut the catalogue snapshot endpoint from about 536 to 87 database queries

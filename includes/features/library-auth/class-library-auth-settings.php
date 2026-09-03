@@ -14,6 +14,7 @@ class MemberLibrary_Auth_Settings {
     public const CLIENT_ID_OPTION = 'tsol_library_auth_client_id';
     public const CLIENT_SECRET_OPTION = 'tsol_library_auth_client_secret';
     public const CATALOGUE_WEBHOOK_SECRET_OPTION = 'tsol_library_catalogue_webhook_secret';
+    public const AUTH_REVOCATION_SECRET_OPTION = 'tsol_library_auth_revocation_secret';
 
     public function init() {
         add_action('admin_init', array($this, 'register'));
@@ -42,6 +43,32 @@ class MemberLibrary_Auth_Settings {
             'sanitize_callback' => array($this, 'sanitize_catalogue_webhook_secret'),
             'default' => '',
         ));
+        register_setting('tsol_library_auth', self::AUTH_REVOCATION_SECRET_OPTION, array(
+            'sanitize_callback' => array($this, 'sanitize_auth_revocation_secret'),
+            'default' => '',
+        ));
+    }
+
+    public function sanitize_auth_revocation_secret($value) {
+        if (defined('TSOL_LIBRARY_AUTH_REVOCATION_SECRET')) {
+            return (string) get_option(self::AUTH_REVOCATION_SECRET_OPTION, '');
+        }
+
+        $value = trim((string) wp_unslash($value));
+        if ($value === '') {
+            return (string) get_option(self::AUTH_REVOCATION_SECRET_OPTION, '');
+        }
+        if (strlen($value) < 32) {
+            add_settings_error(self::AUTH_REVOCATION_SECRET_OPTION, 'short_secret', __('The session revocation secret must be at least 32 characters.', 'member-library'));
+            return (string) get_option(self::AUTH_REVOCATION_SECRET_OPTION, '');
+        }
+        foreach (array(self::client_secret(), self::catalogue_webhook_secret()) as $other_secret) {
+            if ($other_secret !== '' && hash_equals($other_secret, $value)) {
+                add_settings_error(self::AUTH_REVOCATION_SECRET_OPTION, 'reused_secret', __('The session revocation secret must be different from the Library client secret and the catalogue synchronization secret.', 'member-library'));
+                return (string) get_option(self::AUTH_REVOCATION_SECRET_OPTION, '');
+            }
+        }
+        return $value;
     }
 
     public function sanitize_app_url($value) {
@@ -112,6 +139,11 @@ class MemberLibrary_Auth_Settings {
         $catalogue_secret_is_present = self::catalogue_webhook_secret() !== '';
         $catalogue_secret_is_valid = strlen(self::catalogue_webhook_secret()) >= 32
             && ($secret_is_valid ? !hash_equals(self::client_secret(), self::catalogue_webhook_secret()) : true);
+        $revocation_secret_from_constant = defined('TSOL_LIBRARY_AUTH_REVOCATION_SECRET');
+        $revocation_secret_is_present = self::auth_revocation_secret() !== '';
+        $revocation_secret_is_valid = strlen(self::auth_revocation_secret()) >= 32
+            && (!$secret_is_valid || !hash_equals(self::client_secret(), self::auth_revocation_secret()))
+            && (!$catalogue_secret_is_valid || !hash_equals(self::catalogue_webhook_secret(), self::auth_revocation_secret()));
         $reason = self::readiness_error();
         $memberpress_ready = class_exists('MeprUser') && class_exists('MeprRule');
         ?>
@@ -205,6 +237,34 @@ class MemberLibrary_Auth_Settings {
                             <p class="description"><?php echo esc_html($catalogue_secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'member-library') : __('Paste the exact TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET from the Library app. Leave blank to keep the current value; the saved value is never displayed.', 'member-library')); ?></p>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row"><label for="tsol-library-auth-revocation-secret"><?php esc_html_e('Session revocation secret', 'member-library'); ?></label></th>
+                        <td>
+                            <p style="margin: 0 0 10px;">
+                                <?php if ($revocation_secret_is_valid) : ?>
+                                    <span data-library-revocation-secret-status="configured" style="align-items: center; background: #edfaef; border: 1px solid #8fd19e; border-radius: 999px; color: #166534; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-yes-alt" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Configured', 'member-library'); ?>
+                                    </span>
+                                <?php elseif ($revocation_secret_is_present) : ?>
+                                    <span data-library-revocation-secret-status="invalid" style="align-items: center; background: #fcf0f1; border: 1px solid #d63638; border-radius: 999px; color: #8a2424; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-warning" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Needs replacement', 'member-library'); ?>
+                                    </span>
+                                <?php else : ?>
+                                    <span data-library-revocation-secret-status="missing" style="align-items: center; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 999px; color: #50575e; display: inline-flex; font-weight: 600; gap: 5px; padding: 4px 10px;">
+                                        <span class="dashicons dashicons-marker" aria-hidden="true" style="font-size: 17px; height: 17px; width: 17px;"></span>
+                                        <?php esc_html_e('Not configured', 'member-library'); ?>
+                                    </span>
+                                <?php endif; ?>
+                                <span class="description" style="margin-left: 6px;">
+                                    <?php echo esc_html($revocation_secret_from_constant ? __('Provided by the server environment', 'member-library') : ($revocation_secret_is_present ? __('Saved in WordPress; the value is never displayed', 'member-library') : __('No secret has been provided yet; WordPress cannot end Library sessions until it is', 'member-library'))); ?>
+                                </span>
+                            </p>
+                            <input id="tsol-library-auth-revocation-secret" class="regular-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr(self::AUTH_REVOCATION_SECRET_OPTION); ?>" value="" <?php disabled($revocation_secret_from_constant); ?> placeholder="<?php echo esc_attr($revocation_secret_is_present ? __('Enter a new secret to replace the current one', 'member-library') : __('At least 32 characters', 'member-library')); ?>">
+                            <p class="description"><?php echo esc_html($revocation_secret_from_constant ? __('This field is disabled because the server environment controls the secret.', 'member-library') : __('Paste the exact TSOL_LIBRARY_AUTH_REVOCATION_SECRET from the Library app. It must differ from the other two secrets. Leave blank to keep the current value; the saved value is never displayed.', 'member-library')); ?></p>
+                        </td>
+                    </tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
@@ -243,6 +303,13 @@ class MemberLibrary_Auth_Settings {
             return trim((string) TSOL_LIBRARY_CATALOGUE_WEBHOOK_SECRET);
         }
         return trim((string) get_option(self::CATALOGUE_WEBHOOK_SECRET_OPTION, ''));
+    }
+
+    public static function auth_revocation_secret() {
+        if (defined('TSOL_LIBRARY_AUTH_REVOCATION_SECRET')) {
+            return trim((string) TSOL_LIBRARY_AUTH_REVOCATION_SECRET);
+        }
+        return trim((string) get_option(self::AUTH_REVOCATION_SECRET_OPTION, ''));
     }
 
     public static function configured() {

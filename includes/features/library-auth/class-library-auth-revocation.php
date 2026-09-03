@@ -276,9 +276,10 @@ class MemberLibrary_Auth_Revocation {
     }
 
     private static function secret() {
-        $secret = defined('TSOL_LIBRARY_AUTH_REVOCATION_SECRET')
-            ? trim((string) TSOL_LIBRARY_AUTH_REVOCATION_SECRET)
-            : '';
+        // A server constant wins; otherwise the write-only WordPress setting
+        // saved on the Library Authentication page (for hosts without wp-config
+        // access) is used. Either way it must differ from the other secrets.
+        $secret = MemberLibrary_Auth_Settings::auth_revocation_secret();
         $secret = trim((string) apply_filters('tsol_library_auth_revocation_secret', $secret));
         $disallowed = array(MemberLibrary_Auth_Settings::client_secret());
         $disallowed[] = MemberLibrary_Auth_Settings::catalogue_webhook_secret();

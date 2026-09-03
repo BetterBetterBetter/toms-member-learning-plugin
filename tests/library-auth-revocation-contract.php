@@ -147,6 +147,34 @@ foreach (array($jti, $replayed_jti ?? '', $retry_jti ?? '') as $cleanup_jti) {
     }
 }
 
+// Managed hosts that cannot edit wp-config may store the revocation secret as a
+// write-only WordPress setting; a server constant still wins when present.
+if (!defined('TSOL_LIBRARY_AUTH_REVOCATION_SECRET')) {
+    $secret_method = new ReflectionMethod(MemberLibrary_Auth_Revocation::class, 'secret');
+    $secret_method->setAccessible(true);
+    $previous_secret_option = get_option(MemberLibrary_Auth_Settings::AUTH_REVOCATION_SECRET_OPTION, null);
+    $settings = new MemberLibrary_Auth_Settings();
+    $option_secret = 'option-managed-revocation-secret-' . wp_generate_password(24, false);
+    update_option(MemberLibrary_Auth_Settings::AUTH_REVOCATION_SECRET_OPTION, $option_secret, false);
+    $assert($option_secret === MemberLibrary_Auth_Settings::auth_revocation_secret(), 'The write-only revocation secret setting is not exposed by the settings service.');
+    $assert($option_secret === $secret_method->invoke(null), 'Revocation delivery does not use the write-only revocation secret setting when no constant is defined.');
+    $assert($option_secret === $settings->sanitize_auth_revocation_secret(''), 'A blank revocation secret submission did not keep the saved value.');
+    $assert($option_secret === $settings->sanitize_auth_revocation_secret('too-short'), 'A revocation secret under 32 characters was accepted.');
+    if (MemberLibrary_Auth_Settings::client_secret() !== '') {
+        $assert($option_secret === $settings->sanitize_auth_revocation_secret(MemberLibrary_Auth_Settings::client_secret()), 'The revocation secret accepted the Library client secret as its value.');
+    }
+    if (MemberLibrary_Auth_Settings::catalogue_webhook_secret() !== '') {
+        $assert($option_secret === $settings->sanitize_auth_revocation_secret(MemberLibrary_Auth_Settings::catalogue_webhook_secret()), 'The revocation secret accepted the catalogue webhook secret as its value.');
+    }
+    $replacement_secret = 'replacement-revocation-secret-' . wp_generate_password(24, false);
+    $assert($replacement_secret === $settings->sanitize_auth_revocation_secret($replacement_secret), 'A valid replacement revocation secret was rejected.');
+    if (null === $previous_secret_option) {
+        delete_option(MemberLibrary_Auth_Settings::AUTH_REVOCATION_SECRET_OPTION);
+    } else {
+        update_option(MemberLibrary_Auth_Settings::AUTH_REVOCATION_SECRET_OPTION, $previous_secret_option, false);
+    }
+}
+
 $assert(false === MemberLibrary_Auth_Revocation::queue(0, 'user.suspended'), 'Revocation accepted an invalid WordPress user ID.');
 $assert(false === MemberLibrary_Auth_Revocation::queue($user_id, 'user.unknown'), 'Revocation accepted an unknown event type.');
 
