@@ -1,6 +1,6 @@
 # Release Process
 
-Canonical repo: `BetterBetterBetter/toms-member-learning-plugin` (private).
+Canonical repo: `BetterBetterBetter/toms-member-learning-plugin` (public).
 
 One plugin core serves both brands (Tom's School of Life, Liberty Classroom);
 brand differences are per-install config (`MemberLibrary_Brand`), never separate
@@ -19,19 +19,18 @@ builds. See `docs/plans/plugin-consolidation-plan.md` in the workspace.
 5. Create the GitHub Release with `gh release create` and attach the locally
    built ZIP. GitHub Actions is not part of the build or release path.
 
-## Update channel — NOT yet live
+## Update channel — LIVE (repository public since 2026-09-03)
 
 The in-plugin update checker (`plugin-update-checker`, wired in
-`member-library-plugin.php`) points at this repo, but the repo is **private**,
-so the checker cannot fetch releases without authentication. Before automated
-updates work, EITHER:
+`member-library-plugin.php` with release assets enabled) reads the GitHub
+Releases of this now-public repository. Each site sees a new version in
+Plugins → Installed Plugins within WordPress's normal update-check window (up
+to 12 hours), or immediately via the plugin row's "Check for updates" link.
+The update installs the `member-library-plugin.zip` asset attached to the
+release, so every release must carry that asset (steps 3–5 above).
 
-- flip the repo to **public** (tokenless, like the legacy TSOL plugin did), OR
-- keep it private and configure a GitHub token via PUC's auth
-  (`$updateChecker->setAuthentication('<token>')`) on each install.
-
-This is consolidation-plan **decision #7** (deferred: "don't publish yet").
-Until then, install/update the plugin manually from a release ZIP.
+Consolidation-plan decision #7 is therefore settled as "public repository";
+no per-site token is needed.
 
 ## Slug / entry-file note (cutover)
 
