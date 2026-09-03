@@ -1317,6 +1317,17 @@ class MemberLibrary_Access_Groups {
         $target_pairs = $this->target_condition_pairs($compiled);
         $users = array_map('intval', $wpdb->get_col("SELECT ID FROM {$wpdb->users} ORDER BY ID"));
         $summary = array('allow_to_allow' => 0, 'allow_to_deny' => 0, 'deny_to_allow' => 0, 'deny_to_deny' => 0);
+        $membership_titles = array();
+        foreach ($this->memberships() as $membership) {
+            $membership_titles[(int) $membership->ID] = (string) $membership->post_title;
+        }
+        $losing_users = array();
+        $losses_by_membership = array();
+        $losing_sample = array();
+        $baseline_sources = array('memberpress' => 0, 'learndash' => 0, 'open' => 0);
+        foreach ($target_pairs as $pair) {
+            $baseline_sources[(string) ($pair['baseline'] ?? 'memberpress')]++;
+        }
         foreach ($users as $user_id) {
             $wp_user = get_user_by('id', $user_id);
             $is_admin = user_can($user_id, 'manage_options');
@@ -1329,15 +1340,39 @@ class MemberLibrary_Access_Groups {
                 'memberships' => $member ? array_map('intval', (array) $member->active_product_subscriptions()) : array(),
             );
             foreach ($target_pairs as $pair) {
-                $old = $this->conditions_allow($pair['old'], $context);
+                if (array_key_exists('old_users', $pair)) {
+                    // Today's access comes from LearnDash enrolment, not from a
+                    // MemberPress rule. null means the course is open to all.
+                    $old = $is_admin || null === $pair['old_users'] || isset($pair['old_users'][$user_id]);
+                } else {
+                    $old = $this->conditions_allow($pair['old'], $context);
+                }
                 $new = $this->conditions_allow($pair['new'], $context);
                 $summary[($old ? 'allow' : 'deny') . '_to_' . ($new ? 'allow' : 'deny')]++;
+                if ($old && !$new && !isset($losing_users[$user_id])) {
+                    $losing_users[$user_id] = true;
+                    $held = array();
+                    foreach ($context['memberships'] as $membership_id) {
+                        $held[] = $membership_titles[(int) $membership_id] ?? sprintf(__('Membership #%d', 'member-library'), (int) $membership_id);
+                    }
+                    sort($held, SORT_STRING);
+                    $label = empty($held) ? __('No active membership', 'member-library') : implode(' + ', $held);
+                    $losses_by_membership[$label] = ($losses_by_membership[$label] ?? 0) + 1;
+                    if (count($losing_sample) < 10) {
+                        $losing_sample[] = (string) $context['login'];
+                    }
+                }
             }
         }
+        arsort($losses_by_membership, SORT_NUMERIC);
         return array_merge(array(
             'users_checked' => count($users),
             'targets_checked' => count($target_pairs),
             'decisions_checked' => count($users) * count($target_pairs),
+            'losing_users' => count($losing_users),
+            'losses_by_membership' => array_slice($losses_by_membership, 0, 8, true),
+            'losing_sample' => $losing_sample,
+            'baseline_sources' => $baseline_sources,
         ), $summary);
     }
 
@@ -1371,9 +1406,64 @@ class MemberLibrary_Access_Groups {
                     $new[$key] = $condition;
                 }
             }
-            $pairs[] = array('old' => $old, 'new' => $new);
+            $pair = array('old' => $old, 'new' => $new, 'baseline' => 'memberpress');
+            if (empty($old)) {
+                $enrolled = $this->legacy_enrolment_users($authorization_id);
+                if (false !== $enrolled) {
+                    $pair['old_users'] = $enrolled;
+                    $pair['baseline'] = 'learndash';
+                } else {
+                    $pair['baseline'] = 'open';
+                }
+            }
+            $pairs[] = $pair;
         }
         return $pairs;
+    }
+
+    /**
+     * Who can reach a legacy LearnDash course today. Sites such as Liberty
+     * Classroom never protected courses with MemberPress rules: the
+     * MemberPress → LearnDash integration enrols members instead. Without this
+     * the review would treat every course as open and count every non-member
+     * as "losing access" when a rule is added.
+     *
+     * @return array|null|false user_id => true; null when the course is open
+     *                          to everyone; false when not a LearnDash course
+     *                          or LearnDash is not active.
+     */
+    private function legacy_enrolment_users($post_id) {
+        static $cache = array();
+        $post_id = (int) $post_id;
+        if (array_key_exists($post_id, $cache)) {
+            return $cache[$post_id];
+        }
+        if ($post_id <= 0
+            || 'sfwd-courses' !== get_post_type($post_id)
+            || !function_exists('learndash_get_users_for_course')
+            || !function_exists('learndash_get_setting')
+        ) {
+            return $cache[$post_id] = false;
+        }
+        $price_type = (string) learndash_get_setting($post_id, 'course_price_type');
+        if (in_array($price_type, array('open', 'free'), true)) {
+            return $cache[$post_id] = null;
+        }
+        $users = learndash_get_users_for_course($post_id, array(), false);
+        $ids = $users instanceof WP_User_Query ? (array) $users->get_results() : (array) $users;
+        return $cache[$post_id] = array_fill_keys(array_map('intval', $ids), true);
+    }
+
+    /**
+     * One-step publish: review first, then activate only when no current
+     * member would lose access. Otherwise the review stays for inspection.
+     */
+    public function publish() {
+        $verification = $this->stage();
+        if ((int) ($verification['matrix']['allow_to_deny'] ?? 1) > 0) {
+            return array('published' => false, 'verification' => $verification);
+        }
+        return array('published' => true, 'verification' => $this->activate(self::ACTIVATE_CONFIRMATION));
     }
 
     private function target_policy_keys($target_id) {

@@ -15,6 +15,29 @@ the "N changes not yet live" heading, the change list, the per-group badges
 (`group_states()`: live / changed / new / draft), and the membership editor's
 "Draft differs from live" note.
 
+## Review baseline ("what members have today")
+
+For each Library item the review compares old vs new access for every user:
+
+1. Published MemberPress rules on the item's authorization post → `old` =
+   those rule conditions (TSOL model).
+2. No such rule and the authorization post is a LearnDash course → `old` =
+   LearnDash enrolment (`learndash_get_users_for_course`), with `open`/`free`
+   price types meaning everyone. This is the Liberty Classroom model, where the
+   MemberPress → LearnDash integration enrols members and no MemberPress rule
+   exists. Without it every non-member counts as "losing access".
+3. Neither → open to everyone.
+
+`matrix.baseline_sources` records how many items used each source;
+`matrix.losing_users`, `losses_by_membership`, and `losing_sample` explain a
+block in people, not combinations.
+
+## One-step publish
+
+`publish()` = `stage()` then `activate()` only when `allow_to_deny` is 0.
+Otherwise the review stays `staged` with the block explanation; the admin
+chooses "Back to editing". "Preview the check first" runs `stage()` alone.
+
 ## Invariants
 
 - **Publishing is blocked server-side** when the review matrix shows any

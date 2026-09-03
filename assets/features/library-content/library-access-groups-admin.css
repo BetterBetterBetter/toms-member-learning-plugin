@@ -380,3 +380,24 @@
         grid-template-columns: 1fr;
     }
 }
+
+.tsol-access-state__losses {
+    display: grid;
+    gap: 4px 16px;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.tsol-access-state__losses li {
+    background: #fcf0f1;
+    border-radius: 3px;
+    color: #8a2424;
+    padding: 6px 10px;
+}
+
+.tsol-access-state__losses strong {
+    font-size: 16px;
+    margin-right: 4px;
+}

@@ -117,6 +117,44 @@ if (!empty($admin_ids) && $service->is_bootstrapped()) {
     }
 }
 
+// 5. The review's "today" baseline follows LearnDash enrolment when no
+// MemberPress rule protects a legacy course (Liberty Classroom), instead of
+// treating every course as open to everyone.
+$enrolment = new ReflectionMethod(MemberLibrary_Access_Groups::class, 'legacy_enrolment_users');
+$enrolment->setAccessible(true);
+$library_course = get_posts(array('post_type' => MemberLibrary_Content_Model::COURSE_POST_TYPE, 'numberposts' => 1, 'post_status' => 'any', 'fields' => 'ids'));
+if (!empty($library_course)) {
+    $assert(false === $enrolment->invoke($service, (int) $library_course[0]), 'A Library course post was treated as a LearnDash enrolment source.');
+    $legacy_id = (int) get_post_meta((int) $library_course[0], MemberLibrary_Content_Model::META_AUTHORIZATION_POST_ID, true);
+    if ($legacy_id > 0 && 'sfwd-courses' === get_post_type($legacy_id) && function_exists('learndash_get_users_for_course')) {
+        $enrolled = $enrolment->invoke($service, $legacy_id);
+        $assert(null === $enrolled || (is_array($enrolled) && count($enrolled) > 0), 'A LearnDash-protected legacy course produced no enrolment baseline.');
+        if (is_array($enrolled)) {
+            $first = (int) array_key_first($enrolled);
+            $assert($first > 0 && sfwd_lms_has_access($legacy_id, $first), 'The enrolment baseline lists a user LearnDash does not grant access to.');
+        }
+    } else {
+        WP_CLI::log('No LearnDash legacy course on this site: the enrolment baseline was checked only for the negative case.');
+    }
+}
+$assert(method_exists($service, 'publish'), 'Access Groups has no one-step publish.');
+
+// 6. In Draft state the primary action is a one-step Publish; the manual
+// review remains available as a preview.
+if (!empty($admin_ids) && $service->is_bootstrapped() && empty($service->preview()['stage'])) {
+    $previous_user = get_current_user_id();
+    wp_set_current_user((int) $admin_ids[0]);
+    ob_start();
+    (new MemberLibrary_Access_Groups_Admin())->render();
+    $draft_html = (string) ob_get_clean();
+    wp_set_current_user($previous_user);
+    $draft_changes = $service->changes_since_publish();
+    if (!empty($draft_changes['has_changes']) || empty($draft_changes['has_published'])) {
+        $assert(false !== strpos($draft_html, 'name="operation" value="publish"'), 'The Draft panel has no one-step Publish action.');
+        $assert(false !== strpos($draft_html, 'name="operation" value="stage"'), 'The Draft panel lost the preview-only review.');
+    }
+}
+
 if (!empty($failures)) {
     WP_CLI::error(implode("\n", array_values(array_unique($failures))));
 }

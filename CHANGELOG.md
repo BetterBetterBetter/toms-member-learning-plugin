@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-09-03
+
+- Fixed the Access Groups review wrongly blocking publication on sites where
+  legacy courses are protected by LearnDash enrolment rather than MemberPress
+  rules (Liberty Classroom: 0 of 1,266 items had a MemberPress rule, so the
+  review treated everything as open and counted about two million phantom
+  losses). When no MemberPress rule protects an item, today's access is now
+  read from LearnDash enrolment for its legacy course; open and free courses
+  count as open to everyone.
+- A blocked review now says who would lose access and why: the number of
+  people, grouped by the memberships they hold (or "No active membership"),
+  with sample usernames, instead of a raw combination count.
+- Publish is one step. It runs the member-by-member check and publishes
+  immediately when nobody loses access; otherwise nothing changes and the
+  blocked explanation is shown. "Preview the check first" remains as a
+  secondary action.
+
 ## 0.12.0 - 2026-09-03
 
 - Put the Library menu in one deliberate order regardless of which module

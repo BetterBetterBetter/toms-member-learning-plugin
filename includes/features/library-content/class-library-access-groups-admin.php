@@ -88,6 +88,9 @@ class MemberLibrary_Access_Groups_Admin {
                 $this->service->reconcile_owned_rules($revision);
             } elseif ('stage' === $operation) {
                 $this->service->stage();
+            } elseif ('publish' === $operation) {
+                $result = $this->service->publish();
+                $operation = !empty($result['published']) ? 'publish' : 'publish_blocked';
             } elseif ('activate' === $operation) {
                 $confirmation = isset($_POST['confirmation']) ? sanitize_text_field(wp_unslash($_POST['confirmation'])) : '';
                 $this->service->activate($confirmation);
@@ -238,7 +241,7 @@ class MemberLibrary_Access_Groups_Admin {
             <?php if ('' !== $error) : ?>
                 <div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div>
             <?php elseif (isset($_GET['updated'])) : ?>
-                <div class="notice notice-success"><p><?php echo esc_html($this->success_message(sanitize_key(wp_unslash($_GET['updated'])))); ?></p></div>
+                <div class="notice <?php echo 'publish_blocked' === sanitize_key(wp_unslash($_GET['updated'])) ? 'notice-warning' : 'notice-success'; ?>"><p><?php echo esc_html($this->success_message(sanitize_key(wp_unslash($_GET['updated'])))); ?></p></div>
             <?php endif; ?>
 
             <?php if (!$preview['bootstrapped']) : ?>
@@ -313,6 +316,8 @@ class MemberLibrary_Access_Groups_Admin {
             'reconcile' => __('The rule was added to the draft. Nothing changed for members.', 'member-library'),
             'stage' => __('Review complete. Publish when you are happy with the summary.', 'member-library'),
             'activate' => __('Published. Members now have this access.', 'member-library'),
+            'publish' => __('Published. Every current member keeps their access, and the draft is now live.', 'member-library'),
+            'publish_blocked' => __('Not published. Some members would have lost access; who and why is shown below, and nothing changed for them.', 'member-library'),
             'rollback' => __('Done. Members have the access that was live before.', 'member-library'),
         );
         return $messages[$operation] ?? __('Access Groups were updated.', 'member-library');
@@ -359,13 +364,33 @@ class MemberLibrary_Access_Groups_Admin {
 
             <section class="tsol-access-state__panel tsol-access-state__panel--draft tsol-access-state__panel--<?php echo esc_attr('' === $phase ? 'draft' : $phase); ?>" data-access-state-panel="draft" aria-labelledby="tsol-access-draft-heading">
                 <?php if ('staged' === $phase) : ?>
-                    <span class="tsol-access-state__badge tsol-access-state__badge--review"><?php esc_html_e('Reviewed', 'member-library'); ?></span>
-                    <h2 id="tsol-access-draft-heading"><?php esc_html_e('Ready to publish', 'member-library'); ?></h2>
+                    <?php $blocked = (int) ($matrix['allow_to_deny'] ?? 0) > 0; ?>
+                    <?php if ($blocked) : ?>
+                        <span class="tsol-access-state__badge tsol-access-state__badge--problem"><?php esc_html_e('Blocked', 'member-library'); ?></span>
+                        <h2 id="tsol-access-draft-heading"><?php echo esc_html(sprintf(_n('%s member would lose access', '%s members would lose access', (int) ($matrix['losing_users'] ?? 0), 'member-library'), number_format_i18n((int) ($matrix['losing_users'] ?? 0)))); ?></h2>
+                        <p><?php esc_html_e('These people can reach Library content today but no group in the draft covers them. Nothing has been published. Give their membership a group, or accept the loss by removing them from LearnDash, then publish again.', 'member-library'); ?></p>
+                        <?php if (!empty($matrix['losses_by_membership'])) : ?>
+                            <ul class="tsol-access-state__losses" data-access-losses>
+                                <?php foreach ((array) $matrix['losses_by_membership'] as $label => $count) : ?>
+                                    <li><strong><?php echo esc_html(number_format_i18n((int) $count)); ?></strong> <?php echo esc_html($label); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                        <?php if (!empty($matrix['losing_sample'])) : ?>
+                            <p class="description"><?php echo esc_html(sprintf(__('For example: %s', 'member-library'), implode(', ', array_map('strval', (array) $matrix['losing_sample'])))); ?></p>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <span class="tsol-access-state__badge tsol-access-state__badge--review"><?php esc_html_e('Reviewed', 'member-library'); ?></span>
+                        <h2 id="tsol-access-draft-heading"><?php esc_html_e('Ready to publish', 'member-library'); ?></h2>
+                    <?php endif; ?>
                     <?php if (!empty($matrix)) : ?>
                         <ul class="tsol-access-state__matrix">
                             <li><strong><?php echo esc_html(number_format_i18n((int) ($matrix['decisions_checked'] ?? 0))); ?></strong> <?php esc_html_e('member-and-content combinations compared', 'member-library'); ?></li>
-                            <li class="<?php echo (int) ($matrix['allow_to_deny'] ?? 0) > 0 ? 'is-blocking' : ''; ?>"><strong><?php echo esc_html(number_format_i18n((int) ($matrix['allow_to_deny'] ?? 0))); ?></strong> <?php esc_html_e('members who would lose access', 'member-library'); ?><?php if ((int) ($matrix['allow_to_deny'] ?? 0) > 0) : ?> <em><?php esc_html_e('(publishing is blocked until this is 0)', 'member-library'); ?></em><?php endif; ?></li>
-                            <li><strong><?php echo esc_html(number_format_i18n((int) ($matrix['deny_to_allow'] ?? 0))); ?></strong> <?php esc_html_e('members who would gain access', 'member-library'); ?></li>
+                            <li class="<?php echo (int) ($matrix['allow_to_deny'] ?? 0) > 0 ? 'is-blocking' : ''; ?>"><strong><?php echo esc_html(number_format_i18n((int) ($matrix['allow_to_deny'] ?? 0))); ?></strong> <?php esc_html_e('member-and-item combinations that would be lost', 'member-library'); ?></li>
+                            <li><strong><?php echo esc_html(number_format_i18n((int) ($matrix['deny_to_allow'] ?? 0))); ?></strong> <?php esc_html_e('member-and-item combinations that would be gained', 'member-library'); ?></li>
+                            <?php if (!empty($matrix['baseline_sources']['learndash'])) : ?>
+                                <li class="description"><?php echo esc_html(sprintf(__('Today\'s access for %d items was read from LearnDash enrolment because no MemberPress rule protects them.', 'member-library'), (int) $matrix['baseline_sources']['learndash'])); ?></li>
+                            <?php endif; ?>
                         </ul>
                     <?php endif; ?>
                     <?php $this->change_list($changes); ?>
@@ -375,9 +400,9 @@ class MemberLibrary_Access_Groups_Admin {
                             <input type="hidden" name="operation" value="activate">
                             <input type="hidden" name="confirmation" value="<?php echo esc_attr(MemberLibrary_Access_Groups::ACTIVATE_CONFIRMATION); ?>">
                             <?php wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME); ?>
-                            <?php submit_button(__('Publish', 'member-library'), 'primary', 'submit', false, (int) ($matrix['allow_to_deny'] ?? 0) > 0 ? array('disabled' => 'disabled') : array()); ?>
+                            <?php if (!$blocked) : ?><?php submit_button(__('Publish', 'member-library'), 'primary', 'submit', false); ?><?php endif; ?>
                         </form>
-                        <?php $this->action_form('rollback', __('Back to editing', 'member-library'), 'secondary'); ?>
+                        <?php $this->action_form('rollback', __('Back to editing', 'member-library'), $blocked ? 'primary' : 'secondary'); ?>
                     </div>
                     <p class="description"><?php esc_html_e('Nothing has changed for members yet. "Back to editing" keeps your draft and drops this review.', 'member-library'); ?></p>
                 <?php elseif (in_array($phase, array('staging', 'failed'), true)) : ?>
@@ -402,8 +427,9 @@ class MemberLibrary_Access_Groups_Admin {
                             <?php if ($publish_blocked) : ?>
                                 <p class="description"><?php esc_html_e('Bring the unmanaged rule above into Access Groups first.', 'member-library'); ?></p>
                             <?php else : ?>
-                                <?php $this->action_form('stage', __('Review changes', 'member-library'), 'primary'); ?>
-                                <span class="description"><?php esc_html_e('Compares the draft against every current member and Library item. Nothing changes until you publish.', 'member-library'); ?></span>
+                                <?php $this->action_form('publish', __('Publish', 'member-library'), 'primary', sprintf(__('Publish the draft now? Every current member is checked first; if anyone would lose access, nothing is published and you will see who. %d change(s) would go live.', 'member-library'), $total_changes)); ?>
+                                <?php $this->action_form('stage', __('Preview the check first', 'member-library'), 'secondary'); ?>
+                                <span class="description"><?php esc_html_e('Publishing checks every current member first. If anyone would lose access, nothing changes and you see exactly who.', 'member-library'); ?></span>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
