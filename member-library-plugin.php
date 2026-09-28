@@ -49,6 +49,7 @@ require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-l
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-entitlements.php';
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-revocation.php';
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-account-security.php';
+require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-auth/class-library-auth-access-testing.php';
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audience-contract.php';
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-audience-resolver.php';
 require_once MEMBER_LIBRARY_PLUGIN_DIR . 'includes/features/library-notifications/class-library-announcement-flags.php';

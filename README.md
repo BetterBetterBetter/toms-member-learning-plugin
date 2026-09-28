@@ -16,7 +16,8 @@ See the workspace consolidation record in
   collections, and Course/Series purchase offers), the WordPress↔app OAuth
   bridge (`library-auth`), the catalogue
   projection + signed webhooks, native MemberPress access groups, member
-  announcements, and the active Liberty LearnDash importer.
+  announcements, administrator Library access testing through the optional
+  Login as User plugin, and the active Liberty LearnDash importer.
 - **Is not:** site-specific features. TSOL-only features (accountability
   modal, cookie consent) and TSOL's legacy one-shot data migrations live in
   the separate **TSOL companion plugin** (`tomschooloflife.com/plugin`).
@@ -79,6 +80,11 @@ tools/run-contract-tests.sh --path=/absolute/path/to/wordpress
 ```
 
 Each also runs standalone: `wp eval-file tests/<name>.php --skip-themes`.
+
+Administrators can test a member's live Library view from the WordPress Users
+or MemberPress Members screen when Web357 Login as User is active. See
+[`docs/library-access-testing.md`](docs/library-access-testing.md) for the
+operator flow, security boundary, and rollout order.
 
 ## Releases
 

@@ -15,14 +15,17 @@ class MemberLibrary_Auth {
     private const HEADER_MENU_LOCATION = 'tsol_library_header';
     private const FOOTER_MENU_LOCATION = 'tsol_library_footer';
     private $settings;
+    private $access_testing;
     private $suppress_logout_propagation = false;
 
     public function __construct() {
         $this->settings = new MemberLibrary_Auth_Settings();
+        $this->access_testing = new MemberLibrary_Auth_Access_Testing();
     }
 
     public function init() {
         $this->settings->init();
+        $this->access_testing->init();
         MemberLibrary_Auth_Revocation::register_hooks();
         MemberLibrary_Account_Security::register_hooks();
         add_action('init', array($this, 'mark_auth_request_uncacheable'), 0);
@@ -51,7 +54,12 @@ class MemberLibrary_Auth {
         $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
         $request_path = (string) wp_parse_url($request_uri, PHP_URL_PATH);
         $is_library_rest = strpos($request_path, '/' . rest_get_url_prefix() . '/tsol-library/v1/') !== false;
-        $is_auth_request = in_array($action, array('tsol_library_authorize', 'tsol_library_logout'), true) || $is_library_rest;
+        $is_auth_request = in_array($action, array(
+            'tsol_library_authorize',
+            'tsol_library_logout',
+            'tsol_library_open_access_test',
+            'tsol_library_finish_access_test',
+        ), true) || $is_library_rest;
 
         if ($is_auth_request && !defined('DONOTCACHEPAGE')) {
             define('DONOTCACHEPAGE', true);
