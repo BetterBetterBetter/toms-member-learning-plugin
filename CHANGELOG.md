@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 0.9.0.1 - 2026-10-05 (hotfix of 0.9.0: only the rate-limit change)
+
+- Library authentication rate limits now count in the persistent object cache
+  (Redis) instead of an `INSERT … ON DUPLICATE KEY UPDATE` plus `SELECT` on
+  `wp_tsol_library_auth_rate_limits` for every Library call (measured on Tom's
+  School of Life: 43.5 ms average, binlog-fsync'd). The contract is unchanged:
+  the same 64-hex key and 10 s–1 day window checks, a window that starts at a
+  key's first request and resets after it, and the same
+  `rate_limit_unavailable` error. Counters use `wp_cache_add` (Redis
+  `SET NX EX`) and `wp_cache_incr` (atomic `INCRBY`) only, in the dedicated
+  group `tsol_library_auth_rate_limits`.
+- Fails closed. Without a persistent object cache, while Redis Object Cache
+  has lost Redis (it then answers from a per-request array), in its igbinary
+  mode (non-atomic increments), with `WP_REDIS_MAXTTL` below the window, or on
+  any failed or implausible cache answer, the request is counted by the
+  unchanged SQL path. If that fails too, it returns `rate_limit_unavailable`
+  as before. The new `tsol_library_auth_rate_limit_object_cache` filter
+  (`false`) forces SQL.
+- On upgrade, counters restart once: open SQL windows are not carried into
+  the cache. `cleanup()` still purges the SQL table; cache entries expire by
+  TTL.
+- Added `tests/standalone/`: a stub harness for the limiter that models Redis
+  Object Cache 3.0.0 (concurrent first requests, cache-failure and Redis-down
+  fallbacks), and a mutation check that every plausible regression, get+set
+  included, fails.
+
 ## 0.9.0 - 2026-09-03
 
 - Link uploads that WP Offload Media already keeps in the shared storage

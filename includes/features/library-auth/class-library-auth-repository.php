@@ -11,6 +11,12 @@ class MemberLibrary_Auth_Repository {
 
     public const SCHEMA_VERSION = '4';
 
+    /** Object-cache group used only by the rate-limit counters. */
+    public const RATE_LIMIT_CACHE_GROUP = 'tsol_library_auth_rate_limits';
+
+    /** Seconds a cached window may outlive its stored end (Redis expires keys in milliseconds from the SET; the end is whole seconds). */
+    private const RATE_LIMIT_CACHE_EXPIRY_SLACK = 2;
+
     public static function table() {
         global $wpdb;
         return $wpdb->prefix . 'tsol_library_auth_codes';
@@ -132,14 +138,107 @@ class MemberLibrary_Auth_Repository {
     }
 
     public static function increment_rate_limit($rate_key, $now, $window_seconds) {
-        global $wpdb;
-
         $rate_key = strtolower((string) $rate_key);
         $now = (int) $now;
         $window_seconds = (int) $window_seconds;
         if (!preg_match('/^[a-f0-9]{64}$/', $rate_key) || $now <= 0 || $window_seconds < 10 || $window_seconds > DAY_IN_SECONDS) {
             return new WP_Error('rate_limit_unavailable', __('The request limit could not be evaluated.', 'member-library'));
         }
+
+        $state = self::increment_rate_limit_in_object_cache($rate_key, $now, $window_seconds);
+        return false !== $state ? $state : self::increment_rate_limit_in_database($rate_key, $now, $window_seconds);
+    }
+
+    /**
+     * Counts one request in the persistent object cache, or returns false so the SQL table counts it.
+     *
+     * Key/TTL scheme, all in the dedicated group RATE_LIMIT_CACHE_GROUP:
+     * - "w:<rate_key>" holds the window end ($now + $window_seconds), added with TTL $window_seconds
+     *   (wp_cache_add = Redis SET NX EX). The first request of a window creates it. A concurrent first
+     *   request's add fails, so it reads the winner's end and both count in one window. Once the key
+     *   expires, the next request starts a new window, exactly like the SQL row's expires_at.
+     * - "c:<rate_key>:<window end>" counts that window: wp_cache_add(1) with TTL until the window end,
+     *   else wp_cache_incr (Redis INCRBY: atomic, keeps the TTL). Naming the counter after its window
+     *   means a count never carries into the next window. If the counter expires between the add and
+     *   the incr, Redis Object Cache's INCRBY recreates it at 1 with no TTL. An incr that returns 1
+     *   after a failed add is therefore deleted, and any incr below 2 is handed to SQL.
+     *
+     * Never fails open: a failed, missing or implausible cache answer returns false.
+     */
+    private static function increment_rate_limit_in_object_cache($rate_key, $now, $window_seconds) {
+        if (!self::rate_limit_cache_usable($window_seconds)) {
+            return false;
+        }
+
+        $group = self::RATE_LIMIT_CACHE_GROUP;
+        try {
+            $window_key = 'w:' . $rate_key;
+            $expires_at = $now + $window_seconds;
+            if (!wp_cache_add($window_key, $expires_at, $group, $window_seconds)) {
+                // $force: read Redis, not this request's copy of an earlier window.
+                $stored = wp_cache_get($window_key, $group, true);
+                $expires_at = is_numeric($stored) ? (int) $stored : 0;
+                // Missing, or kept past its end: the cache is not expiring keys as asked.
+                if ($expires_at < $now - self::RATE_LIMIT_CACHE_EXPIRY_SLACK) {
+                    return false;
+                }
+            }
+
+            $counter_key = 'c:' . $rate_key . ':' . $expires_at;
+            if (wp_cache_add($counter_key, 1, $group, max(1, $expires_at - $now))) {
+                $count = 1;
+            } else {
+                $count = wp_cache_incr($counter_key, 1, $group);
+                $count = is_numeric($count) ? (int) $count : 0;
+                if ($count === 1) {
+                    wp_cache_delete($counter_key, $group);
+                }
+                if ($count < 2) {
+                    return false;
+                }
+            }
+        } catch (Throwable $exception) {
+            return false;
+        }
+
+        // After a Redis error, Redis Object Cache answers the remaining calls from a per-request array.
+        if (!self::rate_limit_cache_connected()) {
+            return false;
+        }
+
+        return array(
+            'count' => $count,
+            'expires_at' => max($now + 1, $expires_at),
+        );
+    }
+
+    /**
+     * Whether the counters may use the object cache: persistent, atomic increments, TTLs kept.
+     */
+    private static function rate_limit_cache_usable($window_seconds) {
+        if (!wp_using_ext_object_cache() || !apply_filters('tsol_library_auth_rate_limit_object_cache', true)) {
+            return false;
+        }
+        // Redis Object Cache's igbinary mode increments with GET then SET, and WP_REDIS_MAXTTL caps every TTL.
+        if (defined('WP_REDIS_IGBINARY') && WP_REDIS_IGBINARY && extension_loaded('igbinary')) {
+            return false;
+        }
+        if (defined('WP_REDIS_MAXTTL') && (int) WP_REDIS_MAXTTL > 0 && (int) WP_REDIS_MAXTTL < $window_seconds) {
+            return false;
+        }
+        return self::rate_limit_cache_connected();
+    }
+
+    /**
+     * False once Redis Object Cache has lost Redis: it then answers from a per-request array, where every request is the first.
+     */
+    private static function rate_limit_cache_connected() {
+        global $wp_object_cache;
+        return !(is_object($wp_object_cache) && is_callable(array($wp_object_cache, 'redis_status')) && !$wp_object_cache->redis_status());
+    }
+
+    private static function increment_rate_limit_in_database($rate_key, $now, $window_seconds) {
+        global $wpdb;
 
         $expires_at = $now + $window_seconds;
         $table = self::rate_limits_table();

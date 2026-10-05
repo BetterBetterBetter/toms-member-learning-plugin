@@ -69,6 +69,7 @@ basenames: `wp-access-sso/access-platform-sso.php`,
 - `includes/features/library-notifications/` — member announcements.
 - `includes/migrations/liberty-learndash-import/` — Liberty LearnDash import (CLI, host-guarded).
 - `tests/` — WP-CLI contract scripts (run via `tools/run-contract-tests.sh`).
+- `tests/standalone/` — plain-PHP stub harnesses that need no WordPress (not run by `tools/run-contract-tests.sh`).
 
 ## Testing
 
@@ -79,6 +80,21 @@ tools/run-contract-tests.sh --path=/absolute/path/to/wordpress
 ```
 
 Each also runs standalone: `wp eval-file tests/<name>.php --skip-themes`.
+
+The authentication rate limiter also has a stub harness and a mutation check
+that run on plain PHP 8 without WordPress:
+
+```
+php tests/standalone/library-auth-rate-limit-cache-test.php
+php tests/standalone/rate-limit-mutants.php
+```
+
+Rate-limit counters live in the persistent object cache (Redis Object Cache)
+when one is connected, and otherwise in `wp_tsol_library_auth_rate_limits`.
+The key/TTL scheme and fail-closed rules are documented on
+`MemberLibrary_Auth_Repository::increment_rate_limit_in_object_cache()`.
+Return `false` from the `tsol_library_auth_rate_limit_object_cache` filter to
+force the SQL table.
 
 ## Releases
 
