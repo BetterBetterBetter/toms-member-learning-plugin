@@ -213,6 +213,14 @@ function counts(array $results) { return array_map(function ($r) { return is_arr
 $group = MemberLibrary_Auth_Repository::RATE_LIMIT_CACHE_GROUP;
 $key = hash('sha256', 'rate-limit-harness');
 
+if (($argv[2] ?? '') === 'maxttl0') {  // own process: constants stick
+    define('WP_REDIS_MAXTTL', 0);      // Redis Object Cache: 0 = no TTL on any key
+    list($cache, $wpdb) = fresh();
+    check('WP_REDIS_MAXTTL = 0: SQL path, the cache untouched', is_array(inc($key, 3800000, 60)) && $wpdb->writes === 1 && $cache->writes === 0);
+    echo $fail ? "FAILED: $fail\n" : "ALL PASS\n";
+    exit($fail ? 1 : 0);
+}
+
 // Input validation: unchanged, and decided before any cache or SQL call.
 list($cache, $wpdb) = fresh();
 $invalid = array(
@@ -367,6 +375,21 @@ foreach (array('Redis up' => true, 'Redis down' => false) as $name => $connected
         $checks[0] === true && $checks[2] === true && is_wp_error($checks[3]) && $checks[3]->get_error_code() === 'rate_limited' && $retry >= 1 && $retry <= 60
         && $wpdb->writes === ($connected ? 0 : 4));
 }
+
+// Any other persistent drop-in (no redis_status(); e.g. Pantheon WP Redis, whose add() is exists + set) goes to SQL.
+final class Fake_Other_Object_Cache {
+    public $store = array();
+    public $writes = 0;
+    public function add($k, $v, $g = '', $e = 0) { $this->writes++; if (isset($this->store["$g:$k"])) { return false; } $this->store["$g:$k"] = $v; return true; }
+    public function set($k, $v, $g = '', $e = 0) { $this->writes++; $this->store["$g:$k"] = $v; return true; }
+    public function get($k, $g = '', $f = false) { return $this->store["$g:$k"] ?? false; }
+    public function incr($k, $o = 1, $g = '') { $this->writes++; return isset($this->store["$g:$k"]) ? ($this->store["$g:$k"] += $o) : false; }
+    public function delete($k, $g = '') { unset($this->store["$g:$k"]); return true; }
+}
+list($cache, $wpdb) = fresh();
+$GLOBALS['wp_object_cache'] = $other = new Fake_Other_Object_Cache();
+$r = MemberLibrary_Auth_Repository::increment_rate_limit($key, 3900000, 60);
+check('a drop-in without redis_status(): SQL path, the cache untouched', is_array($r) && $wpdb->writes === 1 && $other->writes === 0);
 
 // WP_REDIS_MAXTTL below the window would expire windows early: SQL. Last, because constants stick.
 define('WP_REDIS_MAXTTL', 30);

@@ -30,10 +30,19 @@ $mutants = array(
     'read the window from the request copy' => array('/wp_cache_get\(\$window_key, \$group, true\)/', 'wp_cache_get($window_key, $group)'),
     'let cache exceptions escape' => array('/(catch \(Throwable \$exception\) \{\n\s*)return false;/', '$1throw $exception;'),
     'ignore WP_REDIS_MAXTTL' => array('/\(int\) WP_REDIS_MAXTTL < \$window_seconds/', 'false'),
+    'treat WP_REDIS_MAXTTL = 0 as unlimited' => array('/defined\(\'WP_REDIS_MAXTTL\'\) && \(int\) WP_REDIS_MAXTTL </', "defined('WP_REDIS_MAXTTL') && (int) WP_REDIS_MAXTTL > 0 && (int) WP_REDIS_MAXTTL <"),
+    'trust any persistent drop-in' => array('/return is_object\(\$wp_object_cache\) && is_callable/', 'return !is_object($wp_object_cache) || !is_callable'),
 );
 
 function run_harness($harness, $dir) {
-    exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($harness) . ' ' . escapeshellarg($dir) . ' 2>&1', $out, $rc);
+    $rc = 0;
+    $out = array();
+    foreach (array('', 'maxttl0') as $mode) {  // maxttl0 runs in its own process (constants stick)
+        exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($harness) . ' ' . escapeshellarg($dir) . ($mode ? ' ' . $mode : '') . ' 2>&1', $lines, $code);
+        $rc = $rc ?: $code;
+        $out = array_merge($out, $lines);
+        $lines = array();
+    }
     $failed = array_values(preg_grep('/^(FAIL |PHP Fatal|Fatal error|PHP Warning)|Uncaught/', $out));
     return array($rc, $failed);
 }
