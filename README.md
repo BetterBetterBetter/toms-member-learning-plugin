@@ -100,3 +100,5 @@ force the SQL table.
 
 See `RELEASE.md`. CI (`.github/workflows/ci.yml`) lints PHP on every push;
 `release.yml` builds a versioned ZIP on a `vX.Y.Z` tag.
+
+Rate-limit counters reset if the object cache is flushed (`wp_cache_flush`) or Redis evicts their keys; the worst case is one extra window per key.

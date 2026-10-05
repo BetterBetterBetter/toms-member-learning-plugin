@@ -223,18 +223,22 @@ class MemberLibrary_Auth_Repository {
         if (defined('WP_REDIS_IGBINARY') && WP_REDIS_IGBINARY && extension_loaded('igbinary')) {
             return false;
         }
-        if (defined('WP_REDIS_MAXTTL') && (int) WP_REDIS_MAXTTL > 0 && (int) WP_REDIS_MAXTTL < $window_seconds) {
+        // WP_REDIS_MAXTTL = 0 means "no expiry at all" in Redis Object Cache, so it counts as below the window too.
+        if (defined('WP_REDIS_MAXTTL') && (int) WP_REDIS_MAXTTL < $window_seconds) {
             return false;
         }
         return self::rate_limit_cache_connected();
     }
 
     /**
-     * False once Redis Object Cache has lost Redis: it then answers from a per-request array, where every request is the first.
+     * True only for Redis Object Cache while it is connected. Its add (SET NX EX) and incr (INCRBY) are atomic, and
+     * redis_status() reports a lost connection, after which it answers from a per-request array where every request is
+     * the first. Any other drop-in is unverified (e.g. Pantheon WP Redis: add = exists + set, no status), so it goes to
+     * SQL: the limiter must never fail open (audit gate l8-ratelimit-0.9.0.1, 2026-10-05).
      */
     private static function rate_limit_cache_connected() {
         global $wp_object_cache;
-        return !(is_object($wp_object_cache) && is_callable(array($wp_object_cache, 'redis_status')) && !$wp_object_cache->redis_status());
+        return is_object($wp_object_cache) && is_callable(array($wp_object_cache, 'redis_status')) && (bool) $wp_object_cache->redis_status();
     }
 
     private static function increment_rate_limit_in_database($rate_key, $now, $window_seconds) {
